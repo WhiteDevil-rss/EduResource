@@ -10,7 +10,7 @@ export async function getSessionUser() {
     return { user: null, role: null, status: null }
   }
 
-  const session = readSessionCookie(sessionCookie)
+  const session = await readSessionCookie(sessionCookie)
   if (!session) {
     console.warn('Session verification failed: invalid or expired cookie')
     return { user: null, role: null, status: null }

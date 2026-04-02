@@ -52,7 +52,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Account inactive.' }, { status: 403 })
     }
 
-    const sessionCookie = createSessionCookie({
+    const sessionCookie = await createSessionCookie({
       uid: user.uid,
       email: user.email,
       role,

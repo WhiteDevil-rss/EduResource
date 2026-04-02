@@ -11,6 +11,7 @@
 /out/
 /.open-next/
 /.npm-cache/
+/.wrangler/
 
 # Production
 /build
