@@ -17,6 +17,9 @@ if (!workerSource.startsWith('// Cloudflare runtime polyfills for Next server bu
   fs.writeFileSync(workerPath, workerSource)
 }
 
+const pagesWorkerPath = path.join(process.cwd(), '.open-next', 'assets', '_worker.js')
+fs.writeFileSync(pagesWorkerPath, workerSource)
+
 if (fs.existsSync(handlerPath)) {
   let handlerSource = fs.readFileSync(handlerPath, 'utf8')
   const before = handlerSource
@@ -28,4 +31,4 @@ if (fs.existsSync(handlerPath)) {
   }
 }
 
-console.log('Patched worker runtime bundle')
+console.log('Patched worker runtime bundle and copied Pages _worker.js')
