@@ -16,11 +16,53 @@ const polyfillBanner = `// Cloudflare runtime polyfills for Next server bundles\
 let workerSource = fs.readFileSync(workerPath, 'utf8')
 if (!workerSource.startsWith('// Cloudflare runtime polyfills for Next server bundles')) {
   workerSource = polyfillBanner + workerSource
-  fs.writeFileSync(workerPath, workerSource)
 }
+
+const staticPassthroughSnippet = `
+            // Serve static assets directly from Pages asset binding.
+            if (
+                url.pathname.startsWith('/_next/static/') ||
+                url.pathname === '/favicon.ico' ||
+                url.pathname.startsWith('/static/')
+            ) {
+                if (env?.ASSETS?.fetch) {
+                    return env.ASSETS.fetch(request);
+                }
+            }
+`
+
+if (!workerSource.includes("url.pathname.startsWith('/_next/static/')")) {
+  workerSource = workerSource.replace(
+    '// - `Request`s are handled by the Next server',
+    `${staticPassthroughSnippet}\n            // - \`Request\`s are handled by the Next server`
+  )
+}
+
+fs.writeFileSync(workerPath, workerSource)
 
 const pagesWorkerPath = path.join(pagesOutputRoot, '_worker.js')
 fs.writeFileSync(pagesWorkerPath, workerSource)
+
+const pagesHeadersPath = path.join(pagesOutputRoot, '_headers')
+const pagesHeaders = `/secure/page
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/static/*
+  Access-Control-Allow-Origin: *
+  X-Robots-Tag: nosnippet
+
+/*
+  Cache-Control: no-cache
+
+https://edu-resource.pages.dev/*
+  X-Robots-Tag: noindex
+`
+fs.writeFileSync(pagesHeadersPath, pagesHeaders)
 
 function copyRuntimePath(relativePath) {
   const source = path.join(openNextRoot, relativePath)
@@ -50,4 +92,4 @@ if (fs.existsSync(handlerPath)) {
   }
 }
 
-console.log('Patched worker runtime bundle and prepared Pages runtime files')
+console.log('Patched worker runtime bundle and prepared Pages runtime files and headers')
