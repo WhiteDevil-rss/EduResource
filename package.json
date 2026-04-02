@@ -9,7 +9,7 @@
     "lint": "next lint",
     "cf:build": "opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare build && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy": "opennextjs-cloudflare build",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "dependencies": {
