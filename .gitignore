@@ -1,0 +1,34 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+/.open-next/
+
+# Production
+/build
+/dist
+
+# Firebase
+.firebase/
+*-debug.log*
+.firebaserc
+
+# Local env files
+.env*.local
+.env
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+.DS_Store
+*.pem
+.gemini/
