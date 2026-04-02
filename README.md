@@ -76,6 +76,12 @@ This project includes Firestore rules in `firestore.rules`. Make sure your Fireb
 
 This project is configured for Cloudflare Workers using OpenNext.
 
+### Pages compatibility note
+
+Cloudflare Pages auto-detects a top-level `functions/` directory as Pages Functions.
+This repo stores Firebase Cloud Functions in `firebase-functions/` to avoid Pages
+build warnings and keep Firebase code separate from Cloudflare Pages Functions.
+
 ### 1. Install Wrangler
 
 ```bash
