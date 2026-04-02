@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "cf:build": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs",
+    "preview": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler dev",
+    "deploy": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "dependencies": {

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/AuthGuard'
 import { db } from '@/lib/firebase'
-import { collection, query, where, getDocs, limit, startAfter, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs, limit, startAfter, orderBy } from 'firebase/firestore/lite'
 import { Search, Download, Book, Filter, Bookmark } from 'lucide-react'
 import { motion } from 'framer-motion'
 

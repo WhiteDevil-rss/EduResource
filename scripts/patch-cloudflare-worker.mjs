@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const workerPath = path.join(process.cwd(), '.open-next', 'worker.js')
-const pagesWorkerPath = path.join(process.cwd(), '.open-next', '_worker.js')
+const handlerPath = path.join(process.cwd(), '.open-next', 'server-functions', 'default', 'handler.mjs')
 
 if (!fs.existsSync(workerPath)) {
   console.error('Missing .open-next/worker.js. Run the OpenNext build first.')
@@ -17,5 +17,15 @@ if (!workerSource.startsWith('// Cloudflare runtime polyfills for Next server bu
   fs.writeFileSync(workerPath, workerSource)
 }
 
-fs.copyFileSync(workerPath, pagesWorkerPath)
-console.log('Patched worker runtime and wrote .open-next/_worker.js')
+if (fs.existsSync(handlerPath)) {
+  let handlerSource = fs.readFileSync(handlerPath, 'utf8')
+  const before = handlerSource
+  handlerSource = handlerSource.split('eval("quire".replace(/^/,"re"))').join('globalThis.__non_webpack_require__')
+
+  if (handlerSource !== before) {
+    fs.writeFileSync(handlerPath, handlerSource)
+    console.log('Patched handler to remove eval-based require shim')
+  }
+}
+
+console.log('Patched worker runtime bundle')

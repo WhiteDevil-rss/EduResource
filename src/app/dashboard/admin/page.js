@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/AuthGuard'
 import { db } from '@/lib/firebase'
-import { collection, query, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore'
+import { collection, query, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore/lite'
 import { Shield, Users, FileText, Ban, CheckCircle, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
 
