@@ -1,5 +1,5 @@
 # Dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 
@@ -19,6 +19,7 @@
 
 # Firebase
 .firebase/
+firebase-functions/node_modules/
 *-debug.log*
 .firebaserc
 
@@ -36,4 +37,9 @@ next-env.d.ts
 # Misc
 .DS_Store
 *.pem
+*.log
 .gemini/
+
+# Keep documentation logs versioned
+!Documents/*.log
+!Documents/**/*.log
