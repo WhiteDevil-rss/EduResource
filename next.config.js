@@ -12,7 +12,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
+  serverExternalPackages: ['firebase-admin'],
 }
 
-module.exports = nextConfig
+export default nextConfig
 

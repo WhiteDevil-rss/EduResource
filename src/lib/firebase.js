@@ -1,6 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-api-key",
@@ -15,13 +14,4 @@ const existingApp = getApps()[0];
 const app = existingApp || initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Only configure Firestore transport once. Auto-detect long-polling is less brittle
-// than forcing it on every client environment.
-const db = existingApp
-  ? getFirestore(app)
-  : initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
-      useFetchStreams: false,
-    });
-
-export { auth, db };
+export { auth };

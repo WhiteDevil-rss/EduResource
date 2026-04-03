@@ -1,192 +1,145 @@
 "use client";
-import { useState, useEffect, createContext, useContext } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { useRouter } from "next/navigation";
 
-const AuthContext = createContext();
+import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
+const AuthContext = createContext(null);
+const studentGoogleProvider = new GoogleAuthProvider();
+studentGoogleProvider.setCustomParameters({ prompt: "select_account" });
+
+async function fetchSessionSnapshot() {
+  try {
+    const response = await fetch("/api/session", { cache: "no-store" });
+    if (!response.ok) {
+      return { user: null, role: null, status: null, authProvider: null };
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    return {
+      user: payload?.user || null,
+      role: payload?.role || null,
+      status: payload?.status || null,
+      authProvider: payload?.authProvider || null,
+    };
+  } catch {
+    return { user: null, role: null, status: null, authProvider: null };
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [authProvider, setAuthProvider] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
-          setUser(firebaseUser);
-          const profile = await loadUserProfile(firebaseUser.uid);
-          setRole(profile?.role || null);
-        } else {
-          setUser(null);
-          setRole(null);
-        }
-      } catch (error) {
-        console.warn("Auth sync warning:", error);
-        setRole(null);
-      } finally {
-        setLoading(false);
-      }
-    });
+  const applySession = (session) => {
+    setUser(session?.user || null);
+    setRole(session?.role || null);
+    setStatus(session?.status || null);
+    setAuthProvider(session?.authProvider || null);
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    let isActive = true;
+
+    const loadSession = async () => {
+      const session = await fetchSessionSnapshot();
+      if (!isActive) {
+        return;
+      }
+
+      applySession(session);
+      setLoading(false);
+    };
+
+    loadSession();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
-  const loadUserProfile = async (uid) => {
-    try {
-      const userDoc = await getDoc(doc(db, "users", uid));
-      if (!userDoc.exists()) {
-        throw new Error("User profile is missing.");
-      }
-
-      const data = userDoc.data() || {};
-      if (!data?.role) {
-        throw new Error("Role data is missing.");
-      }
-
-      return data;
-    } catch (error) {
-      if (error?.code === "unavailable" || error?.message?.toLowerCase().includes("offline")) {
-        throw new Error("We could not load your profile because Firestore appears offline. Check your connection and try again.");
-      }
-
-      throw error;
-    }
-  };
-
-  const getFriendlyAuthMessage = (error, fallbackMessage) => {
-    if (!error) {
-      return fallbackMessage;
-    }
-
-    if (error.code === "auth/invalid-credential" || error.code === "auth/wrong-password" || error.code === "auth/user-not-found") {
-      return "Invalid email or password.";
-    }
-
-    if (error.code === "auth/too-many-requests") {
-      return "Too many login attempts. Please wait a moment and try again.";
-    }
-
-    return error.message || fallbackMessage;
-  };
-
-  const login = async (email, password) => {
+  const signInWithGoogleStudent = async () => {
     try {
       setIsAuthenticating(true);
-      setLoading(true);
-      const sanitizedEmail = String(email || "").trim();
-      const sanitizedPassword = String(password || "");
 
-      if (!sanitizedEmail || !sanitizedPassword) {
-        throw new Error("Email and password are required.");
-      }
+      const credential = await signInWithPopup(auth, studentGoogleProvider);
+      const idToken = await credential.user.getIdToken(true);
 
-      const cred = await signInWithEmailAndPassword(auth, sanitizedEmail, sanitizedPassword);
-      let requestedRole = null;
-      let profileLookupError = null;
-
-      try {
-        const profile = await loadUserProfile(cred.user.uid);
-        requestedRole = profile.role;
-      } catch (error) {
-        profileLookupError = error;
-        console.warn("Proceeding without client profile lookup:", error);
-      }
-
-      const idToken = await cred.user.getIdToken(true);
-
-      const response = await fetch("/api/session-login", {
+      const response = await fetch("/api/auth/student-google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, role: requestedRole }),
+        body: JSON.stringify({ idToken }),
       });
 
+      const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        if (profileLookupError) {
-          throw profileLookupError;
-        }
-        throw new Error(payload?.error || "Session login failed. The server could not validate your role.");
-      }
-
-      const payload = await response.json();
-      const userRole = payload?.role;
-
-      if (!userRole) {
-        throw new Error("Role missing. Access denied.");
-      }
-
-      setUser(cred.user);
-      setRole(userRole);
-      router.push(`/dashboard/${userRole}`);
-    } catch (error) {
-      console.error("Login error:", error);
-      if (auth.currentUser) {
         await signOut(auth).catch(() => {});
+        throw new Error(payload?.error || "Google student sign-in failed.");
       }
-      throw new Error(getFriendlyAuthMessage(error, "Failed to sign in."));
+
+      const nextSession = {
+        user: payload?.user || null,
+        role: payload?.role || "student",
+        status: payload?.user?.status || "active",
+        authProvider: "google",
+      };
+
+      applySession(nextSession);
+      router.replace("/dashboard/student");
+    } catch (error) {
+      throw new Error(error?.message || "Google student sign-in failed.");
     } finally {
       setIsAuthenticating(false);
       setLoading(false);
     }
   };
 
-  const register = async (email, password, selectedRole = "student") => {
+  const loginWithCredentials = async (loginId, password) => {
     try {
       setIsAuthenticating(true);
-      setLoading(true);
-      const sanitizedEmail = String(email || "").trim();
-      const sanitizedPassword = String(password || "");
 
-      if (!sanitizedEmail || !sanitizedPassword) {
-        throw new Error("Email and password are required.");
-      }
+      await signOut(auth).catch(() => {});
 
-      const allowedRoles = ["student", "faculty"];
-      const finalRole = allowedRoles.includes(selectedRole) ? selectedRole : "student";
-
-      const cred = await createUserWithEmailAndPassword(auth, sanitizedEmail, sanitizedPassword);
-
-      await setDoc(doc(db, "users", cred.user.uid), {
-        uid: cred.user.uid,
-        email: sanitizedEmail,
-        role: finalRole,
-        status: "active",
-        createdAt: serverTimestamp(),
-      });
-      const idToken = await cred.user.getIdToken(true);
-
-      const response = await fetch("/api/session-login", {
+      const response = await fetch("/api/auth/credential-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, role: finalRole }),
+        body: JSON.stringify({
+          loginId: String(loginId || "").trim(),
+          password: String(password || ""),
+        }),
       });
 
+      const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || "Session login failed. The server could not validate your role.");
+        throw new Error(payload?.error || "Credential sign-in failed.");
       }
 
-      const payload = await response.json();
-      const userRole = payload?.role || finalRole;
+      const nextRole = payload?.role || null;
+      const nextSession = {
+        user: payload?.user || null,
+        role: nextRole,
+        status: payload?.user?.status || "active",
+        authProvider: "credentials",
+      };
 
-      if (!userRole) {
-        throw new Error("Role missing. Access denied.");
+      if (!nextRole) {
+        throw new Error("Role resolution failed for this account.");
       }
 
-      setUser(cred.user);
-      setRole(userRole);
-      router.push(`/dashboard/${userRole}`);
+      applySession(nextSession);
+      router.replace(`/dashboard/${nextRole}`);
     } catch (error) {
-      console.error("Registration error:", error);
-      if (auth.currentUser) {
-        await signOut(auth).catch(() => {});
-      }
-      throw new Error(getFriendlyAuthMessage(error, "Failed to register."));
+      throw new Error(error?.message || "Credential sign-in failed.");
     } finally {
       setIsAuthenticating(false);
       setLoading(false);
@@ -194,18 +147,27 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await fetch("/api/session-logout", { method: "POST" });
-    await signOut(auth);
-    setUser(null);
-    setRole(null);
-    router.push("/");
+    await fetch("/api/session-logout", { method: "POST" }).catch(() => {});
+    await signOut(auth).catch(() => {});
+    applySession({ user: null, role: null, status: null, authProvider: null });
+    router.replace("/login");
   };
 
-  return (
-    <AuthContext.Provider value={{ user, role, loading: loading || isAuthenticating, isAuthenticating, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    role,
+    status,
+    authProvider,
+    loading: loading || isAuthenticating,
+    isAuthenticating,
+    signInWithGoogleStudent,
+    loginWithCredentials,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  return useContext(AuthContext);
+}

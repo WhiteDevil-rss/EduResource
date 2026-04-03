@@ -1,139 +1,143 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+
+import {
+  AlertCircle,
+  ArrowRight,
+  Chrome,
+  GraduationCap,
+  Shield,
+} from 'lucide-react'
 import Link from 'next/link'
-import { Mail, Lock, UserPlus, GraduationCap, Laptop } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import PublicFooter from '@/components/PublicFooter'
+import PublicHeader from '@/components/PublicHeader'
+import { useAuth } from '@/hooks/useAuth'
+
+const footerLinks = [
+  { label: 'Privacy Policy', href: '/login' },
+  { label: 'Terms of Service', href: '/login' },
+  { label: 'Support', href: '/#archive' },
+]
 
 export default function Register() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [roleState, setRoleState] = useState('student')
-  const { register, user, role, loading, isAuthenticating } = useAuth()
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const { signInWithGoogleStudent, user, role, loading, isAuthenticating } = useAuth()
   const router = useRouter()
-  const isSubmitting = isAuthenticating
 
   useEffect(() => {
     if (!loading && user && role) {
       router.replace(`/dashboard/${role}`)
     }
-  }, [user, role, loading, router])
+  }, [loading, role, router, user])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleStudentRegistration = async () => {
+    if (!acceptedTerms) {
+      toast.error('Please accept the academic integrity guidelines to continue.')
+      return
+    }
+
     try {
-      await register(email, password, roleState)
-
-      toast.success('Successfully registered!')
+      await signInWithGoogleStudent()
+      toast.success('Student account verified with Google.')
     } catch (error) {
-      toast.error(error.message || 'Failed to register')
+      toast.error(error.message || 'Google registration failed.')
     }
   }
 
   return (
-    <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 80px)' }}>
-      <motion.div 
-        className="glass-card" 
-        style={{ width: '100%', maxWidth: '480px', padding: '3.5rem' }}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h2 style={{ fontSize: '2rem' }}>Begin Your Journey</h2>
-          <p style={{ color: '#aaaab7' }}>Explore premium academic resources.</p>
-        </div>
+    <div className="auth-page">
+      <PublicHeader
+        links={[
+          { label: 'Resources', href: '/#curriculum' },
+          { label: 'Support', href: '/#archive' },
+        ]}
+      />
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ position: 'relative' }}>
-            <label htmlFor="register-email" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Email Address</label>
-            <Mail aria-hidden="true" style={{ position: 'absolute', left: '1rem', top: 'calc(50% + 0.75rem)', transform: 'translateY(-50%)', width: '1.25rem', height: '1.25rem', color: '#aaaab7' }} />
-            <input
-              id="register-email"
-              type="email"
-              name="email"
-              autoComplete="email"
-              spellCheck={false}
-              placeholder="name@institution.edu…"
-              className="input-glass"
-              style={{ width: '100%', paddingLeft: '3.5rem' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+      <main className="auth-main auth-main--register">
+        <div className="auth-card auth-card--register">
+          <div className="auth-header">
+            <span className="auth-kicker">Student Access</span>
+            <h1>Register With Google</h1>
+            <p>Student accounts are created only through Google OAuth and immediately protected by role-based access rules.</p>
           </div>
 
-          <div style={{ position: 'relative' }}>
-            <label htmlFor="register-password" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Password</label>
-            <Lock aria-hidden="true" style={{ position: 'absolute', left: '1rem', top: 'calc(50% + 0.75rem)', transform: 'translateY(-50%)', width: '1.25rem', height: '1.25rem', color: '#aaaab7' }} />
-            <input 
-              id="register-password"
-              type="password" 
-              name="password"
-              autoComplete="new-password"
-              placeholder="Create a strong password…"
-              className="input-glass" 
-              style={{ width: '100%', paddingLeft: '3.5rem' }}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
+          <div className="auth-form">
+            <div className="auth-select">
+              <span className="auth-select__label">Authentication Policy</span>
+              <div className="auth-select__grid">
+                <button type="button" className="auth-select__button auth-select__button--active">
+                  <GraduationCap size={18} />
+                  Student Google OAuth
+                </button>
+                <button type="button" className="auth-select__button" disabled aria-disabled="true">
+                  <Shield size={18} />
+                  Faculty/Admin by Invite
+                </button>
+              </div>
+            </div>
 
-          <fieldset style={{ border: 'none', padding: 0, marginTop: '0.5rem' }}>
-            <legend style={{ marginBottom: '0.75rem', fontWeight: 600 }}>Account Type</legend>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+            <div className="auth-alert">
+              <AlertCircle size={18} color="var(--secondary)" />
+              <span>Faculty and admin accounts cannot self-register. Those credentials are created and managed only by the super admin.</span>
+            </div>
+
+            <label className="auth-checkbox" htmlFor="register-terms">
+              <input
+                id="register-terms"
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(event) => setAcceptedTerms(event.target.checked)}
+              />
+              <span>
+                I acknowledge the{' '}
+                <Link href="/#scholarships" style={{ color: 'var(--primary)' }}>
+                  Academic Integrity
+                </Link>{' '}
+                guidelines and consent to role-based access controls.
+              </span>
+            </label>
+
             <button
               type="button"
-              onClick={() => setRoleState('student')}
-              style={{ 
-                flex: 1, 
-                padding: '1rem', 
-                textAlign: 'center', 
-                cursor: 'pointer',
-                backgroundColor: roleState === 'student' ? 'rgba(182, 160, 255, 0.1)' : 'transparent',
-                border: `1px solid ${roleState === 'student' ? 'var(--accent-primary)' : 'var(--glass-border)'}`,
-                borderRadius: '12px',
-                transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease',
-                color: 'var(--foreground)'
-              }}
+              className="button-primary button-block"
+              onClick={handleStudentRegistration}
+              disabled={isAuthenticating}
             >
-              <GraduationCap aria-hidden="true" style={{ width: '1.5rem', height: '1.5rem', margin: '0 auto 0.5rem', color: roleState === 'student' ? '#fff' : '#aaaab7' }} />
-              <div style={{ fontSize: '0.9rem', fontWeight: roleState === 'student' ? '700' : '400' }}>Student</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRoleState('faculty')}
-              style={{ 
-                flex: 1, 
-                padding: '1rem', 
-                textAlign: 'center', 
-                cursor: 'pointer',
-                backgroundColor: roleState === 'faculty' ? 'rgba(182, 160, 255, 0.1)' : 'transparent',
-                border: `1px solid ${roleState === 'faculty' ? 'var(--accent-primary)' : 'var(--glass-border)'}`,
-                borderRadius: '12px',
-                transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease',
-                color: 'var(--foreground)'
-              }}
-            >
-              <Laptop aria-hidden="true" style={{ width: '1.5rem', height: '1.5rem', margin: '0 auto 0.5rem', color: roleState === 'faculty' ? '#fff' : '#aaaab7' }} />
-              <div style={{ fontSize: '0.9rem', fontWeight: roleState === 'faculty' ? '700' : '400' }}>Faculty</div>
+              <Chrome size={18} />
+              {isAuthenticating ? 'Connecting...' : 'Continue With Google'}
+              {!isAuthenticating ? <ArrowRight size={16} /> : null}
             </button>
           </div>
-          </fieldset>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '1rem' }} disabled={isSubmitting}>
-            <UserPlus aria-hidden="true" className="w-5 h-5 mr-2" />
-            {isSubmitting ? 'Creating Account…' : 'Create Account'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.95rem', color: '#aaaab7' }}>
-          Already a member? <Link href="/login" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '600' }}>Sign in instead</Link>
+          <div className="auth-footer">
+            <p>
+              Already have access?{' '}
+              <Link href="/login" style={{ color: 'var(--secondary)', fontWeight: 800 }}>
+                Sign In
+              </Link>
+            </p>
+          </div>
         </div>
-      </motion.div>
+
+        <div className="auth-proof">
+          <span className="auth-proof__item">
+            <span className="auth-proof__dot" style={{ background: 'var(--secondary)' }} />
+            Google OAuth Only
+          </span>
+          <span className="auth-proof__item">
+            <span className="auth-proof__dot" style={{ background: 'var(--tertiary)' }} />
+            Admin Controlled Staff Access
+          </span>
+        </div>
+      </main>
+
+      <PublicFooter
+        compact
+        links={footerLinks}
+        tagline="(c) 2024 EDUHUB. The Digital Curator."
+      />
     </div>
   )
 }

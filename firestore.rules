@@ -1,50 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper: Is the user logged in?
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Helper: Get user data from Firestore
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Helper: Is the user an admin?
-    function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
-    }
-
-    // Helper: Is the user a faculty member?
-    function isFaculty() {
-      return isSignedIn() && getUserData().role == 'faculty';
-    }
-
-    // Users collection rules
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn()
-        && userId == request.auth.uid
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.role in ['student', 'faculty']
-        && request.resource.data.status == 'active';
-      allow update: if isAdmin()
-        || (
-          isSignedIn()
-          && userId == request.auth.uid
-          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status'])
-        );
-      allow delete: if isAdmin();
-    }
-
-    // Resources collection rules
-    match /resources/{resourceId} {
-      allow read: if isSignedIn();
-      allow create: if isFaculty();
-      allow update, delete: if isAdmin() || (isFaculty() && resource.data.uploadedBy == request.auth.uid);
+    // All application data now flows through secured Next.js API routes that use
+    // privileged server credentials. Direct browser access to Firestore is blocked.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EduResource Hub - Student Dashboard</title>
+<!-- Google Fonts: Manrope & Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error": "#490013",
+              "outline": "#737580",
+              "tertiary-container": "#fd3e80",
+              "secondary-container": "#006493",
+              "on-tertiary": "#48001c",
+              "surface": "#0c0e17",
+              "on-secondary": "#002a42",
+              "on-secondary-fixed-variant": "#00567f",
+              "surface-variant": "#222532",
+              "secondary-fixed": "#a7d7ff",
+              "on-primary-container": "#280072",
+              "inverse-surface": "#faf8ff",
+              "primary-fixed": "#a98fff",
+              "surface-container-lowest": "#000000",
+              "secondary": "#00affe",
+              "on-primary": "#340090",
+              "on-primary-fixed-variant": "#32008a",
+              "on-surface": "#f0f0fd",
+              "surface-tint": "#b6a0ff",
+              "on-tertiary-container": "#100003",
+              "tertiary-fixed-dim": "#ff769b",
+              "on-background": "#f0f0fd",
+              "on-secondary-fixed": "#003855",
+              "primary-container": "#a98fff",
+              "on-error-container": "#ffb2b9",
+              "on-tertiary-fixed": "#380014",
+              "on-secondary-container": "#f3f8ff",
+              "error": "#ff6e84",
+              "on-tertiary-fixed-variant": "#770033",
+              "error-dim": "#d73357",
+              "tertiary-dim": "#ff6c95",
+              "tertiary-fixed": "#ff8fa9",
+              "primary-fixed-dim": "#9c7eff",
+              "error-container": "#a70138",
+              "surface-container-highest": "#222532",
+              "surface-container-low": "#11131d",
+              "primary-dim": "#7e51ff",
+              "on-surface-variant": "#aaaab7",
+              "secondary-fixed-dim": "#86cbff",
+              "outline-variant": "#464752",
+              "inverse-primary": "#6834eb",
+              "surface-bright": "#282b3a",
+              "inverse-on-surface": "#53545f",
+              "primary": "#b6a0ff",
+              "on-primary-fixed": "#000000",
+              "surface-container-high": "#1c1f2b",
+              "background": "#0c0e17",
+              "surface-container": "#171924",
+              "tertiary": "#ff6c95",
+              "secondary-dim": "#00a7f2",
+              "surface-dim": "#0c0e17"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+      }
+      .glass-card {
+        background: rgba(34, 37, 50, 0.4);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(115, 117, 128, 0.1);
+        border-left: 1px solid rgba(115, 117, 128, 0.1);
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #464752;
+        border-radius: 10px;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body selection:bg-primary/30 selection:text-primary">
+<!-- TopAppBar -->
+<nav class="fixed top-0 w-full z-50 bg-[#0c0e17]/80 backdrop-blur-xl flex items-center justify-between px-8 h-20 w-full">
+<div class="flex items-center gap-12">
+<span class="text-2xl font-extrabold tracking-tighter text-[#f0f0fd] font-headline">EduResource Hub</span>
+<!-- Search Bar (on_left as per JSON) -->
+<div class="relative hidden md:block w-96">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline">search</span>
+</div>
+<input class="w-full h-11 bg-surface-container-lowest border-none rounded-xl pl-12 pr-4 text-sm text-on-surface focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-outline/60" placeholder="Search academic resources..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors relative group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-tertiary rounded-full"></span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors group">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">settings</span>
+</button>
+</div>
+<div class="h-10 w-10 rounded-full border-2 border-primary/20 p-0.5">
+<img alt="Student Profile Avatar" class="rounded-full w-full h-full object-cover" data-alt="Student profile picture with a clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1swg91D90Qrd3-WGvjLC_5m88vpbYjC2b7BORRR79WcQgNNn_BJj5M2qBNI-blpgWpfqAy9mtiamzaJG__kbfba9q7Uyhj9ALV3hpfVBpBPcJPNSMt3OxWpeFaOaGCnHfSRS1pHC4vKYmRd-sLBfdDGPYj7l0UDIGhFYMdQAgCnSEQgmR5KTVBhTO4tsSyMYcaE3cUvSL9T1QvQeewtiSpvQeyW-jdiCnFrB83UsOyKlJTuN7DT0YQRjs37tBvE8aCR7lKkn08EOY"/>
+</div>
+</div>
+</nav>
+<!-- Sidebar & Main Content Layout -->
+<div class="flex pt-20 min-h-screen">
+<!-- SideNavBar (The Curator Glass Sidebar) -->
+<aside class="fixed left-4 top-24 bottom-4 w-64 rounded-2xl bg-[#0c0e17]/60 backdrop-blur-2xl flex flex-col p-6 space-y-4 shadow-[0px_24px_48px_rgba(0,0,0,0.4)] z-40 tonal-shift bg-[#171924]">
+<div class="mb-8 px-2">
+<h2 class="text-[#f0f0fd] font-bold font-headline text-lg">Curator Space</h2>
+<p class="text-xs text-outline font-medium tracking-widest uppercase mt-1">Academic Excellence</p>
+</div>
+<div class="flex-1 space-y-2">
+<!-- Active Item: Library -->
+<a class="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-[#b6a0ff] to-[#7e51ff] text-white rounded-xl shadow-lg transition-transform duration-300 hover:scale-[1.02] group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">local_library</span>
+<span class="font-manrope text-sm font-medium tracking-wide">Library</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#f0f0fd]/70 hover:bg-[#1c1f2b] rounded-xl transition-transform duration-300 hover:scale-[1.02] group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">download</span>
+<span class="font-manrope text-sm font-medium tracking-wide">My Downloads</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#f0f0fd]/70 hover:bg-[#1c1f2b] rounded-xl transition-transform duration-300 hover:scale-[1.02] group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">person</span>
+<span class="font-manrope text-sm font-medium tracking-wide">Profile</span>
+</a>
+</div>
+<div class="pt-6 border-t border-outline/10 space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 text-[#f0f0fd]/70 hover:bg-[#1c1f2b] rounded-xl transition-transform duration-300 hover:scale-[1.02] group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">help</span>
+<span class="font-manrope text-sm font-medium tracking-wide">Help</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#f0f0fd]/70 hover:bg-[#1c1f2b] rounded-xl transition-transform duration-300 hover:scale-[1.02] group" href="#">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">logout</span>
+<span class="font-manrope text-sm font-medium tracking-wide">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-72 flex-1 p-8 pr-12">
+<!-- Header Section -->
+<header class="mb-12">
+<div class="flex items-center gap-3 mb-2">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container text-[10px] font-bold tracking-widest uppercase rounded-full">Dashboard</span>
+<span class="text-outline-variant text-sm">/</span>
+<span class="text-primary text-sm font-medium">Digital Library</span>
+</div>
+<h1 class="text-5xl font-extrabold font-headline tracking-tight text-on-surface mb-4">Curated Resources</h1>
+<p class="text-on-surface-variant max-w-2xl leading-relaxed">
+                    Explore high-fidelity academic modules selected by the faculty. Each resource is optimized for deep learning and research excellence.
+                </p>
+</header>
+<!-- Filters / Categories -->
+<div class="flex items-center gap-4 mb-10 overflow-x-auto pb-4 custom-scrollbar">
+<button class="px-6 py-2.5 bg-primary text-on-primary rounded-full text-sm font-semibold whitespace-nowrap">All Subjects</button>
+<button class="px-6 py-2.5 bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-full text-sm font-semibold whitespace-nowrap transition-colors">Mathematics</button>
+<button class="px-6 py-2.5 bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-full text-sm font-semibold whitespace-nowrap transition-colors">Computer Science</button>
+<button class="px-6 py-2.5 bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-full text-sm font-semibold whitespace-nowrap transition-colors">Physics</button>
+<button class="px-6 py-2.5 bg-surface-container-high text-on-surface-variant hover:text-on-surface rounded-full text-sm font-semibold whitespace-nowrap transition-colors">Architecture</button>
+</div>
+<!-- Resource Grid (Bento/Asymmetric Feel) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="glass-card group rounded-2xl p-6 flex flex-col hover:scale-[1.02] transition-all duration-300">
+<div class="relative w-full h-48 rounded-xl overflow-hidden mb-6">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Abstract 3D rendering of mathematical patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCa6-buE_O4ashDN3zRJupojmrBXKh6VTb8LDObgrV4FZAillNHJh33LXGe44cpjKj0C8vRjCUioGsd2uOG3UBik2KlMHgoZ7QBujKeR-9gd-6cktwnZblBZpflMMapmS8UQRm1nrNUOOBPInkiwOsiZZOjB__3Xp9_nfz5D-53A07XYRmcUCIP3fIWu2ARoHmYPSaLjX1TPN_3Gv76LMecSh_SWWmf7ZJnE-uVDsYd9vLTTy32FY1wHs9BEMau6PQTIJNYHWDktUXU"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container/80 to-transparent"></div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-3">
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase">Mathematics</span>
+<span class="w-1 h-1 rounded-full bg-outline/40"></span>
+<span class="text-[10px] font-bold text-secondary tracking-widest uppercase">PDF • 12MB</span>
+</div>
+<h3 class="text-xl font-bold font-headline text-on-surface mb-2">Advanced Calculus: Manifolds &amp; Forms</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">A comprehensive study of differential forms and their applications in modern geometry.</p>
+</div>
+<div class="mt-6 flex items-center justify-between">
+<div class="flex -space-x-2">
+<img class="w-6 h-6 rounded-full border border-surface" data-alt="Avatar of professor one" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2YScN7fZ1C4xWlZiVCYu0pz26p6CEXl3-Yfz_TyIRl6SihAGman7S2fQOea4cb84qgWuv1s8bemiHIomRq8A-Ex_mOGYUYgHK6SWaX6liDqR741Z5yhdzL7MFGf3PHADR1MMZtqRxNOoQckWDg9r40XPm4DuTMkoBiAM0z4zHp19L7gZsvAJvSoT0ClAajpSYmhMAt3V2M-NTFGSvalcUw64Owcj9cmjwQFic8lv9TewkinSQQdD08WBrujJv4okwPn6AyuIjyXaK"/>
+<img class="w-6 h-6 rounded-full border border-surface" data-alt="Avatar of professor two" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxXefExJHtflyCORX41xGLvKMNajx7fecexU6XkUOBxTvLYKtZGGQjZN9DVvplVIFHcfif4TJ4iJ8ivY_wkAmTK2F0quYGFGVuQU8EpEQ0HgjXLCVC5YNGF7Wor9lD9LVfvOZgQ9Js1XcoqSVa0gg8PuJT22YYlx-Xy3dibxb4dx69nq835OshMmxLjJlaRLCXCYSvlRAIX-gzCdV873HyOr5ZurKeC6l2MYBVrvk4Qy9VGc8hZHj-20dT8RYQ36VKCtnfyAAksMGY"/>
+</div>
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-highest text-primary hover:bg-primary hover:text-on-primary transition-all shadow-lg group/btn">
+<span class="material-symbols-outlined text-xl group-active/btn:scale-90">download</span>
+</button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-card group rounded-2xl p-6 flex flex-col hover:scale-[1.02] transition-all duration-300">
+<div class="relative w-full h-48 rounded-xl overflow-hidden mb-6">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Neural network visualization with glowing nodes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiJ6WaQOcW7VXhYQ5_lZVjVEjkW9kn_G5eXtdj_3Ruy9p62IFeYTZmK9aWwlZuz7Kc6qwosKfuMRaL8hX8VA2vk0kHp0P1oszvSyqNPqXzES_xbvx_Mtz3yU27sr8LwnyC_98dPbBcWU0pZ3_9iiIg4e47BZET_I6obua4XE2W1VAjNlFzFDKIo4jFOhDi3XlW_zcaK16DSPE3LlHra7a_Rl8b4LPa4lzi_MsLUZUJQKa8OpejRdfUssp3ZCD4qLx9spH3zFsi3cTV"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container/80 to-transparent"></div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-3">
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase">CS</span>
+<span class="w-1 h-1 rounded-full bg-outline/40"></span>
+<span class="text-[10px] font-bold text-secondary tracking-widest uppercase">Video • 45m</span>
+</div>
+<h3 class="text-xl font-bold font-headline text-on-surface mb-2">Neural Networks Foundations</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">Master backpropagation, activation functions, and gradient descent from scratch.</p>
+</div>
+<div class="mt-6 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-tertiary">star</span>
+<span class="text-xs text-on-surface font-medium">Top Rated</span>
+</div>
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-highest text-primary hover:bg-primary hover:text-on-primary transition-all shadow-lg group/btn">
+<span class="material-symbols-outlined text-xl">play_arrow</span>
+</button>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="glass-card group rounded-2xl p-6 flex flex-col hover:scale-[1.02] transition-all duration-300">
+<div class="relative w-full h-48 rounded-xl overflow-hidden mb-6">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="Close up of a computer microchip" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxor8tmaLbhTFxVBpXuR1sMU39UVgiAkgmSG4OEYnskwbiHO1hhEGkV-Qc_OxkCF70WAbuX7ARNPhQ28bBKwmOayecn9msR1_5cXXePEDXlVGC315k_6glVnkbl58MSH2Jlvvus2q9hyKL-QCGUQy7Om6nETD5B-DhTEF1E2kPhqqvsf0xJMW9IaDcXPjyyyqtQzUGBFignU2xxFEEGtT_KVxLAcsCjRCbjCm9AcqtWu4VQ3WpTy_E4rcTnBjkw0zQ8k0XYcpyqj6O"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container/80 to-transparent"></div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-3">
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase">Electronics</span>
+<span class="w-1 h-1 rounded-full bg-outline/40"></span>
+<span class="text-[10px] font-bold text-secondary tracking-widest uppercase">ZIP • 256MB</span>
+</div>
+<h3 class="text-xl font-bold font-headline text-on-surface mb-2">VLSI Design &amp; Architecture</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed line-clamp-2">Advanced methodologies for large-scale integration and circuit optimization.</p>
+</div>
+<div class="mt-6 flex items-center justify-between">
+<span class="text-xs text-outline italic">Updated 2 days ago</span>
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-surface-container-highest text-primary hover:bg-primary hover:text-on-primary transition-all shadow-lg group/btn">
+<span class="material-symbols-outlined text-xl">download</span>
+</button>
+</div>
+</div>
+<!-- Card 4 (Large / Featured) -->
+<div class="glass-card group rounded-2xl p-8 lg:col-span-2 flex flex-col md:flex-row gap-8 hover:scale-[1.01] transition-all duration-300">
+<div class="w-full md:w-1/2 h-64 md:h-auto rounded-xl overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Classic library with tall bookshelves and warm lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwlEZ2-tcVM9wyBtyE68lXNvEzzs7jG5Ga_I6VVo53N8SoCmvY0jiBkE0A7-CYzCb-8E_zXS5opFkC_TDPy-BbgTI4Ifr0XSZdrLfmGx58GhWCxADDXJEGMbnOnL6TX7-5Hvr03DXr6_O9AxnnVV8r6Nb7ccMr_umVogp_WYrTj_FO_uMIzg24TrRJgL5mBDvNAkC6_k0FZ24-hV-f81g4MqutYTyUpJ2t9TZrhwNkN-Ybgj74c97QlQHIQbfF8sBpG719YtzVfm3v"/>
+</div>
+<div class="flex flex-col justify-center flex-1">
+<div class="mb-4">
+<span class="px-3 py-1 bg-tertiary/20 text-tertiary text-[10px] font-bold tracking-widest uppercase rounded-md border border-tertiary/20">Faculty Pick</span>
+</div>
+<h3 class="text-3xl font-extrabold font-headline text-on-surface mb-4">Historical Archives: The Renaissance Tech</h3>
+<p class="text-on-surface-variant leading-relaxed mb-8">
+                            A curated collection of original manuscripts digitized in 8K resolution. Explore the intersection of 15th-century engineering and modern mechanics.
+                        </p>
+<div class="flex items-center gap-4">
+<button class="px-8 py-3 bg-gradient-to-r from-primary to-primary-dim text-on-primary font-bold rounded-xl shadow-lg hover:shadow-primary/20 transition-all flex items-center gap-2 group/btn">
+                                Explore Collection
+                                <span class="material-symbols-outlined text-lg group-hover/btn:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<button class="p-3 bg-surface-container-high rounded-xl text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">bookmark</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 5 (Secondary/Small) -->
+<div class="glass-card group rounded-2xl p-6 flex flex-col hover:scale-[1.02] transition-all duration-300 border-dashed border-outline/20">
+<div class="flex-1 flex flex-col items-center justify-center text-center py-8">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-4 text-outline-variant">
+<span class="material-symbols-outlined text-3xl">auto_stories</span>
+</div>
+<h3 class="text-lg font-bold font-headline text-on-surface mb-2">Request Resource</h3>
+<p class="text-xs text-on-surface-variant max-w-[200px]">Can't find a specific research paper? Submit a request to the curator.</p>
+</div>
+<button class="w-full py-3 border border-outline/20 rounded-xl text-xs font-bold text-outline uppercase tracking-widest hover:bg-surface-container hover:text-primary transition-all">
+                        Submit Request
+                    </button>
+</div>
+</div>
+<!-- Bottom Spacer -->
+<div class="h-24"></div>
+</main>
+</div>
+<!-- Background Atmospheric Glows (Ethereal Scholar Style) -->
+<div class="fixed top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+<div class="fixed bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-secondary/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+</body></html>

@@ -72,62 +72,56 @@ The app runs at `http://localhost:3000`.
 
 This project includes Firestore rules in `firestore.rules`. Make sure your Firebase project uses the matching rules and indexes before testing the app in production.
 
-## Cloudflare Deployment
+## Cloudflare Pages Deployment
 
-This project is configured for Cloudflare Workers using OpenNext.
+This project is configured for deployment on Cloudflare Pages with automatic builds via GitHub integration.
 
-### 1. Install Wrangler
+### Deployment Setup
+1. Connect your GitHub repository to Cloudflare Pages
+2. Set build command: `npm run build`
+3. Set build output directory: `.next`
+4. Configure environment variables in Cloudflare Pages dashboard
 
-```bash
-npm install
-```
-
-### 2. Log in to Cloudflare
-
-```bash
-npx wrangler login
-```
-
-### 3. Set production secrets
-
-In the Cloudflare dashboard or via Wrangler, set:
-
+### Required Environment Variables
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
 - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
-- `SESSION_SECRET`
-- `CLOUDINARY_API_KEY`
-- `CLOUDINARY_API_SECRET`
 - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
 - `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `SESSION_SECRET`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
+- `FIREBASE_PROJECT_ID`
 
-### 4. Build for Cloudflare
-
+### Local Development
 ```bash
-npm run cf:build
+npm run dev
 ```
 
-### 5. Preview locally in Wrangler
+The app runs at `http://localhost:3000`.
 
+### Preview Production Build
 ```bash
 npm run preview
 ```
 
-### 6. Deploy
-
+### Deploy to Production
 ```bash
 npm run deploy
 ```
 
-## Scripts
+## Security Features
 
-- `npm run dev` starts local Next.js development
-- `npm run build` builds the Next.js app
-- `npm run cf:build` builds the Cloudflare worker output
-- `npm run preview` previews the Cloudflare build locally
+- **Role-Based Access Control**: Strict RBAC with admin, faculty, and student roles
+- **Secure Authentication**: Google OAuth for students, credential-based for faculty/admin
+- **Session Management**: Signed cookies with expiration and validation
+- **API Security**: All endpoints protected with authentication and authorization
+- **Database Security**: Firestore access restricted to server-side operations
 - `npm run deploy` deploys to Cloudflare
 
 ## Security
