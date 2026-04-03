@@ -5,4 +5,6 @@ export default defineCloudflareConfig({
   experimental: {
     disableStreaming: true,
   },
+  // Mark jose and jwks-rsa as external to avoid bundling issues
+  external: ["jose", "jwks-rsa"],
 });
