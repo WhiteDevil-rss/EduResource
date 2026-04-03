@@ -26,7 +26,15 @@ export async function POST(request) {
       )
     }
 
-    const decoded = await adminAuth.verifyIdToken(idToken)
+    let decoded
+    try {
+      decoded = await adminAuth.verifyIdToken(idToken)
+    } catch (error) {
+      console.error('Token verification failed:', error.message)
+      return withNoStore(
+        NextResponse.json({ error: 'Invalid or expired Google token.' }, { status: 401 })
+      )
+    }
     if (decoded?.firebase?.sign_in_provider !== 'google.com') {
       return withNoStore(
         NextResponse.json(

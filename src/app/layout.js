@@ -23,7 +23,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className={`${bodyFont.variable} ${headlineFont.variable}`}>
         <a href="#main-content" className="skip-link">Skip to Content</a>
         <AuthProvider>
