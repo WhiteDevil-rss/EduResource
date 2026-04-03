@@ -8,15 +8,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "cf:build": "next build",
-    "preview": "next build && npx wrangler pages dev .next",
-    "deploy": "next build && npx wrangler pages deploy .next",
-    "upload": "next build && npx wrangler pages deploy .next"
+    "cf:build": "opennextjs-cloudflare build",
+    "preview": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler dev",
+    "deploy": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler pages deploy .open-next/assets",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "dependencies": {
     "cloudinary": "^2.5.1",
     "firebase": "^12.11.0",
-    "firebase-admin": "^13.7.0",
+    "firebase-admin": "^10.3.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.460.0",
     "next": "^16.2.2",
