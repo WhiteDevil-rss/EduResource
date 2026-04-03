@@ -13,35 +13,41 @@ if (privateKey) {
   privateKey = privateKey.replace(/\\n/g, '\n')
 }
 
-if (!projectId) {
-  throw new Error('Missing FIREBASE_PROJECT_ID (or NEXT_PUBLIC_FIREBASE_PROJECT_ID) for Firebase Admin.')
+let adminApp = null
+let adminAuth = null
+let adminDb = null
+
+if (projectId) {
+  adminApp =
+    getApps().length > 0
+      ? getApps()[0]
+      : initializeApp(
+          clientEmail && privateKey
+            ? {
+                credential: cert({ projectId, clientEmail, privateKey }),
+                projectId,
+              }
+            : process.env.GOOGLE_APPLICATION_CREDENTIALS
+            ? { credential: applicationDefault(), projectId }
+            : { projectId }
+        )
+
+  adminAuth = getAuth(adminApp)
+  adminDb = getFirestore(adminApp)
+} else {
+  // Build-time path: API routes may be evaluated during static generation.
+  // Defer error until runtime to avoid failing the Next.js build when env vars are missing.
+  console.warn(
+    'Firebase Admin is not initialized because FIREBASE_PROJECT_ID is missing. Ensure environment variables are configured at runtime.'
+  )
 }
 
-const adminApp =
-  getApps().length > 0
-    ? getApps()[0]
-    : initializeApp(
-        clientEmail && privateKey
-          ? {
-              credential: cert({ projectId, clientEmail, privateKey }),
-              projectId,
-            }
-          : process.env.GOOGLE_APPLICATION_CREDENTIALS
-          ? { credential: applicationDefault(), projectId }
-          : { projectId }
-      )
-
-const adminAuth = getAuth(adminApp)
-const adminDb = getFirestore(adminApp)
-
 export function assertPrivilegedFirebaseAccess() {
-  if (hasServiceAccountCredentials) {
-    return
+  if (!projectId || !hasServiceAccountCredentials || !adminApp || !adminAuth || !adminDb) {
+    throw new Error(
+      'Privileged Firebase access is not configured. Set FIREBASE_PROJECT_ID and service account credentials (FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY or GOOGLE_APPLICATION_CREDENTIALS).' 
+    )
   }
-
-  throw new Error(
-    'Privileged Firebase access is not configured. Add FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY before using secure management APIs.'
-  )
 }
 
 export { adminApp, adminAuth, adminDb, hasServiceAccountCredentials }
