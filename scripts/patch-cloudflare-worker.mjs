@@ -10,37 +10,18 @@ const stubPath = join(process.cwd(), 'scripts', 'node-stubs.js');
 
 /**
  * esbuild Plugin to dynamically stub unsupported Node.js modules.
- * This redirects any legacy or non-edge-compatible imports (like v8, inspector, os) 
- * to our safe node-stubs.js file.
  */
 const nodeStubPlugin = {
   name: 'node-stub',
   setup(build) {
-    // List of modules natively supported by Cloudflare Workers (nodejs_compat flag)
     const safeModules = new Set([
-      'async_hooks',
-      'buffer',
-      'crypto',
-      'diagnostics_channel',
-      'events',
-      'path',
-      'process',
-      'stream',
-      'string_decoder',
-      'util',
-      'url',
-      'timers',
-      'perf_hooks',
-      'readline',
-      'tty',
-      'zlib',
-      'assert',
-      'module',
-      'querystring',
-      'string_decoder'
+      'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
+      'path', 'process', 'stream', 'string_decoder', 'util', 'url',
+      'timers', 'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
+      'module', 'querystring'
     ]);
 
-    // Match both 'node:module' and 'module' formats
+    // Handle all node:* and bare Node modules
     build.onResolve({ filter: /^(node:)?([a-z_][a-z0-9_]*)$/ }, (args) => {
       const isNodeModule = args.path.startsWith('node:') || 
         ['fs', 'os', 'vm', 'v8', 'inspector', 'child_process', 'cluster', 'dns', 'http', 'https', 'net', 'tls', 'dgram', 'readline', 'repl', 'tty', 'zlib', 'crypto', 'path', 'util', 'stream', 'events', 'buffer', 'process'].includes(args.path);
@@ -48,17 +29,12 @@ const nodeStubPlugin = {
       if (!isNodeModule) return null;
 
       const moduleName = args.path.replace(/^node:/, '');
-      
-      // If NOT in the safe list, redirect to our universal stub
       if (!safeModules.has(moduleName)) {
         return { path: stubPath };
       }
-
-      // If IT IS in the safe list, let esbuild treat it as an external import
       return { path: args.path, external: true };
     });
 
-    // Ensure cloudflare:* imports remain external
     build.onResolve({ filter: /^cloudflare:.*$/ }, (args) => {
       return { path: args.path, external: true };
     });
@@ -68,37 +44,45 @@ const nodeStubPlugin = {
 async function runPatch() {
   try {
     console.log(`Reading worker from: ${sourcePath}`);
-    const workerCode = readFileSync(sourcePath, 'utf-8');
+    let workerCode = readFileSync(sourcePath, 'utf-8');
 
-    console.log('Injecting logic in worker code...');
-    let patchedCode = workerCode;
+    console.log('Promoting dynamic imports to static for deep bundling...');
+    // Replace: const { handler } = await import("./server-functions/default/handler.mjs");
+    // With: import { handler } from "./server-functions/default/handler.mjs";
+    const dynamicImportRegex = /const\s+\{\s*handler\s*\}\s+=\s+await\s+import\(\"\.\/server-functions\/default\/handler\.mjs\"\);/;
+    if (dynamicImportRegex.test(workerCode)) {
+      workerCode = 'import { handler as _handler } from "./server-functions/default/handler.mjs";\n' + workerCode;
+      workerCode = workerCode.replace(dynamicImportRegex, 'const handler = _handler;');
+      console.log('Successfully promoted dynamic handler to static import.');
+    }
 
-    // Inject ASSETS passthrough at the start of the fetch handler
-    const fetchStartIdx = patchedCode.indexOf('async fetch(request, env, ctx) {');
+    console.log('Injecting ASSETS passthrough logic...');
+    // Static asset passthrough
+    const fetchStartIdx = workerCode.indexOf('async fetch(request, env, ctx) {');
     if (fetchStartIdx !== -1) {
-      const insertionPoint = patchedCode.indexOf('{', fetchStartIdx) + 1;
+      const insertionPoint = workerCode.indexOf('{', fetchStartIdx) + 1;
       const passthroughLogic = `
-        // Static asset passthrough
         const url = new URL(request.url);
         if (url.pathname.startsWith('/_next/static/') || url.pathname.includes('.')) {
           return env.ASSETS.fetch(request);
         }
 `;
-      patchedCode = patchedCode.slice(0, insertionPoint) + passthroughLogic + patchedCode.slice(insertionPoint);
+      workerCode = workerCode.slice(0, insertionPoint) + passthroughLogic + workerCode.slice(insertionPoint);
     }
 
-    // Wrap the main handler in a try/catch
-    patchedCode = patchedCode.replace(
+    // Wrap in try/catch
+    workerCode = workerCode.replace(
       /return handler\(reqOrResp, env, ctx, request\.signal\);/,
       `try {
                 return await handler(reqOrResp, env, ctx, request.signal);
             } catch (err) {
-                console.error('Next.js Runtime Error:', err);
+                console.error('Deep Runtime Exception:', err);
                 return new Response(JSON.stringify({
-                    error: 'Runtime Exception',
+                    status: 'error',
+                    code: 'RUNTIME_EXCEPTION',
                     message: err.message,
                     stack: err.stack,
-                    tip: 'This usually occurs when an incompatible Node.js API is called at runtime.'
+                    diagnostics: 'If this is a "No such module" error, the stubbing layer failed to catch a dynamic dependency.'
                 }, null, 2), { 
                     status: 500,
                     headers: { 'Content-Type': 'application/json' }
@@ -106,9 +90,9 @@ async function runPatch() {
             }`
     );
 
-    writeFileSync(tempPatchedPath, patchedCode);
+    writeFileSync(tempPatchedPath, workerCode);
 
-    console.log('Bundling worker with Robust Node-Stub Plugin...');
+    console.log('Deep Bundling everything into a single _worker.js...');
     const banner = 'import { createRequire } from "node:module"; const require = createRequire("file:///worker.js");';
     
     await build({
@@ -119,6 +103,7 @@ async function runPatch() {
       target: 'esnext',
       platform: 'node',
       plugins: [nodeStubPlugin],
+      resolveExtensions: ['.mjs', '.js', '.ts'],
       loader: {
         '.wasm': 'dataurl',
       },
@@ -128,33 +113,32 @@ async function runPatch() {
       define: {
         'process.env.NODE_ENV': '"production"',
       },
+      alias: {
+        // Force resolve all node:* to the plugin/stub
+        'node:fs': stubPath,
+      },
       minify: false,
       logLevel: 'info',
     });
 
     console.log(`Bundled worker saved to: ${destPath}`);
 
-    // Copy static files
-    console.log('Copying static HTML files...');
-    const serverAppDir = join(process.cwd(), '.next', 'server', 'app');
-    if (existsSync(serverAppDir)) {
-      const files = readdirSync(serverAppDir, { recursive: true });
-      files.forEach(file => {
-        if (file.endsWith('.html')) {
-          const src = join(serverAppDir, file);
-          if (statSync(src).isFile()) {
-            const dest = join(assetsDir, file);
-            const destDir = dirname(dest);
-            if (!existsSync(destDir)) mkdirSync(destDir, { recursive: true });
-            copyFileSync(src, dest);
-          }
-        }
-      });
+    // Final Verification
+    const finalContent = readFileSync(destPath, 'utf-8');
+    if (finalContent.includes('import(')) {
+      console.warn('Warning: Final bundle still contains dynamic imports. Deep stubbing might be partial.');
     }
+    const forbidden = ['node:fs', 'node:v8', 'node:inspector', 'node:vm'];
+    forbidden.forEach(mod => {
+      if (finalContent.includes(mod)) {
+        console.error(`FATAL ERROR: ${mod} found in the final bundle!`);
+        process.exit(1);
+      }
+    });
 
-    console.log('Worker patched and bundled successfully.');
+    console.log('Worker deeply patched and bundled successfully.');
   } catch (error) {
-    console.error('Patching/Bundling process failed:', error);
+    console.error('Deep Patching process failed:', error);
     process.exit(1);
   }
 }

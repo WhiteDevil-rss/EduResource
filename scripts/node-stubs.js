@@ -1,43 +1,48 @@
 /**
- * Comprehensive stub file for unsupported Node.js modules in Cloudflare Workers.
- * This file uses a Proxy to provide safe no-op or empty values for any property access.
+ * Comprehensive, Universal Stub for Unsupported Node.js Modules in Cloudflare Workers.
  */
 
 const noop = () => {};
 const emptyObject = {};
 const emptyArray = [];
 
-// A base proxy that returns itself/noop for any property access
+// A base proxy that behaves like an object, a function, or a class.
 const createStub = (name = 'Stub') => {
-  const stub = new Proxy(noop, {
+  const handler = {
     get: (target, prop) => {
-      // Common properties that should return specific types
-      if (prop === 'promises') return stub;
+      // Special cases for common Node.js properties
+      if (prop === 'promises') return createStub(`${name}.promises`);
       if (prop === 'constants') return emptyObject;
       if (prop === 'types') return emptyObject;
       if (prop === 'codes') return emptyObject;
-      if (prop === 'AsyncLocalStorage') return class { enterWith() {}; run(s, f) { return f(); }; getStore() { return {}; }; };
+      if (prop === 'AsyncLocalStorage') {
+        return class { 
+          enterWith() {} 
+          run(s, f) { return f(); } 
+          getStore() { return {}; } 
+        };
+      }
       
-      // If someone checks for standard Node properties
+      // Standard Node environment details
       if (prop === 'cwd') return () => '/';
       if (prop === 'env') return process.env || {};
       if (prop === 'platform') return 'linux';
       if (prop === 'arch') return 'x64';
       if (prop === 'version') return 'v20.0.0';
-      
-      return stub;
+      if (prop === 'isatty') return () => false;
+
+      // For everything else, return a recursion of the stub
+      return createStub(`${name}.${String(prop)}`);
     },
-    apply: () => {
-      // If called as a function, return undefined or false for 'sync' checks
-      return undefined;
-    }
-  });
-  return stub;
+    apply: () => undefined,
+    construct: () => ({})
+  };
+  return new Proxy(noop, handler);
 };
 
-const universalStub = createStub();
+const universalStub = createStub('UniversalStub');
 
-// Explicitly export common names to avoid "No matching export" build errors
+// Explicitly export common names to satisfy both CJS and ESM consumers
 export const promises = universalStub;
 export const constants = emptyObject;
 export const watch = noop;
@@ -53,11 +58,8 @@ export const type = () => 'Darwin';
 export const release = () => '23.0.0';
 export const arch = () => 'x64';
 export const platform = () => 'darwin';
-export const hostname = () => 'edge';
-export const networkInterfaces = () => ({});
 export const userInfo = () => ({ username: 'edge' });
 export const cpus = () => emptyArray;
-export const heapStats = () => emptyObject;
 export const getHeapStatistics = () => emptyObject;
 
 // Export as default for 'import x from "node:x"'
