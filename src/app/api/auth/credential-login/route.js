@@ -5,9 +5,10 @@ import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
 import {
   createAuditRecord,
-  findUserRecordByLoginId,
+  findUserRecordByEmail,
   touchUserLogin,
 } from '@/lib/server-data'
+import { adminAuth } from '@/lib/firebase-admin'
 
 function getFriendlyCredentialMessage(error) {
   const message = String(error?.message || '')
@@ -16,7 +17,7 @@ function getFriendlyCredentialMessage(error) {
     message.includes('INVALID_PASSWORD') ||
     message.includes('EMAIL_NOT_FOUND')
   ) {
-    return 'Invalid login ID or password.'
+    return 'Invalid email or password.'
   }
 
   if (message.includes('USER_DISABLED')) {
@@ -31,31 +32,65 @@ export async function POST(request) {
     assertSameOrigin(request)
 
     const body = await request.json()
-    const loginId = String(body?.loginId || '').trim()
+    const email = String(body?.email || '').trim().toLowerCase()
     const password = String(body?.password || '')
+    const googleIdToken = String(body?.googleIdToken || '').trim()
 
-    if (!loginId || !password) {
+    if (!email || !password) {
       return withNoStore(
         NextResponse.json(
-          { error: 'Login ID and password are required.' },
+          { error: 'Email and password are required.' },
           { status: 400 }
         )
       )
     }
 
-    const record = await findUserRecordByLoginId(loginId)
-    if (!record || record.user.authProvider !== 'credentials') {
+    // Verify Gmail ID via Google authentication
+    if (!email.endsWith('@gmail.com')) {
       return withNoStore(
-        NextResponse.json({ error: 'Invalid login ID or password.' }, { status: 401 })
+        NextResponse.json(
+          { error: 'Only Gmail addresses are allowed for login.' },
+          { status: 400 }
+        )
       )
     }
 
-    if (!['faculty', 'admin'].includes(record.user.role)) {
+    if (!googleIdToken) {
       return withNoStore(
         NextResponse.json(
-          { error: 'Credential sign-in is reserved for faculty and admin accounts.' },
-          { status: 403 }
+          { error: 'Invalid or unverified Gmail ID' },
+          { status: 401 }
         )
+      )
+    }
+
+    // Verify the Google ID token
+    let decodedToken
+    try {
+      decodedToken = await adminAuth.verifyIdToken(googleIdToken)
+    } catch (error) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'Invalid or unverified Gmail ID' },
+          { status: 401 }
+        )
+      )
+    }
+
+    // Ensure the token's email matches the provided email
+    if (decodedToken.email.toLowerCase() !== email) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'Invalid or unverified Gmail ID' },
+          { status: 401 }
+        )
+      )
+    }
+
+    const record = await findUserRecordByEmail(email)
+    if (!record || record.user.authProvider !== 'credentials') {
+      return withNoStore(
+        NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
       )
     }
 
@@ -65,10 +100,24 @@ export async function POST(request) {
       )
     }
 
-    const result = await signInWithPassword(record.user.email, password)
+    let result
+    try {
+      result = await signInWithPassword(record.user.email, password)
+    } catch (error) {
+      const message = String(error?.message || '')
+      if (message.includes('INVALID_PASSWORD')) {
+        return withNoStore(
+          NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
+        )
+      }
+      return withNoStore(
+        NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
+      )
+    }
+
     if (!result?.uid || result.uid !== record.user.uid) {
       return withNoStore(
-        NextResponse.json({ error: 'Invalid login ID or password.' }, { status: 401 })
+        NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
       )
     }
 
@@ -88,7 +137,6 @@ export async function POST(request) {
       role: record.user.role,
       status: record.user.status,
       authProvider: 'credentials',
-      loginId: record.user.loginId,
       name: record.user.displayName || null,
       exp: Date.now() + SESSION_MAX_AGE_MS,
     })

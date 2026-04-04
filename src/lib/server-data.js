@@ -549,6 +549,57 @@ export async function resolveStudentGoogleUser(decodedToken) {
   return sanitizeUserData(decodedToken.uid, payload)
 }
 
+export async function createStudentAccount({ email, password, displayName, googleIdToken }) {
+  assertPrivilegedFirebaseAccess()
+
+  const normalizedEmail = normalizeEmail(email)
+  if (!normalizedEmail) {
+    throw new Error('Invalid email address.')
+  }
+
+  const existingByEmail = await findUserRecordByEmail(normalizedEmail)
+  if (existingByEmail) {
+    throw new Error('An account with this email already exists.')
+  }
+
+  const createdAt = nowIso()
+  const authUser = await adminAuth.createUser({
+    email: normalizedEmail,
+    password,
+    displayName: displayName || undefined,
+    disabled: false,
+  })
+
+  const payload = {
+    uid: authUser.uid,
+    displayName: displayName || normalizedEmail.split('@')[0],
+    email: normalizedEmail,
+    emailLower: normalizedEmail,
+    role: 'student',
+    status: 'active',
+    authProvider: 'credentials',
+    pending: false,
+    selfRegistered: true,
+    createdAt,
+    updatedAt: createdAt,
+    lastLoginAt: null,
+  }
+
+  await adminDb.collection(USERS_COLLECTION).doc(authUser.uid).set(payload)
+  await createAuditRecord({
+    actorUid: authUser.uid,
+    actorRole: 'student',
+    action: 'user.student.self-registered',
+    targetId: authUser.uid,
+    targetRole: 'student',
+    message: `Student account created for ${normalizedEmail}.`,
+  })
+
+  return {
+    user: sanitizeUserData(authUser.uid, payload),
+  }
+}
+
 export async function createResourceRecord({ session, payload }) {
   assertPrivilegedFirebaseAccess()
 

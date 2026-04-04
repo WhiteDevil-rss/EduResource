@@ -104,7 +104,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginWithCredentials = async (loginId, password) => {
+  const loginWithCredentials = async (email, password, googleIdToken) => {
     try {
       setIsAuthenticating(true);
 
@@ -114,8 +114,9 @@ export function AuthProvider({ children }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          loginId: String(loginId || "").trim(),
+          email: String(email || "").trim(),
           password: String(password || ""),
+          googleIdToken: String(googleIdToken || ""),
         }),
       });
 
@@ -160,7 +161,6 @@ export function AuthProvider({ children }) {
     authProvider,
     loading: loading || isAuthenticating,
     isAuthenticating,
-    signInWithGoogleStudent,
     loginWithCredentials,
     logout,
   };
