@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -68,13 +69,9 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const signInWithGoogleStudent = async () => {
+  const loginWithGoogle = async (idToken) => {
     try {
       setIsAuthenticating(true);
-
-      const credential = await signInWithPopup(auth, studentGoogleProvider);
-      const idToken = await credential.user.getIdToken(true);
-
       const response = await fetch("/api/auth/student-google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,28 +80,59 @@ export function AuthProvider({ children }) {
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        await signOut(auth).catch(() => {});
-        throw new Error(payload?.error || "Google student sign-in failed.");
+        throw new Error(payload?.error || "Google sign-in failed.");
       }
 
+      const nextRole = payload?.role || null;
       const nextSession = {
         user: payload?.user || null,
-        role: payload?.role || "student",
+        role: nextRole,
         status: payload?.user?.status || "active",
         authProvider: "google",
       };
 
       applySession(nextSession);
-      router.replace("/dashboard/student");
+      if (typeof window !== "undefined") {
+        window.location.replace(`/dashboard/${nextRole}`);
+        return;
+      }
+      router.replace(`/dashboard/${nextRole}`);
     } catch (error) {
-      throw new Error(error?.message || "Google student sign-in failed.");
+      throw new Error(error?.message || "Google sign-in failed.");
     } finally {
       setIsAuthenticating(false);
       setLoading(false);
     }
   };
 
-  const loginWithCredentials = async (email, password, googleIdToken) => {
+  const signInWithGoogleStudent = async () => {
+    try {
+      setIsAuthenticating(true);
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
+      
+      // Try popup first, if blocked or fails, use redirect
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const idToken = await result.user.getIdToken();
+        await loginWithGoogle(idToken);
+      } catch (error) {
+        if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+          await signInWithRedirect(auth, provider);
+        } else {
+          throw error;
+        }
+      }
+    } catch (error) {
+      if (error.code !== 'auth/popup-closed-by-user') {
+        throw new Error(error?.message || "Google student sign-in failed.");
+      }
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const loginWithCredentials = async (email, password) => {
     try {
       setIsAuthenticating(true);
 
@@ -116,7 +144,6 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({
           email: String(email || "").trim(),
           password: String(password || ""),
-          googleIdToken: String(googleIdToken || ""),
         }),
       });
 
@@ -138,6 +165,11 @@ export function AuthProvider({ children }) {
       }
 
       applySession(nextSession);
+      if (typeof window !== 'undefined') {
+        window.location.replace(`/dashboard/${nextRole}`);
+        return;
+      }
+
       router.replace(`/dashboard/${nextRole}`);
     } catch (error) {
       throw new Error(error?.message || "Credential sign-in failed.");
@@ -162,6 +194,8 @@ export function AuthProvider({ children }) {
     loading: loading || isAuthenticating,
     isAuthenticating,
     loginWithCredentials,
+    loginWithGoogle,
+    signInWithGoogleStudent,
     logout,
   };
 

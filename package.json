@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack .",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "cf:build": "opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler dev",
     "deploy": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler pages deploy .open-next/assets",
@@ -16,7 +16,7 @@
   "dependencies": {
     "cloudinary": "^2.5.1",
     "firebase": "^12.11.0",
-    "firebase-admin": "^10.3.0",
+    "firebase-admin": "^13.7.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.460.0",
     "next": "^16.2.2",
@@ -25,11 +25,19 @@
     "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.18.0",
     "eslint": "^9.22.0",
     "eslint-config-next": "^16.2.2",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "typescript": "^5.9.3",
     "wrangler": "^4.80.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.2.4",
+    "jsonwebtoken": "^9.0.0",
+    "http-proxy-agent": "^7.0.0",
+    "teeny-request": "^9.0.0",
+    "retry-request": "^7.0.3"
   }
 }

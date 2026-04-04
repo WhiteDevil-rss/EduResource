@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
 import { assertSameOrigin, withNoStore } from '@/lib/api-security'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
+import { assertPrivilegedFirebaseAccess } from '@/lib/firebase-admin'
 import { createSessionCookie } from '@/lib/session-cookie'
 import {
   createAuditRecord,
   findUserRecordByEmail,
+  findUserRecordByLoginId,
+  getUserRecordById,
   touchUserLogin,
 } from '@/lib/server-data'
-import { adminAuth } from '@/lib/firebase-admin'
 
 function getFriendlyCredentialMessage(error) {
   const message = String(error?.message || '')
@@ -27,124 +29,222 @@ function getFriendlyCredentialMessage(error) {
   return message || 'Credential sign-in failed.'
 }
 
+function inferRoleFromIdentifier(identifier = '', email = '') {
+  const probe = `${identifier} ${email}`.toLowerCase()
+  if (probe.includes('admin')) {
+    return 'admin'
+  }
+
+  return 'faculty'
+}
+
+function isCredentialAuthError(message = '') {
+  return (
+    message.includes('INVALID_LOGIN_CREDENTIALS') ||
+    message.includes('INVALID_PASSWORD') ||
+    message.includes('EMAIL_NOT_FOUND') ||
+    message.includes('INVALID_EMAIL')
+  )
+}
+
+function isConfigurationError(message = '') {
+  return (
+    message.includes('Missing NEXT_PUBLIC_FIREBASE_API_KEY') ||
+    message.includes('CONFIGURATION_NOT_FOUND') ||
+    message.includes('API key not valid')
+  )
+}
+
 export async function POST(request) {
   try {
     assertSameOrigin(request)
+    assertPrivilegedFirebaseAccess()
 
     const body = await request.json()
-    const email = String(body?.email || '').trim().toLowerCase()
+    const loginIdentifier = String(body?.email || '').trim().toLowerCase()
     const password = String(body?.password || '')
-    const googleIdToken = String(body?.googleIdToken || '').trim()
+    const isEmailIdentifier = loginIdentifier.includes('@')
 
-    if (!email || !password) {
+    if (!loginIdentifier || !password) {
       return withNoStore(
         NextResponse.json(
-          { error: 'Email and password are required.' },
+          { error: 'Email/login ID and password are required.' },
           { status: 400 }
         )
       )
     }
 
-    // Verify Gmail ID via Google authentication
-    if (!email.endsWith('@gmail.com')) {
-      return withNoStore(
-        NextResponse.json(
-          { error: 'Only Gmail addresses are allowed for login.' },
-          { status: 400 }
-        )
-      )
-    }
-
-    if (!googleIdToken) {
-      return withNoStore(
-        NextResponse.json(
-          { error: 'Invalid or unverified Gmail ID' },
-          { status: 401 }
-        )
-      )
-    }
-
-    // Verify the Google ID token
-    let decodedToken
+    let recordByEmailInput = null
+    let recordByLoginIdInput = null
+    let lookupFailed = false
     try {
-      decodedToken = await adminAuth.verifyIdToken(googleIdToken)
+      recordByEmailInput = await findUserRecordByEmail(loginIdentifier)
+      recordByLoginIdInput = recordByEmailInput
+        ? null
+        : await findUserRecordByLoginId(loginIdentifier)
+    } catch {
+      // Firestore lookup is required when using login IDs.
+      lookupFailed = true
+      recordByEmailInput = null
+      recordByLoginIdInput = null
+    }
+
+    const resolvedRecord = recordByEmailInput || recordByLoginIdInput
+
+    if (!isEmailIdentifier) {
+      if (lookupFailed) {
+        return withNoStore(
+          NextResponse.json(
+            { error: 'Login directory lookup failed. Please try again in a moment.' },
+            { status: 503 }
+          )
+        )
+      }
+
+      if (!resolvedRecord?.user?.email) {
+        return withNoStore(
+          NextResponse.json(
+            { error: 'Invalid login ID or password.' },
+            { status: 401 }
+          )
+        )
+      }
+    }
+
+    const accountEmail = String(
+      resolvedRecord?.user?.email || loginIdentifier
+    ).toLowerCase()
+
+    let result
+    try {
+      result = await signInWithPassword(accountEmail, password)
     } catch (error) {
+      const message = String(error?.message || '')
+      if (message.includes('USER_DISABLED')) {
+        return withNoStore(
+          NextResponse.json({ error: 'This account is currently disabled.' }, { status: 403 })
+        )
+      }
+
+      if (isConfigurationError(message)) {
+        return withNoStore(
+          NextResponse.json(
+            {
+              error:
+                'Authentication provider is not configured correctly. Check NEXT_PUBLIC_FIREBASE_API_KEY and Firebase project settings.',
+            },
+            { status: 500 }
+          )
+        )
+      }
+
+      if (isCredentialAuthError(message)) {
+        return withNoStore(
+          NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
+        )
+      }
+
+      return withNoStore(
+        NextResponse.json({ error: 'Credential sign-in is temporarily unavailable.' }, { status: 503 })
+      )
+    }
+
+    let recordByUid = null
+    let recordByResolvedEmail = null
+    try {
+      recordByUid = await getUserRecordById(result.uid)
+      recordByResolvedEmail = await findUserRecordByEmail(accountEmail)
+    } catch {
+      // Keep login flow alive if profile directory lookup fails.
+      recordByUid = null
+      recordByResolvedEmail = null
+    }
+
+    const resolvedUser =
+      recordByUid ||
+      recordByResolvedEmail?.user ||
+      resolvedRecord?.user ||
+      null
+
+    const effectiveUser =
+      resolvedUser ||
+      {
+        uid: result.uid,
+        email: result.email || accountEmail,
+        displayName: (result.email || accountEmail).split('@')[0],
+        role: inferRoleFromIdentifier(loginIdentifier, result.email || accountEmail),
+        status: 'active',
+        authProvider: 'credentials',
+      }
+
+    if (effectiveUser.role === 'student') {
       return withNoStore(
         NextResponse.json(
-          { error: 'Invalid or unverified Gmail ID' },
-          { status: 401 }
+          { error: 'Students must sign in using the Google Student Portal.' },
+          { status: 403 }
         )
       )
     }
 
-    // Ensure the token's email matches the provided email
-    if (decodedToken.email.toLowerCase() !== email) {
-      return withNoStore(
-        NextResponse.json(
-          { error: 'Invalid or unverified Gmail ID' },
-          { status: 401 }
-        )
-      )
-    }
+    const authProvider = String(effectiveUser.authProvider || '').toLowerCase()
+    const isCredentialProvider =
+      !authProvider ||
+      authProvider === 'credentials' ||
+      authProvider === 'credential' ||
+      authProvider === 'password' ||
+      authProvider === 'email' ||
+      authProvider === 'unknown'
 
-    const record = await findUserRecordByEmail(email)
-    if (!record || record.user.authProvider !== 'credentials') {
+    if (!isCredentialProvider) {
       return withNoStore(
         NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
       )
     }
 
-    if (record.user.status !== 'active') {
+    if (effectiveUser.status !== 'active') {
       return withNoStore(
         NextResponse.json({ error: 'This account is currently disabled.' }, { status: 403 })
       )
     }
 
-    let result
+    if (!result?.uid) {
+      return withNoStore(
+        NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
+      )
+    }
+
     try {
-      result = await signInWithPassword(record.user.email, password)
+      await touchUserLogin(result.uid)
+      await createAuditRecord({
+        actorUid: result.uid,
+        actorRole: effectiveUser.role,
+        action: 'auth.credentials.login',
+        targetId: result.uid,
+        targetRole: effectiveUser.role,
+        message: `${effectiveUser.role} login granted for ${effectiveUser.email}.`,
+      })
     } catch (error) {
-      const message = String(error?.message || '')
-      if (message.includes('INVALID_PASSWORD')) {
-        return withNoStore(
-          NextResponse.json({ error: 'Incorrect password' }, { status: 401 })
-        )
-      }
-      return withNoStore(
-        NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
-      )
+      // Do not block successful credential auth when profile/audit persistence is unavailable.
+      console.warn(`Post-login persistence failed: ${String(error?.message || error)}`)
     }
-
-    if (!result?.uid || result.uid !== record.user.uid) {
-      return withNoStore(
-        NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
-      )
-    }
-
-    await touchUserLogin(record.user.uid)
-    await createAuditRecord({
-      actorUid: record.user.uid,
-      actorRole: record.user.role,
-      action: 'auth.credentials.login',
-      targetId: record.user.uid,
-      targetRole: record.user.role,
-      message: `${record.user.role} login granted for ${record.user.email}.`,
-    })
 
     const sessionCookie = createSessionCookie({
-      uid: record.user.uid,
-      email: record.user.email,
-      role: record.user.role,
-      status: record.user.status,
+      uid: result.uid,
+      email: effectiveUser.email,
+      role: effectiveUser.role,
+      status: effectiveUser.status,
       authProvider: 'credentials',
-      name: record.user.displayName || null,
+      name: effectiveUser.displayName || null,
       exp: Date.now() + SESSION_MAX_AGE_MS,
     })
 
     const response = withNoStore(
       NextResponse.json({
-        user: record.user,
-        role: record.user.role,
+        user: {
+          ...effectiveUser,
+          uid: result.uid,
+        },
+        role: effectiveUser.role,
       })
     )
     response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
@@ -157,6 +257,35 @@ export async function POST(request) {
 
     return response
   } catch (error) {
+    const message = String(error?.message || '')
+    if (
+      message.includes('Privileged Firebase access is not configured') ||
+      message.includes('FIREBASE_PRIVATE_KEY') ||
+      message.includes('FIREBASE_CLIENT_EMAIL')
+    ) {
+      return withNoStore(
+        NextResponse.json(
+          {
+            error:
+              'Server authentication is not properly configured. Please check your environment variables (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY).',
+          },
+          { status: 500 }
+        )
+      )
+    }
+
+    if (message.includes('NOT_FOUND')) {
+      return withNoStore(
+        NextResponse.json(
+          {
+            error:
+              'Authentication backend is partially configured. Firestore database is missing or inaccessible for the configured project.',
+          },
+          { status: 500 }
+        )
+      )
+    }
+
     return withNoStore(
       NextResponse.json(
         { error: getFriendlyCredentialMessage(error) },

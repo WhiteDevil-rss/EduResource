@@ -5,7 +5,7 @@ import { join } from 'path';
 const workerPath = join(process.cwd(), '.open-next', 'assets', 'worker.js');
 
 // Read the worker file
-let workerCode = readFileSync(workerPath, 'utf-8');
+const workerCode = readFileSync(workerPath, 'utf-8');
 
 // Add any necessary patches here
 // For example, if you need to add some code to the worker

@@ -16,13 +16,16 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   GoogleAuthProvider,
-  signInWithPopup,
+  getRedirectResult,
+  signInWithRedirect,
   signOut,
 } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
+
+const PENDING_GOOGLE_EMAIL_KEY = 'eduresourcehub.register.pending-google-email'
 
 const footerLinks = [
   { label: 'Privacy Policy', href: '/login' },
@@ -69,6 +72,63 @@ export default function Register() {
     }
   }, [loading, role, router, user])
 
+  useEffect(() => {
+    let isActive = true
+
+    const restoreGoogleVerification = async () => {
+      try {
+        const credential = await getRedirectResult(auth)
+        if (!isActive || !credential?.user) {
+          return
+        }
+
+        const pendingEmail =
+          typeof window !== 'undefined'
+            ? window.sessionStorage.getItem(PENDING_GOOGLE_EMAIL_KEY)
+            : ''
+        const userEmail = credential.user.email?.toLowerCase() || ''
+        const idToken = await credential.user.getIdToken(true)
+
+        if (!pendingEmail) {
+          setFormError('Please verify your Gmail ID again.')
+          await signOut(auth).catch(() => {})
+          return
+        }
+
+        if (!userEmail || !userEmail.endsWith('@gmail.com')) {
+          await signOut(auth).catch(() => {})
+          setFormError('Invalid or unverified Gmail ID')
+          return
+        }
+
+        if (userEmail !== pendingEmail) {
+          await signOut(auth).catch(() => {})
+          setFormError('Google account does not match the entered Gmail ID.')
+          return
+        }
+
+        setEmail(userEmail)
+        setGoogleIdToken(idToken)
+        setGoogleVerified(true)
+        setFormSuccess('Gmail ID verified successfully. Now set your password.')
+      } catch {
+        if (isActive) {
+          setFormError('Invalid or unverified Gmail ID')
+        }
+      } finally {
+        if (typeof window !== 'undefined') {
+          window.sessionStorage.removeItem(PENDING_GOOGLE_EMAIL_KEY)
+        }
+      }
+    }
+
+    restoreGoogleVerification()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
+
   const handleGoogleVerification = async () => {
     setFormError('')
     setFormSuccess('')
@@ -88,27 +148,15 @@ export default function Register() {
     try {
       const provider = new GoogleAuthProvider()
       provider.setCustomParameters({ prompt: 'select_account' })
-      const result = await signInWithPopup(auth, provider)
-      const idToken = await result.user.getIdToken(true)
-      const userEmail = result.user.email?.toLowerCase()
-
-      if (!userEmail || !userEmail.endsWith('@gmail.com')) {
-        await signOut(auth).catch(() => {})
-        setFormError('Invalid or unverified Gmail ID')
-        return
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem(PENDING_GOOGLE_EMAIL_KEY, normalizedEmail)
       }
 
-      if (userEmail !== normalizedEmail) {
-        await signOut(auth).catch(() => {})
-        setFormError('Google account does not match the entered Gmail ID.')
-        return
-      }
-
-      setEmail(userEmail)
-      setGoogleIdToken(idToken)
-      setGoogleVerified(true)
-      setFormSuccess('Gmail ID verified successfully. Now set your password.')
+      await signInWithRedirect(auth, provider)
     } catch (error) {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(PENDING_GOOGLE_EMAIL_KEY)
+      }
       setFormError('Invalid or unverified Gmail ID')
     } finally {
       setIsVerifying(false)

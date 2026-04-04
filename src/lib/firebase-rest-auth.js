@@ -133,6 +133,25 @@ export async function signInWithPassword(email, password) {
     throw new Error('INVALID_LOGIN_CREDENTIALS')
   }
 
-  return { uid, email: payload?.email || email }
+  return { uid, email: payload?.email || email, idToken: payload?.idToken }
+}
+
+export async function updateFirebasePassword(idToken, newPassword) {
+  const apiKey = requireEnv('NEXT_PUBLIC_FIREBASE_API_KEY', FIREBASE_API_KEY)
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idToken,
+        password: newPassword,
+        returnSecureToken: true,
+      }),
+      cache: 'no-store',
+    }
+  )
+
+  return parseJsonResponse(response)
 }
 

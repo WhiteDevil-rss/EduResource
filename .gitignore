@@ -19,6 +19,7 @@
 .firebase/
 *-debug.log*
 .firebaserc
+eduresourcehub-73f9b-firebase-adminsdk-fbsvc-ce5cd52668.json
 
 # Local env files
 .env*.local
@@ -35,3 +36,6 @@ next-env.d.ts
 .DS_Store
 *.pem
 .gemini/
+.wrangler/
+.github/
+.scripts/

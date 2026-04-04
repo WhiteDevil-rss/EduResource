@@ -17,6 +17,17 @@ export async function GET(request) {
 
     return withNoStore(NextResponse.json({ resources: visibleResources }))
   } catch (error) {
+    const message = String(error?.message || '')
+    if (message.includes('NOT_FOUND')) {
+      return withNoStore(
+        NextResponse.json({
+          resources: [],
+          warning:
+            'Resource storage is not configured yet (Firestore not found for the configured project).',
+        })
+      )
+    }
+
     return jsonError(error, 'Could not load faculty resources.')
   }
 }

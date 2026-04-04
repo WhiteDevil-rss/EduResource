@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
 import { assertSameOrigin, withNoStore } from '@/lib/api-security'
 import { createSessionCookie } from '@/lib/session-cookie'
-import { adminAuth } from '@/lib/firebase-admin'
+import { getAdminAuth } from '@/lib/firebase-admin'
 import {
   createAuditRecord,
   createStudentAccount,
@@ -32,6 +32,16 @@ export async function POST(request) {
         NextResponse.json(
           { error: 'Only Gmail addresses are allowed for student registration.' },
           { status: 400 }
+        )
+      )
+    }
+
+    const adminAuth = await getAdminAuth()
+    if (!adminAuth) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'Firebase Admin not configured. Check environment variables.' },
+          { status: 500 }
         )
       )
     }

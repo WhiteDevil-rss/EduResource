@@ -3,9 +3,19 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
+  {
+    ignores: [
+      ".next/**",
+      ".wrangler/**",
+      "out/**",
+      "dist/**",
+      "build/**",
+      "node_modules/**",
+    ],
+  },
   js.configs.recommended,
   {
-    files: ["**/*.{js,jsx}"],
+    files: ["**/*.{js,jsx,mjs,cjs}"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -17,6 +27,9 @@ export default [
       globals: {
         console: "readonly",
         process: "readonly",
+        require: "readonly",
+        module: "readonly",
+        exports: "readonly",
         Buffer: "readonly",
         __dirname: "readonly",
         __filename: "readonly",

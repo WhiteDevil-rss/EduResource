@@ -1,5 +1,5 @@
 import 'server-only'
-import { adminAuth, adminDb, assertPrivilegedFirebaseAccess } from '@/lib/firebase-admin'
+import { getAdminAuth, getAdminDb, assertPrivilegedFirebaseAccess } from '@/lib/firebase-admin'
 
 const USERS_COLLECTION = 'users'
 const RESOURCES_COLLECTION = 'resources'
@@ -37,6 +37,24 @@ function randomIndex(max) {
   const bytes = new Uint32Array(1)
   crypto.getRandomValues(bytes)
   return bytes[0] % max
+}
+
+async function requireAdminAuth() {
+  const adminAuth = await getAdminAuth()
+  if (!adminAuth) {
+    throw new Error('Privileged Firebase access is not configured.')
+  }
+
+  return adminAuth
+}
+
+async function requireAdminDb() {
+  const adminDb = await getAdminDb()
+  if (!adminDb) {
+    throw new Error('Privileged Firebase access is not configured.')
+  }
+
+  return adminDb
 }
 
 function generateTemporaryPassword(length = 14) {
@@ -99,11 +117,13 @@ function sanitizeResourceData(docId, data = {}) {
 }
 
 async function getCollectionRecords(collectionName) {
+  const adminDb = await requireAdminDb()
   const snapshot = await adminDb.collection(collectionName).get()
   return snapshot.docs
 }
 
 export async function getUserRecordById(userId) {
+  const adminDb = await requireAdminDb()
   const snapshot = await adminDb.collection(USERS_COLLECTION).doc(userId).get()
   if (!snapshot.exists) {
     return null
@@ -113,6 +133,7 @@ export async function getUserRecordById(userId) {
 }
 
 export async function getRawUserRecordById(userId) {
+  const adminDb = await requireAdminDb()
   const snapshot = await adminDb.collection(USERS_COLLECTION).doc(userId).get()
   if (!snapshot.exists) {
     return null
@@ -125,6 +146,7 @@ export async function getRawUserRecordById(userId) {
 }
 
 export async function findUserRecordByEmail(email) {
+  const adminDb = await requireAdminDb()
   const emailLower = normalizeEmail(email)
   if (!emailLower) {
     return null
@@ -149,6 +171,7 @@ export async function findUserRecordByEmail(email) {
 }
 
 export async function findUserRecordByLoginId(loginId) {
+  const adminDb = await requireAdminDb()
   const loginIdLower = normalizeLoginId(loginId)
   if (!loginIdLower) {
     return null
@@ -233,6 +256,7 @@ export async function createAuditRecord({
   message,
 }) {
   try {
+    const adminDb = await requireAdminDb()
     await adminDb.collection(AUDIT_COLLECTION).add({
       actorUid: actorUid || null,
       actorRole: actorRole || null,
@@ -264,6 +288,7 @@ async function ensureUniqueLoginId(baseValue) {
 }
 
 export async function touchUserLogin(userId) {
+  const adminDb = await requireAdminDb()
   await adminDb.collection(USERS_COLLECTION).doc(userId).set(
     {
       lastLoginAt: nowIso(),
@@ -275,6 +300,8 @@ export async function touchUserLogin(userId) {
 
 export async function createManagedUser({ role, email, displayName, actorUid, actorRole }) {
   assertPrivilegedFirebaseAccess()
+  const adminAuth = await requireAdminAuth()
+  const adminDb = await requireAdminDb()
 
   const normalizedRole = role === 'admin' ? 'admin' : role === 'faculty' ? 'faculty' : 'student'
   const normalizedEmail = normalizeEmail(email)
@@ -374,6 +401,8 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
 
 export async function setManagedUserStatus({ userId, nextStatus, actorUid, actorRole }) {
   assertPrivilegedFirebaseAccess()
+  const adminAuth = await requireAdminAuth()
+  const adminDb = await requireAdminDb()
 
   const record = await getRawUserRecordById(userId)
   if (!record) {
@@ -417,6 +446,8 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
 
 export async function resetManagedCredentials({ userId, actorUid, actorRole }) {
   assertPrivilegedFirebaseAccess()
+  const adminAuth = await requireAdminAuth()
+  const adminDb = await requireAdminDb()
 
   const record = await getRawUserRecordById(userId)
   if (!record) {
@@ -460,6 +491,7 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole }) {
 
 export async function resolveStudentGoogleUser(decodedToken) {
   assertPrivilegedFirebaseAccess()
+  const adminDb = await requireAdminDb()
 
   const email = normalizeEmail(decodedToken?.email)
   if (!decodedToken?.uid || !email) {
@@ -551,6 +583,8 @@ export async function resolveStudentGoogleUser(decodedToken) {
 
 export async function createStudentAccount({ email, password, displayName, googleIdToken }) {
   assertPrivilegedFirebaseAccess()
+  const adminAuth = await requireAdminAuth()
+  const adminDb = await requireAdminDb()
 
   const normalizedEmail = normalizeEmail(email)
   if (!normalizedEmail) {
@@ -602,6 +636,7 @@ export async function createStudentAccount({ email, password, displayName, googl
 
 export async function createResourceRecord({ session, payload }) {
   assertPrivilegedFirebaseAccess()
+  const adminDb = await requireAdminDb()
 
   const title = String(payload?.title || '').trim()
   const subject = String(payload?.subject || '').trim()
@@ -657,6 +692,7 @@ export async function createResourceRecord({ session, payload }) {
 
 export async function updateResourceRecord({ resourceId, session, payload }) {
   assertPrivilegedFirebaseAccess()
+  const adminDb = await requireAdminDb()
 
   const snapshot = await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).get()
   if (!snapshot.exists) {
@@ -706,6 +742,7 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
 
 export async function deleteResourceRecord({ resourceId, session }) {
   assertPrivilegedFirebaseAccess()
+  const adminDb = await requireAdminDb()
 
   const snapshot = await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).get()
   if (!snapshot.exists) {

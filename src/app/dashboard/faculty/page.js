@@ -57,6 +57,12 @@ export default function FacultyDashboard() {
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const deferredSearch = useDeferredValue(searchTerm)
 
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordLoading, setPasswordLoading] = useState(false)
+
   const loadResources = async ({ background = false } = {}) => {
     if (background) {
       setRefreshing(true)
@@ -177,6 +183,43 @@ export default function FacultyDashboard() {
       await loadResources({ background: true })
     } catch (error) {
       toast.error(error.message || 'Could not delete the resource.')
+    }
+  }
+
+  const handlePasswordChange = async (event) => {
+    event.preventDefault()
+
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match.')
+      return
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters long.')
+      return
+    }
+
+    setPasswordLoading(true)
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password.')
+      }
+
+      toast.success('Password updated successfully.')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setPasswordLoading(false)
     }
   }
 
@@ -416,7 +459,52 @@ export default function FacultyDashboard() {
 
               <article className="support-card" id="faculty-settings">
                 <span className="metric-card__label">Security Controls</span>
-                <p>Faculty access is created and maintained only by the admin panel. Password resets, activation changes, and privilege adjustments are handled centrally.</p>
+                <form className="modal-form" style={{ marginTop: '1rem' }} onSubmit={handlePasswordChange}>
+                  <div className="auth-field">
+                    <label htmlFor="current-password">Current Password</label>
+                    <input
+                      id="current-password"
+                      type="password"
+                      className="auth-textarea"
+                      placeholder="••••••••"
+                      required
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="new-password">New Password</label>
+                    <input
+                      id="new-password"
+                      type="password"
+                      className="auth-textarea"
+                      placeholder="Min. 6 characters"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="auth-field">
+                    <label htmlFor="confirm-password">Confirm New Password</label>
+                    <input
+                      id="confirm-password"
+                      type="password"
+                      className="auth-textarea"
+                      placeholder="Confirm your new password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    className="button-primary" 
+                    style={{ width: '100%', marginTop: '0.5rem' }}
+                    disabled={passwordLoading}
+                  >
+                    {passwordLoading ? 'Updating...' : 'Update Password'}
+                  </button>
+                </form>
               </article>
             </div>
           </section>
