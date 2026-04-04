@@ -55,7 +55,7 @@ console.log('Bundling worker with esbuild...');
 try {
   // Use platform: node to resolve built-ins, but externalize them so Cloudflare handles them
   // We use a banner to provide 'require' compatibility
-  const banner = 'import { createRequire } from "node:module"; const require = createRequire("http://local/worker.js");';
+  const banner = 'import { createRequire } from "node:module"; const require = createRequire("file:///worker.js");';
   execSync(`npx esbuild "${tempPatchedPath}" --bundle --outfile="${destPath}" --format=esm --target=esnext --platform=node --external:"node:*" --external:"cloudflare:*" --loader:.wasm=dataurl --banner:js='${banner}' --minify=false`, { stdio: 'inherit' });
   console.log(`Bundled worker saved to: ${destPath}`);
 } catch (error) {
