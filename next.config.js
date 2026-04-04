@@ -17,6 +17,7 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
+    turbo: { enabled: false },
   },
   serverExternalPackages: ['firebase-admin'],
   allowedDevOrigins: ['10.112.183.165'],

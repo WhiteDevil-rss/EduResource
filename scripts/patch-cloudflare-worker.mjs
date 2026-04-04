@@ -9,9 +9,37 @@ const destPath = join(process.cwd(), '.open-next', 'assets', '_worker.js');
 console.log(`Reading worker from: ${sourcePath}`);
 const workerCode = readFileSync(sourcePath, 'utf-8');
 
-// Patching logic: Fix relative paths because we moved the worker from .open-next/ to .open-next/assets/
-console.log('Fixing relative paths in worker code...');
-const patchedCode = workerCode.replace(/from "\.\//g, 'from "../').replace(/import\("\.\//g, 'import("../');
+// Patching logic: Fix relative paths and inject asset passthrough + error handling
+console.log('Fixing relative paths and injecting logic in worker code...');
+let patchedCode = workerCode
+  .replace(/from "\.\//g, 'from "../')
+  .replace(/import\("\.\//g, 'import("../');
+
+// Inject ASSETS passthrough at the start of the fetch handler
+const fetchStartIdx = patchedCode.indexOf('async fetch(request, env, ctx) {');
+if (fetchStartIdx !== -1) {
+  const insertionPoint = patchedCode.indexOf('{', fetchStartIdx) + 1;
+  const passthroughLogic = `
+        // Static asset passthrough
+        const url = new URL(request.url);
+        if (url.pathname.startsWith('/_next/static/') || url.pathname.includes('.')) {
+          console.log('Static asset passthrough:', url.pathname);
+          return env.ASSETS.fetch(request);
+        }
+`;
+  patchedCode = patchedCode.slice(0, insertionPoint) + passthroughLogic + patchedCode.slice(insertionPoint);
+}
+
+// Wrap the main handler in a try/catch for better error logging
+patchedCode = patchedCode.replace(
+  /return handler\(reqOrResp, env, ctx, request\.signal\);/,
+  `try {
+                return await handler(reqOrResp, env, ctx, request.signal);
+            } catch (err) {
+                console.error('Worker Error:', err);
+                return new Response('Internal Server Error', { status: 500 });
+            }`
+);
 
 // Write to the final assets location as _worker.js
 console.log(`Writing patched worker to: ${destPath}`);
