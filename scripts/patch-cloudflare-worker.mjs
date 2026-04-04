@@ -97,7 +97,10 @@ async function runPatch() {
         'http': stubPath,
         'node:http': stubPath,
         'https': stubPath,
-        'node:https': stubPath
+        'node:https': stubPath,
+        'node:inspector': stubPath,
+        'node:v8': stubPath,
+        'node:vm': stubPath
       },
       loader: {
         '.wasm': 'dataurl',
