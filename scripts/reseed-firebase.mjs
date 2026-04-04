@@ -5,12 +5,31 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 // Load service account from environment or file
-const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './eduresourcehub-73f9b-firebase-adminsdk-fbsvc-ce5cd52668.json';
-const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+// Load credentials
+let firebaseConfig = null;
+
+if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY.trim();
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    privateKey = privateKey.slice(1, -1);
+  }
+  privateKey = privateKey.replace(/\\n/g, '\n');
+
+  firebaseConfig = {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: privateKey,
+  };
+  console.log('Using credentials from environment variables.');
+} else {
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './eduresourcehub-73f9b-firebase-adminsdk-fbsvc-ce5cd52668.json';
+  firebaseConfig = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+  console.log(`Using credentials from file: ${serviceAccountPath}`);
+}
 
 if (getApps().length === 0) {
   initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert(firebaseConfig),
   });
 }
 

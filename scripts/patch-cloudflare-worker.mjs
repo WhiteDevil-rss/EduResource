@@ -2,15 +2,19 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 // Path to the generated worker file
-const workerPath = join(process.cwd(), '.open-next', 'assets', 'worker.js');
+const sourcePath = join(process.cwd(), '.open-next', 'worker.js');
+const destPath = join(process.cwd(), '.open-next', 'assets', '_worker.js');
 
 // Read the worker file
-const workerCode = readFileSync(workerPath, 'utf-8');
+console.log(`Reading worker from: ${sourcePath}`);
+const workerCode = readFileSync(sourcePath, 'utf-8');
 
-// Add any necessary patches here
+// Patching logic...
 // For example, if you need to add some code to the worker
+const patchedCode = workerCode;
 
-// Write back the patched code
-writeFileSync(workerPath, workerCode);
+// Write to the final assets location as _worker.js
+console.log(`Writing patched worker to: ${destPath}`);
+writeFileSync(destPath, patchedCode);
 
 console.log('Worker patched successfully');
