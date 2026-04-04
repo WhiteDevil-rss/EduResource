@@ -299,19 +299,67 @@ h6 {
 }
 
 .public-nav__menu-button {
-  display: none;
+  display: flex;
   width: 2.9rem;
   height: 2.9rem;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--foreground);
   cursor: pointer;
+  z-index: 50;
+}
+
+@media (min-width: 1024px) {
+  .public-nav__menu-button {
+    display: none;
+  }
 }
 
 .public-nav__mobile-panel {
-  display: none;
+  position: fixed;
+  inset: 0;
+  top: 4.5rem;
+  z-index: 45;
+  padding: 2.5rem 2rem;
+  background: rgba(10, 11, 18, 0.98);
+  backdrop-filter: blur(40px);
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.public-nav__mobile-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.public-nav__mobile-links a {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--foreground);
+}
+
+.public-nav__mobile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .public-nav__links,
+  .public-nav__actions {
+    display: none;
+  }
 }
 
 .landing-main {
@@ -329,8 +377,7 @@ h6 {
 }
 
 .landing-hero h1 {
-  max-width: 12ch;
-  font-size: clamp(3.5rem, 9vw, 7rem);
+  font-size: clamp(2.5rem, 10vw, 7rem);
   margin-top: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -407,6 +454,13 @@ h6 {
   padding-bottom: 7rem;
 }
 
+@media (max-width: 1024px) {
+  .landing-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
 .landing-card {
   border-radius: 26px;
   padding: 2.25rem;
@@ -422,29 +476,18 @@ h6 {
   color: rgba(240, 240, 253, 0.66);
 }
 
-.landing-card--wide {
-  grid-column: span 7;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.landing-card--tall {
-  grid-column: span 5;
-  display: flex;
-  flex-direction: column;
-}
-
-.landing-card--compact {
-  grid-column: span 5;
-}
-
+.landing-card--wide,
+.landing-card--tall,
+.landing-card--compact,
 .landing-card--stats {
-  grid-column: span 7;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
+  grid-column: span 12;
+}
+
+@media (min-width: 1024px) {
+  .landing-card--wide { grid-column: span 7; }
+  .landing-card--tall { grid-column: span 5; }
+  .landing-card--compact { grid-column: span 5; }
+  .landing-card--stats { grid-column: span 7; }
 }
 
 .landing-avatar-row {
@@ -491,9 +534,28 @@ h6 {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding: 7rem 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 4rem;
   align-items: center;
+}
+
+@media (max-width: 1024px) {
+  .landing-mastery {
+    grid-template-columns: 1fr;
+    padding: 4rem 0;
+    gap: 3rem;
+  }
+  .landing-mastery div {
+    order: 2;
+  }
+  .landing-visual {
+    order: 1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .landing-mastery > div:first-child { grid-column: span 6; }
+  .landing-visual { grid-column: span 6; }
 }
 
 .landing-mastery h2 {
@@ -613,9 +675,8 @@ h6 {
 .auth-main {
   position: relative;
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 7rem 1.5rem 3rem;
 }
 
@@ -633,6 +694,14 @@ h6 {
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow-bloom);
   backdrop-filter: blur(28px);
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 2rem 1.5rem;
+    border-radius: 24px;
+    background: rgba(31, 34, 49, 0.95);
+  }
 }
 
 .auth-card--register {
@@ -888,16 +957,22 @@ h6 {
 }
 
 .auth-footer__trust {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  color: rgba(240, 240, 253, 0.3);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .auth-footer__trust {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    color: rgba(240, 240, 253, 0.3);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
 }
 
 .auth-footer__trust::before,

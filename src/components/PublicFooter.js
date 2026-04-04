@@ -10,7 +10,7 @@ export default function PublicFooter({
       <div className="public-footer">
         <div className="public-footer__brand">
           <span className="public-footer__logo">EduResource Hub</span>
-          <span className="public-footer__tagline">{tagline}</span>
+          <p className="public-footer__tagline">{tagline}</p>
         </div>
         <div className="public-footer__links">
           {links.map((link) => (
