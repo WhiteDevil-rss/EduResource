@@ -8,9 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "cf:build": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler pages deploy .open-next/assets",
+    "cf:build": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs",
+    "preview": "npm run cf:build && wrangler dev",
+    "deploy": "npm run cf:build && wrangler pages deploy .open-next/assets",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "dependencies": {
