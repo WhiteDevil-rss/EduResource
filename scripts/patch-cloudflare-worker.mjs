@@ -17,8 +17,8 @@ const nodeStubPlugin = {
     const safeModules = new Set([
       'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
       'path', 'process', 'stream', 'string_decoder', 'util', 'url',
-      'timers', 'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
-      'module', 'querystring'
+      'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
+      'module'
     ]);
 
     // Handle all node:* and bare Node modules

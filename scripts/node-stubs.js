@@ -10,18 +10,13 @@ const emptyArray = [];
 const createStub = (name = 'Stub') => {
   const handler = {
     get: (target, prop) => {
-      // Special cases for common Node.js properties
+      // Standard timers
+      if (prop === 'setImmediate') return (fn, ...args) => setTimeout(fn, 0, ...args);
+      if (prop === 'clearImmediate') return (id) => clearTimeout(id);
+      
+      // Node specifics
       if (prop === 'promises') return createStub(`${name}.promises`);
       if (prop === 'constants') return emptyObject;
-      if (prop === 'types') return emptyObject;
-      if (prop === 'codes') return emptyObject;
-      if (prop === 'AsyncLocalStorage') {
-        return class { 
-          enterWith() {} 
-          run(s, f) { return f(); } 
-          getStore() { return {}; } 
-        };
-      }
       
       // Standard Node environment details
       if (prop === 'cwd') return () => '/';
@@ -31,8 +26,13 @@ const createStub = (name = 'Stub') => {
       if (prop === 'version') return 'v20.0.0';
       if (prop === 'isatty') return () => false;
 
-      // For everything else, return a recursion of the stub
+      // Always return a self-referential Proxy for property access
       return createStub(`${name}.${String(prop)}`);
+    },
+    // Allow assignments by returning true for 'set'
+    set: (target, prop, value) => {
+      // Ignore but don't crash
+      return true;
     },
     apply: () => undefined,
     construct: () => ({})
@@ -43,6 +43,21 @@ const createStub = (name = 'Stub') => {
 const universalStub = createStub('UniversalStub');
 
 // Explicitly export common names to satisfy both CJS and ESM consumers
+// Timers
+export const setTimeout = (fn, delay, ...args) => globalThis.setTimeout(fn, delay, ...args);
+export const clearTimeout = (id) => globalThis.clearTimeout(id);
+export const setInterval = (fn, delay, ...args) => globalThis.setInterval(fn, delay, ...args);
+export const clearInterval = (id) => globalThis.clearInterval(id);
+export const setImmediate = (fn, ...args) => globalThis.setTimeout(fn, 0, ...args);
+export const clearImmediate = (id) => globalThis.clearTimeout(id);
+
+// Querystring
+export const parse = () => ({});
+export const stringify = () => '';
+export const decode = () => ({});
+export const encode = () => '';
+
+// Common Node internals
 export const promises = universalStub;
 export const constants = emptyObject;
 export const watch = noop;
