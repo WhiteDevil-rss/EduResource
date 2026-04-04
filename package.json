@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.18.0",
+    "esbuild": "^0.28.0",
     "eslint": "^9.22.0",
     "eslint-config-next": "^16.2.2",
     "eslint-plugin-react": "^7.37.5",
