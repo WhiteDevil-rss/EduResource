@@ -3,6 +3,7 @@ import { auth, firestore } from '@/lib/firebase-edge'
 
 const USERS_COLLECTION = 'users'
 const RESOURCES_COLLECTION = 'resources'
+const RESOURCE_REQUESTS_COLLECTION = 'resource_requests'
 const AUDIT_COLLECTION = 'audit_logs'
 const SESSIONS_COLLECTION = 'active_sessions'
 const NOTIFICATIONS_COLLECTION = 'notifications'
@@ -105,6 +106,22 @@ function sanitizeResourceData(docId, data = {}) {
     previewUrl: data.previewUrl || '',
     previewPublicId: data.previewPublicId || '',
     category: data.category || '',
+    createdAt: data.createdAt || null,
+    updatedAt: data.updatedAt || null,
+  }
+}
+
+function sanitizeResourceRequestData(docId, data = {}) {
+  return {
+    id: docId,
+    studentUid: data.studentUid || '',
+    studentEmail: data.studentEmail || '',
+    studentName: data.studentName || '',
+    courseName: data.courseName || '',
+    titleName: data.titleName || '',
+    preferredFormat: data.preferredFormat || '',
+    details: data.details || '',
+    status: data.status || 'pending',
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
   }
@@ -282,6 +299,101 @@ export async function listResourceRecords() {
     .sort((left, right) =>
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
+}
+
+export async function listResourceRequestRecords() {
+  const records = await getCollectionRecords(RESOURCE_REQUESTS_COLLECTION).catch(() => [])
+  return records
+    .map((document) => sanitizeResourceRequestData(document.id, getDocumentData(document)))
+    .sort((left, right) =>
+      String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
+    )
+}
+
+export async function listResourceRequestRecordsForUser(studentUid) {
+  const normalizedStudentUid = String(studentUid || '').trim()
+  if (!normalizedStudentUid) {
+    return []
+  }
+
+  const requests = await listResourceRequestRecords()
+  return requests.filter((record) => record.studentUid === normalizedStudentUid)
+}
+
+export async function createResourceRequestRecord({ session, payload }) {
+  const courseName = String(payload?.courseName || '').trim()
+  const titleName = String(payload?.titleName || '').trim()
+  const preferredFormat = String(payload?.preferredFormat || '').trim()
+  const details = String(payload?.details || '').trim()
+
+  if (!courseName || !titleName || !preferredFormat) {
+    throw new Error('Course name, title name, and preferred format are required.')
+  }
+
+  const createdAt = nowIso()
+  const record = await firestore.addDoc(RESOURCE_REQUESTS_COLLECTION, {
+    studentUid: session.uid,
+    studentEmail: session.email || '',
+    studentName: session.name || '',
+    courseName,
+    titleName,
+    preferredFormat,
+    details,
+    status: 'pending',
+    createdAt,
+    updatedAt: createdAt,
+  })
+
+  await createAuditRecord({
+    actorUid: session.uid,
+    actorRole: session.role,
+    action: 'resource.request.created',
+    targetId: record.id,
+    targetRole: 'resource_request',
+    message: `Resource request created for "${titleName}".`,
+  })
+
+  return sanitizeResourceRequestData(record.id, {
+    studentUid: session.uid,
+    studentEmail: session.email || '',
+    studentName: session.name || '',
+    courseName,
+    titleName,
+    preferredFormat,
+    details,
+    status: 'pending',
+    createdAt,
+    updatedAt: createdAt,
+  })
+}
+
+export async function updateResourceRequestStatus({ requestId, status, actorUid, actorRole }) {
+  const current = await firestore.getDoc(`${RESOURCE_REQUESTS_COLLECTION}/${requestId}`)
+  if (!current) {
+    throw new Error('Resource request not found.')
+  }
+
+  const nextStatus = ['pending', 'underreview', 'done'].includes(String(status || ''))
+    ? String(status)
+    : 'pending'
+
+  const updated = {
+    ...current,
+    status: nextStatus,
+    updatedAt: nowIso(),
+  }
+
+  await firestore.setDoc(`${RESOURCE_REQUESTS_COLLECTION}/${requestId}`, updated, true)
+  await createAuditRecord({
+    actorUid,
+    actorRole,
+    action: 'resource.request.status.updated',
+    targetId: requestId,
+    targetRole: 'resource_request',
+    message: `Updated resource request status to ${nextStatus.toUpperCase()}.`,
+  })
+
+  return sanitizeResourceRequestData(requestId, updated)
 }
 
 export async function searchResourceRecords({
@@ -1020,7 +1132,7 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
       throw new Error('Resource not found.')
     }
   
-    if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
+    if (!isOwnedBySession(current, session)) {
       throw new Error('You can only manage resources that you uploaded.')
     }
   
@@ -1067,6 +1179,36 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
       message: `Updated resource "${title}".`,
     })
   
+    return sanitizeResourceData(resourceId, updated)
+  }
+
+  export async function updateResourceStatusRecord({ resourceId, session, status }) {
+    const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+    if (!current) {
+      throw new Error('Resource not found.')
+    }
+
+    if (!isOwnedBySession(current, session)) {
+      throw new Error('You can only manage resources that you uploaded.')
+    }
+
+    const nextStatus = status === 'draft' ? 'draft' : 'live'
+    const updated = {
+      ...current,
+      status: nextStatus,
+      updatedAt: nowIso(),
+    }
+
+    await firestore.setDoc(`${RESOURCES_COLLECTION}/${resourceId}`, updated, true)
+    await createAuditRecord({
+      actorUid: session.uid,
+      actorRole: session.role,
+      action: 'resource.status.updated',
+      targetId: resourceId,
+      targetRole: 'resource',
+      message: `Changed resource status to ${nextStatus.toUpperCase()} for "${updated.title}".`,
+    })
+
     return sanitizeResourceData(resourceId, updated)
   }
   

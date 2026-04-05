@@ -14,7 +14,7 @@ import {
   Settings,
   User,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useRef, useState, useTransition } from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -76,12 +76,19 @@ export default function StudentDashboard() {
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [notificationsSaving, setNotificationsSaving] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [requestModalOpen, setRequestModalOpen] = useState(false)
+  const [requestSubmitting, setRequestSubmitting] = useState(false)
+  const [resourceRequest, setResourceRequest] = useState({
+    courseName: '',
+    titleName: '',
+    preferredFormat: '',
+    details: '',
+  })
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsError, setNotificationsError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
-  const [isFiltering, startTransition] = useTransition()
   const deferredSearch = useDeferredValue(searchTerm)
   const notificationsPanelRef = useRef(null)
 
@@ -97,16 +104,7 @@ export default function StudentDashboard() {
     const loadResources = async () => {
       setLoading(true)
       try {
-        const params = new URLSearchParams()
-        if (deferredSearch.trim()) {
-          params.set('q', deferredSearch.trim())
-        }
-        if (selectedSubject && selectedSubject !== 'All Subjects') {
-          params.set('subject', selectedSubject)
-        }
-
-        const url = `/api/student/resources${params.toString() ? `?${params.toString()}` : ''}`
-        const response = await fetch(url, { cache: 'no-store' })
+        const response = await fetch('/api/student/resources', { cache: 'no-store' })
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) {
           throw new Error(payload?.error || 'Could not load the student catalog.')
@@ -137,14 +135,12 @@ export default function StudentDashboard() {
       }
     }
 
-    startTransition(() => {
-      loadResources()
-    })
+    loadResources()
 
     return () => {
       isActive = false
     }
-  }, [deferredSearch, selectedSubject])
+  }, [user?.uid])
 
   useEffect(() => {
     if (!user?.uid) {
@@ -221,8 +217,23 @@ export default function StudentDashboard() {
   const subjectOptions = ['All Subjects', ...new Set(catalog.map((entry) => entry.subject))]
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
-  const leadResources = catalog.slice(0, 3)
-  const additionalResources = catalog.slice(3)
+  const filteredResources = catalog.filter((entry) => {
+    const term = deferredSearch.trim().toLowerCase()
+    const matchesSearch =
+      !term ||
+      [entry.title, entry.subject, entry.class, entry.summary, entry.facultyName, entry.facultyEmail]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
+
+    const matchesSubject =
+      !selectedSubject || selectedSubject === 'All Subjects' || entry.subject === selectedSubject
+
+    return matchesSearch && matchesSubject
+  })
+
+  const leadResources = filteredResources.slice(0, 3)
+  const additionalResources = filteredResources.slice(3)
 
   const persistDownloads = (entries) => {
     setDownloads(entries)
@@ -235,6 +246,47 @@ export default function StudentDashboard() {
 
   const openNotifications = () => {
     setNotificationsOpen((current) => !current)
+  }
+
+  const previewSrcForResource = (entry) => entry.previewUrl || entry.fileUrl || ''
+
+  const openRequestModal = () => {
+    setResourceRequest({
+      courseName: '',
+      titleName: '',
+      preferredFormat: '',
+      details: '',
+    })
+    setRequestModalOpen(true)
+  }
+
+  const closeRequestModal = () => {
+    setRequestModalOpen(false)
+  }
+
+  const handleRequestSubmit = async (event) => {
+    event.preventDefault()
+    setRequestSubmitting(true)
+
+    try {
+      const response = await fetch('/api/student/resource-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resourceRequest),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not submit the request.')
+      }
+
+      toast.success('Resource request sent.')
+      setRequestModalOpen(false)
+    } catch (error) {
+      toast.error(error.message || 'Could not submit the request.')
+    } finally {
+      setRequestSubmitting(false)
+    }
   }
 
   const markNotificationRead = async (notificationId) => {
@@ -315,6 +367,89 @@ export default function StudentDashboard() {
 
   return (
     <div className="dashboard-page">
+      {requestModalOpen ? (
+        <div className="modal-backdrop" role="presentation" onClick={closeRequestModal}>
+          <div
+            className="modal-card modal-card--compact"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="resource-request-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="resource-request-title">Request Resource</h3>
+            <p>Send a request to the admin team with your course details and preferred format.</p>
+
+            <form className="modal-form" onSubmit={handleRequestSubmit}>
+              <div className="auth-field">
+                <label htmlFor="request-email">Your Email</label>
+                <input id="request-email" className="auth-textarea" type="email" value={user?.email || ''} readOnly />
+              </div>
+
+              <div className="modal-form__grid">
+                <div className="auth-field">
+                  <label htmlFor="request-course">Course Name</label>
+                  <input
+                    id="request-course"
+                    className="auth-textarea"
+                    type="text"
+                    value={resourceRequest.courseName}
+                    onChange={(event) => setResourceRequest((current) => ({ ...current, courseName: event.target.value }))}
+                    placeholder="e.g. Database Management"
+                    required
+                  />
+                </div>
+                <div className="auth-field">
+                  <label htmlFor="request-title">Title Name</label>
+                  <input
+                    id="request-title"
+                    className="auth-textarea"
+                    type="text"
+                    value={resourceRequest.titleName}
+                    onChange={(event) => setResourceRequest((current) => ({ ...current, titleName: event.target.value }))}
+                    placeholder="e.g. Chapter 4 Notes"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="request-format">Preferred Format</label>
+                <input
+                  id="request-format"
+                  className="auth-textarea"
+                  type="text"
+                  value={resourceRequest.preferredFormat}
+                  onChange={(event) => setResourceRequest((current) => ({ ...current, preferredFormat: event.target.value }))}
+                  placeholder="PDF, DOCX, PPTX, Video"
+                  required
+                />
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="request-details">Additional Details</label>
+                <textarea
+                  id="request-details"
+                  className="auth-textarea"
+                  rows={4}
+                  value={resourceRequest.details}
+                  onChange={(event) => setResourceRequest((current) => ({ ...current, details: event.target.value }))}
+                  placeholder="Optional notes for the admin team"
+                />
+              </div>
+
+              <div className="modal-form__actions">
+                <button type="button" className="button-secondary" onClick={closeRequestModal}>
+                  Cancel
+                </button>
+                <button type="submit" className="button-primary" disabled={requestSubmitting}>
+                  {requestSubmitting ? 'Sending...' : 'Send Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
       <div className="dashboard-layout">
         <aside className="dashboard-sidebar">
           <div className="dashboard-sidebar__brand">
@@ -478,18 +613,18 @@ export default function StudentDashboard() {
                     key={subject}
                     type="button"
                     className={subject === selectedSubject ? 'button-primary' : 'button-secondary'}
-                    onClick={() => startTransition(() => setSelectedSubject(subject))}
+                    onClick={() => setSelectedSubject(subject)}
                   >
                     {subject}
                   </button>
                 ))}
               </div>
               <span className="metric-card__label">
-                {isFiltering ? 'Updating results...' : `${catalog.length} item(s)`}
+                {filteredResources.length} item(s)
               </span>
             </div>
 
-            {catalog.length > 0 ? (
+            {filteredResources.length > 0 ? (
               <div className="resource-grid">
                 {leadResources.map((entry) => {
                   const tone = getSubjectTone(entry.subject)
@@ -508,11 +643,11 @@ export default function StudentDashboard() {
                           }
                         </span>
                       </div>
-                      {entry.previewUrl && (
+                      {previewSrcForResource(entry) ? (
                         <div className="resource-card__preview">
-                          <img src={entry.previewUrl} alt={entry.title} loading="lazy" />
+                          <img src={previewSrcForResource(entry)} alt={entry.title} loading="lazy" />
                         </div>
-                      )}
+                      ) : null}
                       <div className="resource-card__body">
                         <h3>{entry.title}</h3>
                         <p>{entry.summary}</p>
@@ -544,11 +679,11 @@ export default function StudentDashboard() {
                         }
                       </span>
                     </div>
-                    {entry.previewUrl && (
+                    {previewSrcForResource(entry) ? (
                       <div className="resource-card__preview">
-                        <img src={entry.previewUrl} alt={entry.title} loading="lazy" />
+                        <img src={previewSrcForResource(entry)} alt={entry.title} loading="lazy" />
                       </div>
-                    )}
+                    ) : null}
                     <div className="resource-card__body">
                       <h3>{entry.title}</h3>
                       <p>{entry.summary}</p>
@@ -638,18 +773,19 @@ export default function StudentDashboard() {
               <article className="support-card">
                 <span className="metric-card__label">Resource Request</span>
                 <p>Send a request with the course code, title, and preferred format so faculty can review it quickly.</p>
-                <a
-                  href={`mailto:library@eduresourcehub.edu?subject=${encodeURIComponent('Resource Request')}&body=${encodeURIComponent('Course code:%0ARequested resource:%0APreferred format:%0AReason for request:')}`}
+                <button
+                  type="button"
                   className="button-primary"
                   style={{ marginTop: '1rem', width: 'fit-content' }}
+                  onClick={openRequestModal}
                 >
-                  Email the Curator
-                </a>
+                  Request Resource
+                </button>
               </article>
 
               <article className="support-card">
-                <span className="metric-card__label">Access Model</span>
-                <p>Student access is granted only through Google sign-in, and each student session is checked server-side before the catalog is returned.</p>
+                <span className="metric-card__label">Request Status</span>
+                <p>Submitted requests are sent to the admin queue so the team can mark them pending, under review, or done.</p>
               </article>
             </div>
           </section>

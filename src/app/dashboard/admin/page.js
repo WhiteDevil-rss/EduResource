@@ -43,6 +43,18 @@ function statusClassName(status) {
   return 'status-state status-state--banned'
 }
 
+function requestStatusClassName(status) {
+  if (status === 'done') return 'status-state status-state--active'
+  if (status === 'underreview') return 'status-state status-state--draft'
+  return 'status-state status-state--pending'
+}
+
+function requestStatusLabel(status) {
+  if (status === 'underreview') return 'Under Review'
+  if (status === 'done') return 'Done'
+  return 'Pending'
+}
+
 function authProviderLabel(entry) {
   if (entry.authProvider === 'google') {
     return entry.pending ? 'Google access pending' : 'Google OAuth'
@@ -55,6 +67,7 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth()
   const [users, setUsers] = useState([])
   const [resources, setResources] = useState([])
+  const [requests, setRequests] = useState([])
   const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -94,12 +107,38 @@ export default function AdminDashboard() {
     }
   }
 
+  const loadRequests = async ({ background = false } = {}) => {
+    if (!background) {
+      setRefreshing(true)
+    }
+
+    try {
+      const response = await fetch('/api/admin/resource-requests', { cache: 'no-store' })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not load the resource requests.')
+      }
+
+      setRequests(Array.isArray(payload?.requests) ? payload.requests : [])
+      setErrorMessage('')
+    } catch (error) {
+      console.error('Admin requests error:', error)
+      setErrorMessage(error.message || 'Could not load the resource requests.')
+    } finally {
+      if (!background) {
+        setRefreshing(false)
+      }
+    }
+  }
+
   useEffect(() => {
     if (!user?.uid) {
       return
     }
 
     loadOverview()
+    loadRequests()
   }, [user?.uid])
 
   const filteredUsers = users.filter((entry) => {
@@ -126,6 +165,7 @@ export default function AdminDashboard() {
   ).length
   const facultyCount = users.filter((entry) => entry.role === 'faculty').length
   const disabledUsers = users.filter((entry) => entry.status !== 'active').length
+  const openRequests = requests.filter((entry) => entry.status !== 'done').length
 
   const exportUsers = () => {
     const headers = ['Name', 'Email', 'Login ID', 'Role', 'Auth Provider', 'Status']
@@ -242,6 +282,28 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleRequestStatusChange = async (requestEntry, status) => {
+    try {
+      const response = await fetch(`/api/admin/resource-requests/${requestEntry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not update the request status.')
+      }
+
+      setRequests((current) =>
+        current.map((entry) => (entry.id === requestEntry.id ? payload.request : entry))
+      )
+      toast.success(`Request moved to ${requestStatusLabel(status).toLowerCase()}.`)
+    } catch (error) {
+      toast.error(error.message || 'Could not update the request status.')
+    }
+  }
+
   if (loading) {
     return (
       <div className="loading-state">
@@ -267,6 +329,11 @@ export default function AdminDashboard() {
             <a href="#admin-resources" className="dashboard-nav__link">
               <FileText size={18} />
               Resource Audit
+            </a>
+            <a href="#admin-requests" className="dashboard-nav__link">
+              <LayoutPanelTop size={18} />
+              Resource Requests
+              {openRequests > 0 ? <span className="dashboard-nav__count">{openRequests}</span> : null}
             </a>
             <a href="#admin-activity" className="dashboard-nav__link">
               <LayoutPanelTop size={18} />
@@ -313,12 +380,16 @@ export default function AdminDashboard() {
             <div className="dashboard-topbar__actions">
               <button type="button" className="dashboard-topbar__icon" aria-label="Notifications">
                 <Bell size={18} />
+                {openRequests > 0 ? <span className="dashboard-topbar__badge">{openRequests}</span> : null}
               </button>
               <button
                 type="button"
                 className="dashboard-topbar__icon"
                 aria-label="Refresh data"
-                onClick={() => loadOverview({ background: true })}
+                onClick={() => {
+                  loadOverview({ background: true })
+                  loadRequests({ background: true })
+                }}
               >
                 <RefreshCw size={18} />
               </button>
@@ -562,6 +633,96 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </section>
+
+          <section className="dashboard-section" id="admin-requests">
+            <div className="section-header">
+              <div>
+                <h3>Resource Requests</h3>
+                <p>Track student requests, assign status, and follow up when a resource needs a human review.</p>
+              </div>
+            </div>
+
+            <div className="table-shell">
+              <table className="data-table data-table--responsive">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Course</th>
+                    <th>Requested Item</th>
+                    <th>Status</th>
+                    <th>Submitted</th>
+                    <th style={{ textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.length > 0 ? (
+                    requests.map((entry) => (
+                      <tr key={entry.id}>
+                        <td data-label="Student">
+                          <div className="table-entity__copy">
+                            <strong>{entry.studentName || entry.studentEmail}</strong>
+                            <span>{entry.studentEmail}</span>
+                          </div>
+                        </td>
+                        <td data-label="Course">{entry.courseName || 'Not specified'}</td>
+                        <td data-label="Requested Item">
+                          <div className="table-entity__copy">
+                            <strong>{entry.titleName || 'Untitled request'}</strong>
+                            <span>{entry.preferredFormat || 'No preferred format'}</span>
+                          </div>
+                        </td>
+                        <td data-label="Status">
+                          <span className={requestStatusClassName(entry.status)}>
+                            <span className="status-state__dot" />
+                            {requestStatusLabel(entry.status)}
+                          </span>
+                        </td>
+                        <td data-label="Submitted">{formatDisplayDate(entry.createdAt)}</td>
+                        <td data-label="Actions" style={{ textAlign: 'right' }}>
+                          <div className="table-action-group">
+                            <button
+                              type="button"
+                              className="text-action text-action--primary"
+                              onClick={() => handleRequestStatusChange(entry, 'pending')}
+                              disabled={entry.status === 'pending'}
+                            >
+                              Pending
+                            </button>
+                            <button
+                              type="button"
+                              className="text-action text-action--primary"
+                              onClick={() => handleRequestStatusChange(entry, 'underreview')}
+                              disabled={entry.status === 'underreview'}
+                            >
+                              Review
+                            </button>
+                            <button
+                              type="button"
+                              className="text-action text-action--primary"
+                              onClick={() => handleRequestStatusChange(entry, 'done')}
+                              disabled={entry.status === 'done'}
+                            >
+                              Done
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td data-label="Student" colSpan={6}>
+                        <div className="empty-state">No resource requests have been submitted yet.</div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="table-shell__footer">
+                <span>{requests.length} request(s) in the queue.</span>
+                <span>Statuses available: pending, under review, done.</span>
+              </div>
             </div>
           </section>
 

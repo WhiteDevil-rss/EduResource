@@ -8,6 +8,7 @@ import {
 import {
   deleteResourceRecord,
   updateResourceRecord,
+  updateResourceStatusRecord,
 } from '@/lib/server-data'
 
 export async function PATCH(request, { params }) {
@@ -24,11 +25,20 @@ export async function PATCH(request, { params }) {
       )
     }
 
-    const resource = await updateResourceRecord({
-      resourceId,
-      session,
-      payload: body,
-    })
+    const action = String(body?.action || '').trim().toLowerCase()
+    const statusOnlyUpdate = action === 'toggle-status' || (body?.status && !body?.title && !body?.subject && !body?.class)
+
+    const resource = statusOnlyUpdate
+      ? await updateResourceStatusRecord({
+          resourceId,
+          session,
+          status: body?.status,
+        })
+      : await updateResourceRecord({
+          resourceId,
+          session,
+          payload: body,
+        })
 
     return withNoStore(NextResponse.json({ resource }))
   } catch (error) {

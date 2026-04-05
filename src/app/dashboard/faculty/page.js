@@ -201,6 +201,30 @@ export default function FacultyDashboard() {
     setDeleteTarget(entry)
   }
 
+  const toggleResourceStatus = async (entry) => {
+    const nextStatus = entry.status === 'draft' ? 'live' : 'draft'
+
+    try {
+      const response = await fetch(`/api/faculty/resources/${entry.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-status', status: nextStatus }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not update the resource status.')
+      }
+
+      setResources((current) =>
+        current.map((item) => (item.id === entry.id ? payload.resource : item))
+      )
+      toast.success(`${entry.title} is now ${nextStatus}.`)
+    } catch (error) {
+      toast.error(error.message || 'Could not update the resource status.')
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteTarget) {
       return
@@ -474,6 +498,13 @@ export default function FacultyDashboard() {
                         <td data-label="Date">{formatDisplayDate(entry.createdAt)}</td>
                         <td data-label="Actions" style={{ textAlign: 'right' }}>
                           <div className="table-action-group">
+                            <button
+                              type="button"
+                              className={entry.status === 'draft' ? 'button-secondary' : 'button-primary'}
+                              onClick={() => toggleResourceStatus(entry)}
+                            >
+                              {entry.status === 'draft' ? 'Publish' : 'Draft'}
+                            </button>
                             <button type="button" className="dashboard-topbar__icon" aria-label={`Edit ${entry.title}`} onClick={() => openEditModal(entry)}>
                               <Edit3 size={16} />
                             </button>

@@ -1732,6 +1732,15 @@ h6 {
   background: rgba(240, 240, 253, 0.28);
 }
 
+.status-state--pending {
+  color: var(--warning);
+}
+
+.status-state--pending .status-state__dot {
+  background: var(--warning);
+  box-shadow: 0 0 10px rgba(245, 188, 66, 0.4);
+}
+
 .text-action {
   color: inherit;
   font-size: 0.78rem;
@@ -2644,11 +2653,12 @@ h6 {
 }
 
 .dashboard-content #student-library .resource-card {
-  min-height: 24rem;
+  min-height: 22rem;
 }
 
 .dashboard-content #student-library .resource-card__preview {
-  aspect-ratio: 16 / 8.5;
+  aspect-ratio: 16 / 8.25;
+  max-height: 11rem;
 }
 
 .dashboard-content #student-library .resource-card__body {
