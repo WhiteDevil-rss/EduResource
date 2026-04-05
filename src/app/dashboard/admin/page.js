@@ -542,8 +542,8 @@ export default function AdminDashboard() {
         </aside>
 
         <div className="dashboard-content">
-          <header className="dashboard-topbar">
-            <div className="dashboard-topbar__actions">
+          <header className="dashboard-topbar" style={{ justifyContent: 'flex-end' }}>
+            <div className="dashboard-topbar__actions" style={{ marginLeft: 'auto' }}>
               <button
                 type="button"
                 className="dashboard-topbar__icon"

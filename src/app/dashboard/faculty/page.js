@@ -62,6 +62,7 @@ export default function FacultyDashboard() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [notificationsSaving, setNotificationsSaving] = useState(false)
@@ -169,16 +170,29 @@ export default function FacultyDashboard() {
     }
   }, [])
 
+  const subjectOptions = ['All Subjects', ...new Set(resources.map((entry) => entry.subject).filter(Boolean))]
+
   const visibleResources = resources.filter((entry) => {
     const term = deferredSearch.trim().toLowerCase()
-    if (!term) {
-      return true
-    }
-
-    return [entry.title, entry.class, entry.subject, entry.status, entry.summary]
+    const matchesSearch =
+      !term ||
+      [
+        entry.title,
+        entry.class,
+        entry.subject,
+        entry.status,
+        entry.summary,
+        entry.fileFormat,
+        entry.fileType,
+      ]
       .join(' ')
       .toLowerCase()
       .includes(term)
+
+    const matchesSubject =
+      !selectedSubject || selectedSubject === 'All Subjects' || entry.subject === selectedSubject
+
+    return matchesSearch && matchesSubject
   })
 
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
@@ -632,6 +646,21 @@ export default function FacultyDashboard() {
                 <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Publishing Policy</span>
                 <strong className="metric-card__value" style={{ fontSize: '2rem' }}>Faculty Only</strong>
               </article>
+            </div>
+
+            <div className="filter-row" style={{ marginBottom: '1rem' }}>
+              <div className="filter-row__actions">
+                {subjectOptions.map((subject) => (
+                  <button
+                    key={subject}
+                    type="button"
+                    className={subject === selectedSubject ? 'button-primary' : 'button-secondary'}
+                    onClick={() => setSelectedSubject(subject)}
+                  >
+                    {subject}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="table-shell">
