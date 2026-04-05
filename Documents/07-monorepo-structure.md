@@ -85,7 +85,7 @@ eduresource-hub/
 │               ├── user.ts
 │               └── resource.ts
 │
-├── functions/                     # Firebase Cloud Functions
+├── firebase-functions/            # Firebase Cloud Functions
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── .env                       # Functions-specific env (not committed)
@@ -151,13 +151,13 @@ eduresource-hub/
   "private": true,
   "workspaces": [
     "apps/web",
-    "functions"
+    "firebase-functions"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspace=apps/web",
-    "functions:dev": "npm run serve --workspace=functions",
-    "functions:deploy": "npm run deploy --workspace=functions",
+    "functions:dev": "npm run serve --workspace=firebase-functions",
+    "functions:deploy": "npm run deploy --workspace=firebase-functions",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces"
   }
@@ -179,7 +179,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION=us-central1
 ```
 
-### `functions/.env`
+### `firebase-functions/.env`
 ```env
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
@@ -191,7 +191,7 @@ FIREBASE_PROJECT_ID=
 
 ## 4. Shared Types
 
-The `types/` directories in `apps/web/src/types/` and `functions/src/` share the same type definitions. For a larger project, extract to a shared `packages/types/` workspace.
+The `types/` directories in `apps/web/src/types/` and `firebase-functions/src/` share the same type definitions. For a larger project, extract to a shared `packages/types/` workspace.
 
 ### `types/user.ts`
 ```typescript

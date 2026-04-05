@@ -75,7 +75,7 @@ describe('validatePDF', () => {
 
 ### 3.2 Functions Units
 
-**Location**: `functions/src/**/__tests__/`
+**Location**: `firebase-functions/src/**/__tests__/`
 
 | Module | Tests |
 |--------|-------|
@@ -88,7 +88,7 @@ describe('validatePDF', () => {
 
 ## 4. Integration Tests
 
-**Location**: `functions/src/**/*.integration.test.ts`  
+**Location**: `firebase-functions/src/**/*.integration.test.ts`  
 **Environment**: Firebase Emulator Suite (Firestore + Auth + Functions)
 
 ### Test Setup

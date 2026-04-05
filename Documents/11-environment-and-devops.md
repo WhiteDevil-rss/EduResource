@@ -47,7 +47,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=
 NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION=us-central1
 ```
 
-### `functions/.env` (Cloud Functions)
+### `firebase-functions/.env` (Cloud Functions)
 
 ```env
 # Firebase
@@ -60,7 +60,7 @@ CLOUDINARY_API_SECRET=
 CLOUDINARY_UPLOAD_FOLDER=eduresource-hub/resources
 ```
 
-> ⚠️ Never commit `.env.local` or `functions/.env` to version control. Only `.env.example` is committed.
+> ⚠️ Never commit `.env.local` or `firebase-functions/.env` to version control. Only `.env.example` is committed.
 
 ---
 
@@ -85,7 +85,7 @@ npm install
 
 # 3. Copy env templates
 cp apps/web/.env.example apps/web/.env.local
-cp functions/.env.example functions/.env
+cp firebase-functions/.env.example firebase-functions/.env
 # Fill in actual values
 
 # 4. Install Firebase CLI
@@ -98,7 +98,7 @@ firebase login
 npm run dev
 
 # 7. (Optional) Start Firebase emulators for local backend
-cd functions && npm run serve
+cd firebase-functions && npm run serve
 ```
 
 ### Firebase Emulators (local backend)
@@ -206,7 +206,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'functions/**'
+      - 'firebase-functions/**'
       - 'firestore/**'
 
 jobs:
@@ -222,10 +222,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --workspace=functions
+        run: npm ci --workspace=firebase-functions
 
       - name: Run tests
-        run: npm run test --workspace=functions
+        run: npm run test --workspace=firebase-functions
 
       - name: Deploy functions
         uses: w9jds/firebase-action@v13.0.2
