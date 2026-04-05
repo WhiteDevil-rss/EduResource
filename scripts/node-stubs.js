@@ -2,7 +2,7 @@
  * Comprehensive, Universal Stub for Unsupported Node.js Modules in Cloudflare Workers.
  */
 
-const noop = () => {};
+function noop() {}
 const emptyObject = {};
 const emptyArray = [];
 
