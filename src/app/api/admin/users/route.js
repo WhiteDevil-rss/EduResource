@@ -23,7 +23,7 @@ import { createManagedUser, listUserRecords } from '@/lib/server-data'
 export async function POST(request) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request)
+    const session = await requireApiSession(request)
     requireRole(session, ['admin'])
 
     const body = await request.json()
@@ -77,7 +77,7 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request)
+    const session = await requireApiSession(request)
     requireRole(session, ['admin'])
 
     const url = new URL(request.url)

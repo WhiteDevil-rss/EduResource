@@ -5,7 +5,7 @@ import {
   requireApiSession,
   withNoStore,
 } from '@/lib/api-security'
-import { createResourceRecord, listResourceRecords } from '@/lib/server-data'
+import { countAuditRecords, createResourceRecord, listResourceRecords } from '@/lib/server-data'
 import { uploadToDrive } from '@/lib/google-drive'
 
 function withTimeout(promise, timeoutMs, fallbackValue = null) {
@@ -24,14 +24,19 @@ export async function GET(request) {
     const visibleResources = resources.filter(
       (entry) => entry.uploadedBy === session.uid || entry.facultyId === session.uid
     )
+    const totalDownloads = await countAuditRecords({
+      action: 'resource.downloaded',
+      targetIds: visibleResources.map((entry) => entry.id),
+    })
 
-    return withNoStore(NextResponse.json({ resources: visibleResources }))
+    return withNoStore(NextResponse.json({ resources: visibleResources, totalDownloads }))
   } catch (error) {
     const message = String(error?.message || '')
     if (message.includes('Privileged Firebase access is not configured')) {
       return withNoStore(
         NextResponse.json({
           resources: [],
+          totalDownloads: 0,
           warning: 'Faculty resources are unavailable until privileged Firebase access is configured.',
         })
       )
@@ -41,6 +46,7 @@ export async function GET(request) {
       return withNoStore(
         NextResponse.json({
           resources: [],
+          totalDownloads: 0,
           warning:
             'Resource storage is not configured yet (Firestore not found for the configured project).',
         })

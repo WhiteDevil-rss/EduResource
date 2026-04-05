@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { jsonError, requireApiSession } from '@/lib/api-security'
-import { getResourceRecordById } from '@/lib/server-data'
+import { createAuditRecord, getResourceRecordById } from '@/lib/server-data'
 import { streamFromDrive } from '@/lib/google-drive'
 
 export async function GET(request, { params }) {
   try {
     const { resourceId } = await params
-    requireApiSession(request, ['student', 'faculty', 'admin'])
+    const session = await requireApiSession(request, ['student', 'faculty', 'admin'])
 
     const resource = await getResourceRecordById(resourceId)
     if (!resource) {
@@ -18,6 +18,15 @@ export async function GET(request, { params }) {
     }
 
     const { stream, fileName, mimeType } = await streamFromDrive(resource.driveFileId)
+
+    await createAuditRecord({
+      actorUid: session.uid,
+      actorRole: session.role,
+      action: 'resource.downloaded',
+      targetId: resource.id,
+      targetRole: 'resource',
+      message: `Downloaded resource "${resource.title}".`,
+    })
 
     const response = new NextResponse(stream)
     

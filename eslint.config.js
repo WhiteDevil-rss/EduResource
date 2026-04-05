@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import nextPlugin from "@next/eslint-plugin-next";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 
@@ -17,6 +18,7 @@ export default [
     ],
   },
   js.configs.recommended,
+  nextPlugin.flatConfig.coreWebVitals,
   {
     files: ["**/*.{js,jsx,mjs,cjs}"],
     languageOptions: {

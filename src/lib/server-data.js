@@ -4,6 +4,8 @@ import { auth, firestore } from '@/lib/firebase-edge'
 const USERS_COLLECTION = 'users'
 const RESOURCES_COLLECTION = 'resources'
 const AUDIT_COLLECTION = 'audit_logs'
+const SESSIONS_COLLECTION = 'active_sessions'
+const NOTIFICATIONS_COLLECTION = 'notifications'
 
 function nowIso() {
   return new Date().toISOString()
@@ -96,6 +98,7 @@ function sanitizeResourceData(docId, data = {}) {
     uploadedBy: data.uploadedBy || data.facultyId || '',
     facultyId: data.facultyId || data.uploadedBy || '',
     facultyEmail: data.facultyEmail || '',
+    facultyName: data.facultyName || data.facultyEmail || '',
     summary: data.summary || data.description || '',
     driveFileId: data.driveFileId || '',
     driveFileLink: data.driveFileLink || '',
@@ -105,6 +108,74 @@ function sanitizeResourceData(docId, data = {}) {
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
   }
+}
+
+function sanitizeSessionData(docId, data = {}) {
+  return {
+    id: docId,
+    uid: data.uid || '',
+    email: data.email || '',
+    name: data.name || null,
+    role: data.role || null,
+    status: data.status || 'active',
+    authProvider: data.authProvider || null,
+    userAgent: data.userAgent || null,
+    createdAt: data.createdAt || null,
+    lastSeenAt: data.lastSeenAt || null,
+    expiresAt: data.expiresAt || null,
+  }
+}
+
+function sanitizeNotificationData(docId, data = {}) {
+  return {
+    id: docId,
+    recipientUid: data.recipientUid || '',
+    type: data.type || 'resource.created',
+    resourceId: data.resourceId || '',
+    resourceTitle: data.resourceTitle || '',
+    resourceSubject: data.resourceSubject || '',
+    resourceClass: data.resourceClass || '',
+    facultyName: data.facultyName || data.facultyEmail || '',
+    facultyEmail: data.facultyEmail || '',
+    message: data.message || '',
+    readAt: data.readAt || null,
+    createdAt: data.createdAt || null,
+  }
+}
+
+function getTimestampValue(value) {
+  if (!value) {
+    return null
+  }
+
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function isSessionExpired(record) {
+  const expiresAt = getTimestampValue(record?.expiresAt)
+  return expiresAt ? Date.now() > expiresAt : false
+}
+
+function isActiveSessionRecord(record) {
+  return String(record?.status || 'active') === 'active' && !isSessionExpired(record)
+}
+
+function isUnreadNotification(record) {
+  return !record?.readAt
+}
+
+function isOwnedBySession(resource, session) {
+  const sessionUid = String(session?.uid || '').trim()
+  const sessionEmail = normalizeEmail(session?.email)
+  const uploadedBy = String(resource?.uploadedBy || '').trim()
+  const facultyId = String(resource?.facultyId || '').trim()
+  const facultyEmail = normalizeEmail(resource?.facultyEmail)
+
+  return (
+    (sessionUid && (uploadedBy === sessionUid || facultyId === sessionUid)) ||
+    (sessionEmail && facultyEmail === sessionEmail)
+  )
 }
 
 function getDocumentData(document) {
@@ -245,6 +316,224 @@ export async function listAuditRecords(limit = 12) {
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
     .slice(0, limit)
+}
+
+export async function countAuditRecords({ action = null, targetIds = [] } = {}) {
+  const records = await getCollectionRecords(AUDIT_COLLECTION).catch(() => [])
+  const normalizedTargets = Array.isArray(targetIds)
+    ? targetIds.map((value) => String(value || '').trim()).filter(Boolean)
+    : []
+
+  return records
+    .map((document) => sanitizeAuditData(document.id, getDocumentData(document)))
+    .filter((record) => {
+      if (action && record.action !== action) {
+        return false
+      }
+
+      if (normalizedTargets.length > 0) {
+        return normalizedTargets.includes(String(record.targetId || '').trim())
+      }
+
+      return true
+    }).length
+}
+
+export async function listNotificationRecords(recipientUid) {
+  const normalizedRecipientUid = String(recipientUid || '').trim()
+  if (!normalizedRecipientUid) {
+    return []
+  }
+
+  const records = await getCollectionRecords(NOTIFICATIONS_COLLECTION).catch(() => [])
+  return records
+    .map((document) => sanitizeNotificationData(document.id, getDocumentData(document)))
+    .filter((record) => record.recipientUid === normalizedRecipientUid)
+    .sort((left, right) =>
+      String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
+    )
+}
+
+export async function countUnreadNotificationRecords(recipientUid) {
+  const notifications = await listNotificationRecords(recipientUid)
+  return notifications.filter(isUnreadNotification).length
+}
+
+export async function markNotificationAsRead({ notificationId, recipientUid }) {
+  const normalizedNotificationId = String(notificationId || '').trim()
+  const normalizedRecipientUid = String(recipientUid || '').trim()
+  if (!normalizedNotificationId || !normalizedRecipientUid) {
+    return null
+  }
+
+  const record = await firestore.getDoc(`${NOTIFICATIONS_COLLECTION}/${normalizedNotificationId}`)
+  if (!record) {
+    return null
+  }
+
+  const sanitized = sanitizeNotificationData(record.id, getDocumentData(record))
+  if (sanitized.recipientUid !== normalizedRecipientUid) {
+    return null
+  }
+
+  const updated = {
+    ...getDocumentData(record),
+    readAt: nowIso(),
+  }
+
+  await firestore.setDoc(`${NOTIFICATIONS_COLLECTION}/${normalizedNotificationId}`, updated, true)
+  return sanitizeNotificationData(normalizedNotificationId, updated)
+}
+
+export async function markAllNotificationsAsRead(recipientUid) {
+  const notifications = await listNotificationRecords(recipientUid)
+  const unreadNotifications = notifications.filter((notification) => !notification.readAt)
+
+  await Promise.all(
+    unreadNotifications.map((notification) =>
+      firestore.setDoc(
+        `${NOTIFICATIONS_COLLECTION}/${notification.id}`,
+        {
+          ...notification,
+          readAt: nowIso(),
+        },
+        true
+      )
+    )
+  )
+
+  return unreadNotifications.length
+}
+
+export async function createNotificationRecordsForResource(resource, facultySession) {
+  const students = (await listUserRecords()).filter(
+    (entry) => entry.role === 'student' && entry.status === 'active'
+  )
+
+  if (students.length === 0) {
+    return 0
+  }
+
+  const message = `${facultySession.name || facultySession.email || 'A faculty member'} uploaded ${resource.title}.`
+  const createdAt = nowIso()
+
+  await Promise.all(
+    students.map((student) =>
+      firestore.addDoc(NOTIFICATIONS_COLLECTION, {
+        recipientUid: student.uid,
+        type: 'resource.created',
+        resourceId: resource.id,
+        resourceTitle: resource.title,
+        resourceSubject: resource.subject,
+        resourceClass: resource.class,
+        facultyName: facultySession.name || facultySession.email || '',
+        facultyEmail: facultySession.email || '',
+        message,
+        readAt: null,
+        createdAt,
+      })
+    )
+  )
+
+  return students.length
+}
+async function listSessionRecords() {
+  const records = await getCollectionRecords(SESSIONS_COLLECTION).catch(() => [])
+  const sanitized = records.map((document) => sanitizeSessionData(document.id, getDocumentData(document)))
+  const activeRecords = sanitized.filter(isActiveSessionRecord)
+
+  const staleRecords = sanitized.filter((record) => !isActiveSessionRecord(record))
+  await Promise.all(
+    staleRecords.map((record) =>
+      firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
+    )
+  )
+
+  return activeRecords
+}
+
+export async function getSessionRecordById(sessionId) {
+  if (!sessionId || typeof sessionId !== 'string' || sessionId.trim() === '') {
+    return null
+  }
+
+  const record = await firestore.getDoc(`${SESSIONS_COLLECTION}/${sessionId}`)
+  if (!record) {
+    return null
+  }
+
+  const sanitized = sanitizeSessionData(record.id, getDocumentData(record))
+  if (!isActiveSessionRecord(sanitized)) {
+    await firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
+    return null
+  }
+
+  return sanitized
+}
+
+export async function listActiveSessionRecordsByUser(uid) {
+  const normalizedUid = String(uid || '').trim()
+  if (!normalizedUid) {
+    return []
+  }
+
+  const records = await listSessionRecords()
+  return records.filter((record) => String(record.uid || '').trim() === normalizedUid)
+}
+
+export async function createSessionRecord({
+  sessionId,
+  uid,
+  role,
+  email,
+  name,
+  authProvider,
+  userAgent,
+  expiresAt,
+}) {
+  const normalizedSessionId = String(sessionId || '').trim()
+  const normalizedUid = String(uid || '').trim()
+
+  if (!normalizedSessionId || !normalizedUid) {
+    throw new Error('Session registration failed.')
+  }
+
+  const existing = await getSessionRecordById(normalizedSessionId)
+  if (existing) {
+    return existing
+  }
+
+  const activeSessions = await listActiveSessionRecordsByUser(normalizedUid)
+  if (activeSessions.length >= 2) {
+    throw new Error('You can only be signed in on 2 devices at a time. Please log out from another device first.')
+  }
+
+  const createdAt = nowIso()
+  const payload = {
+    uid: normalizedUid,
+    email: normalizeEmail(email),
+    name: String(name || '').trim() || null,
+    role: role || null,
+    status: 'active',
+    authProvider: authProvider || null,
+    userAgent: String(userAgent || '').trim() || null,
+    createdAt,
+    lastSeenAt: createdAt,
+    expiresAt: expiresAt || null,
+  }
+
+  await firestore.setDoc(`${SESSIONS_COLLECTION}/${normalizedSessionId}`, payload, true)
+  return sanitizeSessionData(normalizedSessionId, payload)
+}
+
+export async function deleteSessionRecord(sessionId) {
+  const normalizedSessionId = String(sessionId || '').trim()
+  if (!normalizedSessionId) {
+    return false
+  }
+
+  await firestore.deleteDoc(`${SESSIONS_COLLECTION}/${normalizedSessionId}`).catch(() => null)
+  return true
 }
 
 export async function createAuditRecord({
@@ -672,6 +961,7 @@ export async function createResourceRecord({ session, payload }) {
     uploadedBy: session.uid,
     facultyId: session.uid,
     facultyEmail: session.email || '',
+    facultyName: session.name || session.email || '',
     createdAt,
     updatedAt: createdAt,
   })
@@ -684,6 +974,20 @@ export async function createResourceRecord({ session, payload }) {
     targetRole: 'resource',
     message: `Created resource "${title}".`,
   })
+
+  try {
+    await createNotificationRecordsForResource(
+      {
+        id: docRef.id,
+        title,
+        subject,
+        class: courseClass,
+      },
+      session
+    )
+  } catch (error) {
+    console.warn('Notification fan-out warning:', error?.message || error)
+  }
 
   return sanitizeResourceData(docRef.id, {
     title,
@@ -704,6 +1008,7 @@ export async function createResourceRecord({ session, payload }) {
     uploadedBy: session.uid,
     facultyId: session.uid,
     facultyEmail: session.email || '',
+    facultyName: session.name || session.email || '',
     createdAt,
     updatedAt: createdAt,
   })
@@ -766,16 +1071,16 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
   }
   
   export async function deleteResourceRecord({ resourceId, session }) {
-  const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
-  if (!current) {
-    throw new Error('Resource not found.')
-  }
+    const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+    if (!current) {
+      throw new Error('Resource not found.')
+    }
 
-  if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
-    throw new Error('You can only manage resources that you uploaded.')
-  }
+    if (!isOwnedBySession(current, session)) {
+      throw new Error('You can only manage resources that you uploaded.')
+    }
 
-  await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+    await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
   await createAuditRecord({
     actorUid: session.uid,
     actorRole: session.role,

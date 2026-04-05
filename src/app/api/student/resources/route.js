@@ -4,7 +4,7 @@ import { searchResourceRecords } from '@/lib/server-data'
 
 export async function GET(request) {
   try {
-    requireApiSession(request, ['student'])
+    await requireApiSession(request, ['student'])
     const { searchParams } = new URL(request.url)
     const searchTerm = searchParams.get('q') || ''
     const subject = searchParams.get('subject') || ''

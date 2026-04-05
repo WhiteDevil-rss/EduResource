@@ -21,7 +21,7 @@ import {
 export async function GET(request, { params }) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request)
+    const session = await requireApiSession(request)
     requireRole(session, ['admin'])
 
     const routeParams = await params
@@ -58,7 +58,7 @@ export async function GET(request, { params }) {
 export async function PATCH(request, { params }) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request)
+    const session = await requireApiSession(request)
     requireRole(session, ['admin'])
 
     const body = await request.json()
@@ -133,7 +133,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request)
+    const session = await requireApiSession(request)
     requireRole(session, ['admin'])
 
     const routeParams = await params

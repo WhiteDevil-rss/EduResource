@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { requireApiSession } from '@/lib/api-security'
-import { getResourceRecordById } from '@/lib/server-data'
+import { createAuditRecord, getResourceRecordById } from '@/lib/server-data'
 import { signDownloadUrl } from '@/lib/cloudinary'
 
 export async function GET(request) {
   try {
     // 1. Authenticate the student session
-    requireApiSession(request, ['student'])
+    const session = await requireApiSession(request, ['student'])
     // 2. Extract resourceId from query params
     const { searchParams } = new URL(request.url)
     const resourceId = searchParams.get('resourceId')
@@ -25,6 +25,15 @@ export async function GET(request) {
     if (resource.status !== 'live') {
       throw new Error('This resource is not currently available for download.')
     }
+
+    await createAuditRecord({
+      actorUid: session.uid,
+      actorRole: session.role,
+      action: 'resource.downloaded',
+      targetId: resource.id,
+      targetRole: 'resource',
+      message: `Downloaded resource "${resource.title}".`,
+    })
 
     // 4. Generate a signed Cloudinary URL with the attachment flag
     // This allows access to restricted assets and forces download to prevent framing errors.

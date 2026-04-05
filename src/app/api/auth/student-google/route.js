@@ -3,7 +3,7 @@ import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
 import { assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
 import { auth } from '@/lib/firebase-edge'
 import { createSessionCookie } from '@/lib/session-cookie'
-import { createAuditRecord, resolveStudentGoogleUser } from '@/lib/server-data'
+import { createAuditRecord, createSessionRecord, resolveStudentGoogleUser } from '@/lib/server-data'
 
 export async function POST(request) {
   try {
@@ -54,16 +54,49 @@ export async function POST(request) {
       )
     }
 
-    await createAuditRecord({
-      actorUid: student.uid,
-      actorRole: 'student',
-      action: 'auth.student.login',
-      targetId: student.uid,
-      targetRole: 'student',
-      message: `Student login granted for ${student.email}.`,
-    })
+    const sessionId = crypto.randomUUID()
+    let sessionRegistryCreated = false
+
+    try {
+      await createSessionRecord({
+        sessionId,
+        uid: student.uid,
+        role: 'student',
+        email: student.email,
+        name: student.displayName || null,
+        authProvider: 'google',
+        userAgent: request.headers.get('user-agent'),
+        expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
+      })
+      sessionRegistryCreated = true
+
+      await createAuditRecord({
+        actorUid: student.uid,
+        actorRole: 'student',
+        action: 'auth.student.login',
+        targetId: student.uid,
+        targetRole: 'student',
+        message: `Student login granted for ${student.email}.`,
+      })
+    } catch (error) {
+      const message = String(error?.message || '')
+      if (message.includes('You can only be signed in on 2 devices at a time')) {
+        return withNoStore(
+          NextResponse.json(
+            {
+              error:
+                'You can only be signed in on 2 devices at a time. Log out from another device and try again.',
+            },
+            { status: 403 }
+          )
+        )
+      }
+
+      console.warn(`Session registry update failed: ${message || error}`)
+    }
 
     const sessionCookie = await createSessionCookie({
+      ...(sessionRegistryCreated ? { sid: sessionId } : {}),
       uid: student.uid,
       email: student.email,
       role: 'student',
@@ -89,6 +122,16 @@ export async function POST(request) {
 
     return response
   } catch (error) {
+    const message = String(error?.message || '')
+    if (message.includes('You can only be signed in on 2 devices at a time')) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'You can only be signed in on 2 devices at a time. Log out from another device and try again.' },
+          { status: 403 }
+        )
+      )
+    }
+
     return jsonError(error, 'Google student sign-in failed.')
   }
 }

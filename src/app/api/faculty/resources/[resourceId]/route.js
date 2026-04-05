@@ -13,7 +13,7 @@ import {
 export async function PATCH(request, { params }) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request, ['faculty'])
+    const session = await requireApiSession(request, ['faculty'])
     const body = await request.json()
     const routeParams = await params
     const resourceId = String(routeParams?.resourceId || '').trim()
@@ -39,7 +39,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request, ['faculty'])
+    const session = await requireApiSession(request, ['faculty'])
     const routeParams = await params
     const resourceId = String(routeParams?.resourceId || '').trim()
 

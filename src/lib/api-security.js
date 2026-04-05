@@ -1,6 +1,7 @@
 import 'server-only'
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME } from '@/lib/auth-constants'
+import { getSessionRecordById } from '@/lib/server-data'
 import { readSessionCookie } from '@/lib/session-cookie'
 
 export class ApiError extends Error {
@@ -37,6 +38,13 @@ export async function getSessionFromRequest(request) {
   const session = await readSessionCookie(sessionCookie)
   if (!session?.uid || !session?.role) {
     return null
+  }
+
+  if (session.sid) {
+    const sessionRecord = await getSessionRecordById(session.sid)
+    if (!sessionRecord || sessionRecord.uid !== session.uid) {
+      return null
+    }
   }
 
   return session

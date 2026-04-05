@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 export default function PublicFooter({
   links = [],
-  tagline = '(c) 2024 EduResource Hub. The Digital Curator.',
+  tagline = `© ${new Date().getFullYear()} EduResource Hub. Zembaa Solution.`,
   compact = false,
 }) {
   return (

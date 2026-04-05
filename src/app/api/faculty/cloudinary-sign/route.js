@@ -10,7 +10,7 @@ cloudinary.config({
 
 export async function POST(request) {
   try {
-    const session = requireApiSession(request, ['faculty'])
+    const session = await requireApiSession(request, ['faculty'])
     const timestamp = Math.round(new Date().getTime() / 1000)
     
     // We restrict the upload to a specific folder for this faculty

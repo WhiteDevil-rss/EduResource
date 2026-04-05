@@ -2,6 +2,7 @@ import 'server-only'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { SESSION_COOKIE_NAME } from '@/lib/auth-constants'
+import { getSessionRecordById } from '@/lib/server-data'
 import { readSessionCookie } from '@/lib/session-cookie'
 
 export async function getSessionUser() {
@@ -15,6 +16,14 @@ export async function getSessionUser() {
   if (!session) {
     console.warn('Session verification failed: invalid or expired cookie')
     return { user: null, role: null, status: null }
+  }
+
+  if (session.sid) {
+    const sessionRecord = await getSessionRecordById(session.sid)
+    if (!sessionRecord || sessionRecord.uid !== session.uid) {
+      console.warn('Session verification failed: revoked or missing session record')
+      return { user: null, role: null, status: null }
+    }
   }
 
   return {

@@ -275,7 +275,7 @@ export default function Login() {
 
       <PublicFooter
         links={footerLinks}
-        tagline="(c) 2024 EduResource Hub. Digital Curator Excellence."
+        tagline={`© ${new Date().getFullYear()} EduResource Hub. Zembaa Solution.`}
       />
     </div>
   )

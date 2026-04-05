@@ -5,6 +5,7 @@ import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
 import {
   createAuditRecord,
+  createSessionRecord,
   findUserRecordByEmail,
   findUserRecordByLoginId,
   getUserRecordById,
@@ -228,7 +229,21 @@ export async function POST(request) {
       )
     }
 
+    const sessionId = crypto.randomUUID()
+    let sessionRegistryCreated = false
+
     try {
+      await createSessionRecord({
+        sessionId,
+        uid: result.uid,
+        role: effectiveUser.role,
+        email: effectiveUser.email,
+        name: effectiveUser.displayName || null,
+        authProvider: 'credentials',
+        userAgent: request.headers.get('user-agent'),
+        expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
+      })
+      sessionRegistryCreated = true
       await touchUserLogin(result.uid)
       await createAuditRecord({
         actorUid: result.uid,
@@ -239,11 +254,25 @@ export async function POST(request) {
         message: `${effectiveUser.role} login granted for ${effectiveUser.email}.`,
       })
     } catch (error) {
+      const message = String(error?.message || '')
+      if (message.includes('You can only be signed in on 2 devices at a time')) {
+        return withNoStore(
+          NextResponse.json(
+            {
+              error:
+                'You can only be signed in on 2 devices at a time. Log out from another device and try again.',
+            },
+            { status: 403 }
+          )
+        )
+      }
+
       // Do not block successful credential auth when profile/audit persistence is unavailable.
-      console.warn(`Post-login persistence failed: ${String(error?.message || error)}`)
+      console.warn(`Post-login persistence failed: ${message || error}`)
     }
 
     const sessionCookie = await createSessionCookie({
+      ...(sessionRegistryCreated ? { sid: sessionId } : {}),
       uid: result.uid,
       email: effectiveUser.email,
       role: effectiveUser.role,
@@ -296,6 +325,15 @@ export async function POST(request) {
               'Authentication backend is partially configured. Firestore database is missing or inaccessible for the configured project.',
           },
           { status: 500 }
+        )
+      )
+    }
+
+    if (message.includes('You can only be signed in on 2 devices at a time')) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'You can only be signed in on 2 devices at a time. Log out from another device and try again.' },
+          { status: 403 }
         )
       )
     }

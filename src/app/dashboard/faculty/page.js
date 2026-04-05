@@ -58,6 +58,7 @@ export default function FacultyDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [totalDownloads, setTotalDownloads] = useState(0)
   const [editorOpen, setEditorOpen] = useState(false)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const deferredSearch = useDeferredValue(searchTerm)
@@ -83,6 +84,7 @@ export default function FacultyDashboard() {
       }
 
       setResources(Array.isArray(payload?.resources) ? payload.resources : [])
+  setTotalDownloads(Number(payload?.totalDownloads || 0))
       setErrorMessage('')
     } catch (error) {
       console.error('Faculty resource error:', error)
@@ -379,7 +381,7 @@ export default function FacultyDashboard() {
               </article>
               <article className="metric-card">
                 <span className="metric-card__label">Total Downloads</span>
-                <strong className="metric-card__value">{formatCompactNumber(Math.max(resources.length, 1) * 48)}</strong>
+                <strong className="metric-card__value">{formatCompactNumber(totalDownloads)}</strong>
               </article>
               <article className="status-panel">
                 <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Publishing Policy</span>
