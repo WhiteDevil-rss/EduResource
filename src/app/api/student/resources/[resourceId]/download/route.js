@@ -6,7 +6,7 @@ import { streamFromDrive } from '@/lib/google-drive'
 export async function GET(request, { params }) {
   try {
     const { resourceId } = await params
-    const session = requireApiSession(request, ['student', 'faculty', 'admin'])
+    requireApiSession(request, ['student', 'faculty', 'admin'])
 
     const resource = await getResourceRecordById(resourceId)
     if (!resource) {

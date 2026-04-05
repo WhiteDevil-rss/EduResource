@@ -39,14 +39,6 @@ function randomIndex(max) {
   return bytes[0] % max
 }
 
-async function requireAdminAuth() {
-  return auth
-}
-
-async function requireAdminDb() {
-  return firestore
-}
-
 function generateTemporaryPassword(length = 14) {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_'
   let value = ''
@@ -580,7 +572,7 @@ export async function resolveStudentGoogleUser(decodedToken) {
   return sanitizeUserData(decodedToken.uid, payload)
 }
 
-export async function createStudentAccount({ email, password, displayName, googleIdToken }) {
+export async function createStudentAccount({ email, password, displayName }) {
   const normalizedEmail = normalizeEmail(email)
   if (!normalizedEmail) {
     throw new Error('Invalid email address.')
@@ -647,7 +639,7 @@ export async function createResourceRecord({ session, payload }) {
   }
 
   const createdAt = nowIso()
-  const result = await firestore.addDoc(RESOURCES_COLLECTION, {
+  const docRef = await firestore.addDoc(RESOURCES_COLLECTION, {
     title,
     titleLower: title.toLowerCase(),
     subject,
@@ -674,12 +666,12 @@ export async function createResourceRecord({ session, payload }) {
     actorUid: session.uid,
     actorRole: session.role,
     action: 'resource.created',
-    targetId: document.id,
+    targetId: docRef.id,
     targetRole: 'resource',
     message: `Created resource "${title}".`,
   })
 
-  return sanitizeResourceData(document.id, {
+  return sanitizeResourceData(docRef.id, {
     title,
     titleLower: title.toLowerCase(),
     subject,
@@ -760,22 +752,22 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
   }
   
   export async function deleteResourceRecord({ resourceId, session }) {
-    const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
-    if (!current) {
-      throw new Error('Resource not found.')
-    }
-  
-    if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
-      throw new Error('You can only manage resources that you uploaded.')
-    }
-  
-    await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
-    await createAuditRecord({
-      actorUid: session.uid,
-      actorRole: session.role,
-      action: 'resource.deleted',
-      targetId: resourceId,
-      targetRole: 'resource',
-      message: `Deleted resource "${current.title || resourceId}".`,
-    })
+  const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+  if (!current) {
+    throw new Error('Resource not found.')
   }
+
+  if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
+    throw new Error('You can only manage resources that you uploaded.')
+  }
+
+  await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+  await createAuditRecord({
+    actorUid: session.uid,
+    actorRole: session.role,
+    action: 'resource.deleted',
+    targetId: resourceId,
+    targetRole: 'resource',
+    message: `Deleted resource "${current.title || resourceId}".`,
+  })
+}

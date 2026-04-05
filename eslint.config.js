@@ -7,6 +7,9 @@ export default [
     ignores: [
       ".next/**",
       ".wrangler/**",
+      ".open-next/**",
+      "scripts/**",
+      "functions/**",
       "out/**",
       "dist/**",
       "build/**",
@@ -50,6 +53,12 @@ export default [
         clearTimeout: "readonly",
         setInterval: "readonly",
         clearInterval: "readonly",
+        TextEncoder: "readonly",
+        TextDecoder: "readonly",
+        atob: "readonly",
+        btoa: "readonly",
+        File: "readonly",
+        globalThis: "readonly",
       },
     },
     plugins: {

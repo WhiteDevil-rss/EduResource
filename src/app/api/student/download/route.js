@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { jsonError, requireApiSession, withNoStore } from '@/lib/api-security'
+import { requireApiSession } from '@/lib/api-security'
 import { getResourceRecordById } from '@/lib/server-data'
 import { signDownloadUrl } from '@/lib/cloudinary'
 
@@ -7,7 +7,6 @@ export async function GET(request) {
   try {
     // 1. Authenticate the student session
     requireApiSession(request, ['student'])
-    
     // 2. Extract resourceId from query params
     const { searchParams } = new URL(request.url)
     const resourceId = searchParams.get('resourceId')

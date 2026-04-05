@@ -146,7 +146,7 @@ export default function FacultyDashboard() {
     setDraft(EMPTY_DRAFT)
   }
 
-  const [isUploading, setIsUploading] = useState(false)
+  
 
   const handleSave = async (event) => {
     event.preventDefault()

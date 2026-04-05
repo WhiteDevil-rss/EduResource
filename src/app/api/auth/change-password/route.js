@@ -30,7 +30,7 @@ export async function POST(request) {
     try {
       const result = await signInWithPassword(user.email, currentPassword)
       idToken = result.idToken
-    } catch (passwordError) {
+    } catch {
       console.warn(`Password verification failed for user: ${user.email}`)
       return NextResponse.json(
         { error: 'The current password you entered is incorrect.' },

@@ -1,4 +1,3 @@
-/* global TextEncoder, btoa */
 import * as jose from 'jose'
 
 /**
