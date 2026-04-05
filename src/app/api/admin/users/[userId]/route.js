@@ -72,6 +72,7 @@ export async function PATCH(request, { params }) {
         userId,
         actorUid: session.uid,
         actorRole: session.role,
+        newPassword: body?.newPassword || body?.password || null,
       })
 
       return withNoStore(

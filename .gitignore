@@ -39,3 +39,7 @@ next-env.d.ts
 .wrangler/
 .github/
 .scripts/
+
+# Google Drive
+client_secret_834792094975-vlaen0i3rcd87udlflogr5skj3u11n1n.apps.googleusercontent.com.json
+helical-clock-454307-p9-7337ef3575f6.json

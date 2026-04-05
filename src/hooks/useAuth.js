@@ -84,6 +84,12 @@ export function AuthProvider({ children }) {
       }
 
       const nextRole = payload?.role || null;
+      const allowedRoles = ['admin', 'faculty', 'student'];
+
+      if (!nextRole || !allowedRoles.includes(nextRole)) {
+        throw new Error("Unauthorized dashboard role resolution.");
+      }
+
       const nextSession = {
         user: payload?.user || null,
         role: nextRole,
@@ -153,6 +159,12 @@ export function AuthProvider({ children }) {
       }
 
       const nextRole = payload?.role || null;
+      const allowedRoles = ['admin', 'faculty', 'student'];
+
+      if (!nextRole || !allowedRoles.includes(nextRole)) {
+        throw new Error("Account role resolution failed or access denied.");
+      }
+
       const nextSession = {
         user: payload?.user || null,
         role: nextRole,
@@ -160,12 +172,8 @@ export function AuthProvider({ children }) {
         authProvider: "credentials",
       };
 
-      if (!nextRole) {
-        throw new Error("Role resolution failed for this account.");
-      }
-
       applySession(nextSession);
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.location.replace(`/dashboard/${nextRole}`);
         return;
       }

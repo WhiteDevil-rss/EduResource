@@ -47,6 +47,7 @@ function normalizeStudentResource(entry) {
     class: entry?.class || 'CORE 101',
     summary: entry?.summary || 'No description available yet.',
     fileUrl: entry?.fileUrl || '',
+    previewUrl: entry?.previewUrl || '',
     createdAt: entry?.createdAt || null,
     updatedAt: entry?.updatedAt || null,
     ...inferred,
@@ -157,6 +158,9 @@ export default function StudentDashboard() {
         title: entry.title,
         subject: entry.subject,
         fileUrl: entry.fileUrl,
+        fileType: entry.fileType || entry.type || '',
+        fileSize: entry.fileSize || entry.size || 0,
+        fileFormat: entry.fileFormat || entry.format || '',
         downloadedAt: new Date().toISOString(),
       },
       ...downloads.filter((download) => download.id !== entry.id),
@@ -165,8 +169,8 @@ export default function StudentDashboard() {
     persistDownloads(nextDownloads)
     toast.success(`${entry.title} added to your downloads.`)
 
-    if (entry.fileUrl && typeof window !== 'undefined') {
-      window.open(entry.fileUrl, '_blank', 'noopener,noreferrer')
+    if (typeof window !== 'undefined') {
+      window.open(`/api/student/resources/${entry.id}/download`, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -298,10 +302,23 @@ export default function StudentDashboard() {
                           {entry.subject}
                         </span>
                         <span>/</span>
-                        <span style={{ color: 'var(--secondary)' }}>{entry.format} / {entry.size}</span>
+                        <span style={{ color: 'var(--secondary)' }}>
+                          {(entry.fileFormat || entry.format || 'FILE').toUpperCase()} / {
+                            entry.fileSize 
+                              ? (entry.fileSize / 1024 / 1024).toFixed(1) + ' MB'
+                              : (entry.size || 'Unknown')
+                          }
+                        </span>
                       </div>
-                      <h3>{entry.title}</h3>
-                      <p>{entry.summary}</p>
+                      {entry.previewUrl && (
+                        <div className="resource-card__preview">
+                          <img src={entry.previewUrl} alt={entry.title} loading="lazy" />
+                        </div>
+                      )}
+                      <div className="resource-card__body">
+                        <h3>{entry.title}</h3>
+                        <p>{entry.summary}</p>
+                      </div>
                       <div className="resource-card__footer">
                         <span className="metric-card__label">{formatRelativeUpdate(entry.updatedAt || entry.createdAt)}</span>
                         <button type="button" className="resource-card__action" onClick={() => handleResourceAction(entry)}>
@@ -317,10 +334,23 @@ export default function StudentDashboard() {
                     <div className="resource-card__meta">
                       <span>{entry.subject}</span>
                       <span>/</span>
-                      <span>{entry.format} / {entry.size}</span>
+                      <span>
+                        {(entry.fileFormat || entry.format || 'FILE').toUpperCase()} / {
+                          entry.fileSize 
+                            ? (entry.fileSize / 1024 / 1024).toFixed(1) + ' MB'
+                            : (entry.size || 'Unknown')
+                        }
+                      </span>
                     </div>
-                    <h3>{entry.title}</h3>
-                    <p>{entry.summary}</p>
+                    {entry.previewUrl && (
+                      <div className="resource-card__preview">
+                        <img src={entry.previewUrl} alt={entry.title} loading="lazy" />
+                      </div>
+                    )}
+                    <div className="resource-card__body">
+                      <h3>{entry.title}</h3>
+                      <p>{entry.summary}</p>
+                    </div>
                     <div className="resource-card__footer">
                       <span className="metric-card__label">{formatRelativeUpdate(entry.updatedAt || entry.createdAt)}</span>
                       <button type="button" className="resource-card__action" onClick={() => handleResourceAction(entry)}>
@@ -359,7 +389,7 @@ export default function StudentDashboard() {
                           <strong>{entry.title}</strong>
                           <span>{entry.subject}</span>
                         </div>
-                        <a href={entry.fileUrl} className="button-secondary" target="_blank" rel="noreferrer">
+                        <a href={`/api/student/resources/${entry.id}/download`} className="button-secondary" target="_blank" rel="noreferrer">
                           Open
                         </a>
                       </div>

@@ -121,7 +121,7 @@ export default function Login() {
           { label: 'Institutions', href: '/#scholarships' },
           { label: 'About', href: '/#archive' },
         ]}
-        actions={[{ label: 'Student Register', href: '/register', variant: 'primary' }]}
+        actions={[{ label: 'Get Access', href: '/register', variant: 'primary' }]}
         showUtilityIcons
       />
 
@@ -153,11 +153,11 @@ export default function Login() {
           </div>
 
           <div className="auth-header" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            <h1>{loginMode === 'staff' ? 'Staff Login' : 'Student Login'}</h1>
+            <h1>{loginMode === 'staff' ? 'Staff Login' : 'Student Access'}</h1>
             <p>
               {loginMode === 'staff'
                 ? 'Sign in with your institutional credentials.'
-                : 'Access your coursework with Google authentication.'}
+                : 'Secure access via your verified Google account.'}
             </p>
           </div>
 
@@ -245,12 +245,12 @@ export default function Login() {
             <div className="auth-student-flow">
               <div className="auth-alert" style={{ background: 'var(--background-secondary)', border: 'none' }}>
                 <Chrome size={18} color="var(--secondary)" />
-                <span>Single Sign-On enabled for all registered students.</span>
+                <span>Single Sign-On is required for all students.</span>
               </div>
               
               <button
                 type="button"
-                className="button-secondary button-block"
+                className="button-primary button-block"
                 onClick={handleStudentLogin}
                 disabled={isAuthenticating}
                 style={{ marginTop: '2rem', height: '3.5rem', fontSize: '1rem' }}
@@ -260,11 +260,11 @@ export default function Login() {
                 ) : (
                   <Chrome size={20} />
                 )}
-                {isAuthenticating ? 'Authenticating...' : 'Continue with Google'}
+                {isAuthenticating ? 'Authenticating...' : 'Sign in with Google'}
               </button>
               
               <p className="auth-footer-note" style={{ textAlign: 'center', marginTop: '1.5rem', opacity: 0.7, fontSize: '0.875rem' }}>
-                Make sure to use the Gmail ID registered with your institution.
+                New students will be automatically registered on their first login.
               </p>
             </div>
           )}

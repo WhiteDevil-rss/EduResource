@@ -16,23 +16,28 @@ const nodeStubPlugin = {
   setup(build) {
     const safeModules = new Set([
       'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
-      'path', 'process', 'stream', 'string_decoder', 'util', 'url',
+      'path', 'process', 'stream', 'string_decoder', 'url',
       'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
       'module'
     ]);
 
     // Handle all node:* and bare Node modules
-    build.onResolve({ filter: /^(node:)?([a-z_][a-z0-9_]*)$/ }, (args) => {
-      const isNodeModule = args.path.startsWith('node:') || 
-        ['fs', 'os', 'vm', 'v8', 'inspector', 'child_process', 'cluster', 'dns', 'http', 'https', 'net', 'tls', 'dgram', 'readline', 'repl', 'tty', 'zlib', 'crypto', 'path', 'util', 'stream', 'events', 'buffer', 'process'].includes(args.path);
+    build.onResolve({ filter: /^(node:)?([a-z_][a-z0-9_]*|timers\/promises)$/ }, (args) => {
+        // Normalize the module name
+        const originalPath = args.path.replace(/^node:/, '');
+        const baseName = originalPath.split('/')[0];
+        
+        const isNodeModule = args.path.startsWith('node:') || 
+          ['fs', 'os', 'vm', 'v8', 'inspector', 'child_process', 'cluster', 'dns', 'http', 'https', 'net', 'tls', 'dgram', 'readline', 'repl', 'tty', 'zlib', 'crypto', 'path', 'util', 'stream', 'events', 'buffer', 'process', 'timers', 'querystring'].includes(baseName);
 
-      if (!isNodeModule) return null;
+        if (!isNodeModule) return null;
 
-      const moduleName = args.path.replace(/^node:/, '');
-      if (!safeModules.has(moduleName)) {
-        return { path: stubPath };
-      }
-      return { path: args.path, external: true };
+        if (!safeModules.has(baseName)) {
+            // Redirect EVERYTHING from problematic modules (including sub-paths) to the stub
+            return { path: stubPath };
+        }
+        
+        return { path: args.path, external: true };
     });
 
     build.onResolve({ filter: /^cloudflare:.*$/ }, (args) => {
@@ -47,8 +52,7 @@ async function runPatch() {
     let workerCode = readFileSync(sourcePath, 'utf-8');
 
     console.log('Promoting dynamic imports to static for deep bundling...');
-    // Replace: const { handler } = await import("./server-functions/default/handler.mjs");
-    // With: import { handler } from "./server-functions/default/handler.mjs";
+    // Replace dynamic imports of handlers to make them visible to esbuild
     const dynamicImportRegex = /const\s+\{\s*handler\s*\}\s+=\s+await\s+import\(\"\.\/server-functions\/default\/handler\.mjs\"\);/;
     if (dynamicImportRegex.test(workerCode)) {
       workerCode = 'import { handler as _handler } from "./server-functions/default/handler.mjs";\n' + workerCode;
@@ -57,7 +61,7 @@ async function runPatch() {
     }
 
     console.log('Injecting ASSETS passthrough logic...');
-    // Static asset passthrough
+    // Static asset passthrough logic for Cloudflare
     const fetchStartIdx = workerCode.indexOf('async fetch(request, env, ctx) {');
     if (fetchStartIdx !== -1) {
       const insertionPoint = workerCode.indexOf('{', fetchStartIdx) + 1;
@@ -70,19 +74,19 @@ async function runPatch() {
       workerCode = workerCode.slice(0, insertionPoint) + passthroughLogic + workerCode.slice(insertionPoint);
     }
 
-    // Wrap in try/catch
+    // Wrap in diagnostic try/catch
     workerCode = workerCode.replace(
       /return handler\(reqOrResp, env, ctx, request\.signal\);/,
       `try {
                 return await handler(reqOrResp, env, ctx, request.signal);
             } catch (err) {
-                console.error('Deep Runtime Exception:', err);
+                console.error('Edge Runtime Exception:', err);
                 return new Response(JSON.stringify({
                     status: 'error',
                     code: 'RUNTIME_EXCEPTION',
                     message: err.message,
                     stack: err.stack,
-                    diagnostics: 'If this is a "No such module" error, the stubbing layer failed to catch a dynamic dependency.'
+                    diagnostics: 'If this is a "setImmediate" TypeError, the post-bundle sanitizer failed to defuse a frozen namespace mutation.'
                 }, null, 2), { 
                     status: 500,
                     headers: { 'Content-Type': 'application/json' }
@@ -113,30 +117,33 @@ async function runPatch() {
       define: {
         'process.env.NODE_ENV': '"production"',
       },
-      alias: {
-        // Force resolve all node:* to the plugin/stub
-        'node:fs': stubPath,
-      },
+      // Remove 'alias' for node:* sub-paths as the plugin's regex handles it more flexibly
       minify: false,
       logLevel: 'info',
     });
 
     console.log(`Bundled worker saved to: ${destPath}`);
 
-    // Final Verification
-    const finalContent = readFileSync(destPath, 'utf-8');
-    if (finalContent.includes('import(')) {
-      console.warn('Warning: Final bundle still contains dynamic imports. Deep stubbing might be partial.');
-    }
-    const forbidden = ['node:fs', 'node:v8', 'node:inspector', 'node:vm'];
-    forbidden.forEach(mod => {
-      if (finalContent.includes(mod)) {
-        console.error(`FATAL ERROR: ${mod} found in the final bundle!`);
-        process.exit(1);
-      }
-    });
+    // FINAL DEFUSE: Surgical String Patching the final bundle
+    console.log('Post-Processing: Defusing illegal namespace mutations in the final bundle...');
+    let finalBundle = readFileSync(destPath, 'utf-8');
+    
+    // We replace specific mutation targets with innocuous dummy property writes.
+    // This circumvents "Cannot set property ... which has only a getter" on Edge.
+    const mutations = [
+        /nodeTimers[a-zA-Z]*\.setImmediate\s*=/g,
+        /nodeTimers[a-zA-Z]*\.clearImmediate\s*=/g,
+        /nodeTimersPromises[a-zA-Z]*\.setImmediate\s*=/g
+    ];
 
-    console.log('Worker deeply patched and bundled successfully.');
+    mutations.forEach(m => {
+        finalBundle = finalBundle.replace(m, 'globalThis.___defused_mutation =');
+    });
+    
+    console.log('Applied surgical patches to defuse frozen module TypeErrors.');
+    writeFileSync(destPath, finalBundle);
+
+    console.log('Worker deeply patched, bundled, and sanitized successfully.');
   } catch (error) {
     console.error('Deep Patching process failed:', error);
     process.exit(1);

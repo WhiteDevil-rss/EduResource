@@ -76,12 +76,13 @@ function sanitizeUserData(docId, data = {}) {
     email: data.email || '',
     loginId: data.loginId || null,
     role: data.role || 'student',
-    status: data.status || 'disabled',
+    status: data.status || 'active',
     authProvider: data.authProvider || 'unknown',
     pending: Boolean(data.pending),
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
     lastLoginAt: data.lastLoginAt || null,
+    avatar: data.avatar || null,
   }
 }
 
@@ -106,11 +107,19 @@ function sanitizeResourceData(docId, data = {}) {
     subject: data.subject || 'General',
     class: data.class || 'CORE 101',
     fileUrl: data.fileUrl || '',
+    fileType: data.fileType || '',
+    fileSize: data.fileSize || 0,
+    fileFormat: data.fileFormat || '',
     status: data.status || 'live',
     uploadedBy: data.uploadedBy || data.facultyId || '',
     facultyId: data.facultyId || data.uploadedBy || '',
     facultyEmail: data.facultyEmail || '',
     summary: data.summary || data.description || '',
+    driveFileId: data.driveFileId || '',
+    driveFileLink: data.driveFileLink || '',
+    previewUrl: data.previewUrl || '',
+    previewPublicId: data.previewPublicId || '',
+    category: data.category || '',
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
   }
@@ -123,6 +132,10 @@ async function getCollectionRecords(collectionName) {
 }
 
 export async function getUserRecordById(userId) {
+  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    console.error('getUserRecordById: Invalid or missing userId');
+    return null;
+  }
   const adminDb = await requireAdminDb()
   const snapshot = await adminDb.collection(USERS_COLLECTION).doc(userId).get()
   if (!snapshot.exists) {
@@ -132,7 +145,25 @@ export async function getUserRecordById(userId) {
   return sanitizeUserData(snapshot.id, snapshot.data())
 }
 
+export async function getResourceRecordById(resourceId) {
+  if (!resourceId || typeof resourceId !== 'string' || resourceId.trim() === '') {
+    console.error('getResourceRecordById: Invalid or missing resourceId');
+    return null;
+  }
+  const adminDb = await requireAdminDb()
+  const snapshot = await adminDb.collection('resources').doc(resourceId).get()
+  if (!snapshot.exists) {
+    return null
+  }
+
+  return sanitizeResourceData(snapshot.id, snapshot.data())
+}
+
 export async function getRawUserRecordById(userId) {
+  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    console.error('getRawUserRecordById: Invalid or missing userId');
+    return null;
+  }
   const adminDb = await requireAdminDb()
   const snapshot = await adminDb.collection(USERS_COLLECTION).doc(userId).get()
   if (!snapshot.exists) {
@@ -444,7 +475,7 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
   return sanitizeUserData(record.id, updated)
 }
 
-export async function resetManagedCredentials({ userId, actorUid, actorRole }) {
+export async function resetManagedCredentials({ userId, actorUid, actorRole, newPassword }) {
   assertPrivilegedFirebaseAccess()
   const adminAuth = await requireAdminAuth()
   const adminDb = await requireAdminDb()
@@ -454,22 +485,38 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole }) {
     throw new Error('User account not found.')
   }
 
-  if (record.data.authProvider !== 'credentials' || !record.data.uid) {
-    throw new Error('Only credential-managed accounts can be reset.')
+  // Ensure the user has a Firebase Auth UID
+  if (!record.data.uid) {
+    throw new Error('This account has not yet been linked to an authentication provider.')
   }
 
-  const temporaryPassword = generateTemporaryPassword()
+  const temporaryPassword = newPassword || generateTemporaryPassword()
+  let loginId = record.data.loginId
+
+  // If the user doesn't have a Login ID (e.g. Google-only student), generate one
+  if (!loginId) {
+    loginId = await ensureUniqueLoginId(
+      record.data.email?.split('@')[0] || record.data.displayName || record.data.role || 'user'
+    )
+  }
+
   await adminAuth.updateUser(record.data.uid, {
     password: temporaryPassword,
     disabled: record.data.status !== 'active',
   })
 
-  await adminDb.collection(USERS_COLLECTION).doc(record.id).set(
-    {
-      updatedAt: nowIso(),
-    },
-    { merge: true }
-  )
+  const updatedData = {
+    ...record.data,
+    loginId,
+    updatedAt: nowIso(),
+  }
+
+  // If they were Google-only, we now effectively support credentials too
+  if (record.data.authProvider === 'google') {
+    updatedData.authProvider = 'credentials'
+  }
+
+  await adminDb.collection(USERS_COLLECTION).doc(record.id).set(updatedData, { merge: true })
 
   await createAuditRecord({
     actorUid,
@@ -481,9 +528,9 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole }) {
   })
 
   return {
-    user: sanitizeUserData(record.id, record.data),
+    user: sanitizeUserData(record.id, updatedData),
     credentials: {
-      loginId: record.data.loginId || null,
+      loginId,
       temporaryPassword,
     },
   }
@@ -496,6 +543,11 @@ export async function resolveStudentGoogleUser(decodedToken) {
   const email = normalizeEmail(decodedToken?.email)
   if (!decodedToken?.uid || !email) {
     throw new Error('A verified Google email is required for student access.')
+  }
+
+  // Enforce Gmail restriction for students
+  if (!email.endsWith('@gmail.com')) {
+    throw new Error('Only Gmail addresses are permitted for student access.')
   }
 
   const currentRecord = await getRawUserRecordById(decodedToken.uid)
@@ -644,6 +696,11 @@ export async function createResourceRecord({ session, payload }) {
   const fileUrl = String(payload?.fileUrl || '').trim()
   const summary = String(payload?.summary || '').trim()
   const status = payload?.status === 'draft' ? 'draft' : 'live'
+  
+  // New metadata fields
+  const fileType = String(payload?.fileType || '').trim()
+  const fileSize = Number(payload?.fileSize || 0)
+  const fileFormat = String(payload?.fileFormat || '').trim()
 
   if (!title || !subject || !courseClass || !fileUrl) {
     throw new Error('Title, subject, class, and file URL are required.')
@@ -656,8 +713,16 @@ export async function createResourceRecord({ session, payload }) {
     subject,
     class: courseClass,
     fileUrl,
+    fileType,
+    fileSize,
+    fileFormat,
     summary,
     status,
+    driveFileId: String(payload?.driveFileId || '').trim(),
+    driveFileLink: String(payload?.driveFileLink || '').trim(),
+    previewUrl: String(payload?.previewUrl || '').trim(),
+    previewPublicId: String(payload?.previewPublicId || '').trim(),
+    category: String(payload?.category || '').trim(),
     uploadedBy: session.uid,
     facultyId: session.uid,
     facultyEmail: session.email || '',
@@ -680,8 +745,16 @@ export async function createResourceRecord({ session, payload }) {
     subject,
     class: courseClass,
     fileUrl,
+    fileType,
+    fileSize,
+    fileFormat,
     summary,
     status,
+    driveFileId: String(payload?.driveFileId || '').trim(),
+    driveFileLink: String(payload?.driveFileLink || '').trim(),
+    previewUrl: String(payload?.previewUrl || '').trim(),
+    previewPublicId: String(payload?.previewPublicId || '').trim(),
+    category: String(payload?.category || '').trim(),
     uploadedBy: session.uid,
     facultyId: session.uid,
     facultyEmail: session.email || '',
@@ -710,6 +783,10 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
   const fileUrl = String(payload?.fileUrl || '').trim()
   const summary = String(payload?.summary || '').trim()
   const status = payload?.status === 'draft' ? 'draft' : 'live'
+  // New metadata fields
+  const fileType = payload?.fileType ? String(payload.fileType).trim() : undefined
+  const fileSize = payload?.fileSize !== undefined ? Number(payload.fileSize) : undefined
+  const fileFormat = payload?.fileFormat ? String(payload.fileFormat).trim() : undefined
 
   if (!title || !subject || !courseClass || !fileUrl) {
     throw new Error('Title, subject, class, and file URL are required.')
@@ -726,6 +803,15 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
     status,
     updatedAt: nowIso(),
   }
+
+  if (fileType !== undefined) updated.fileType = fileType
+  if (fileSize !== undefined) updated.fileSize = fileSize
+  if (fileFormat !== undefined) updated.fileFormat = fileFormat
+  if (payload?.driveFileId !== undefined) updated.driveFileId = String(payload.driveFileId).trim()
+  if (payload?.driveFileLink !== undefined) updated.driveFileLink = String(payload.driveFileLink).trim()
+  if (payload?.previewUrl !== undefined) updated.previewUrl = String(payload.previewUrl).trim()
+  if (payload?.previewPublicId !== undefined) updated.previewPublicId = String(payload.previewPublicId).trim()
+  if (payload?.category !== undefined) updated.category = String(payload.category).trim()
 
   await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).set(updated, { merge: true })
   await createAuditRecord({

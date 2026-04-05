@@ -6,6 +6,7 @@ const projectRoot = dirname(fileURLToPath(import.meta.url))
 
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingRoot: projectRoot,
   reactStrictMode: false,
   images: {
     remotePatterns: [
@@ -17,7 +18,6 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
-    turbo: { enabled: false },
   },
   serverExternalPackages: ['firebase-admin'],
   allowedDevOrigins: ['10.112.183.165'],

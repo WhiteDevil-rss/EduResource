@@ -248,3 +248,25 @@ export function getSubjectTone(subject) {
 
   return 'neutral'
 }
+
+/**
+ * Ensures a URL used in an img tag is safe and correctly formatted.
+ * Specifically handles Cloudinary PDFs by appending .jpg extension for thumbnails.
+ */
+export function getSafeAvatarUrl(url, fallback = null) {
+  if (!url || typeof url !== 'string') {
+    return fallback
+  }
+
+  const trimmed = url.trim()
+  if (!trimmed) {
+    return fallback
+  }
+
+  // Handle Cloudinary PDF URLs: transform to image thumbnail if it's a PDF
+  if (trimmed.includes('res.cloudinary.com') && trimmed.toLowerCase().endsWith('.pdf')) {
+    return `${trimmed}.jpg` // Cloudinary's trick to render the first page of a PDF as an image
+  }
+
+  return trimmed
+}

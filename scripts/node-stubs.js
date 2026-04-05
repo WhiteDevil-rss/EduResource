@@ -10,14 +10,6 @@ const emptyArray = [];
 const createStub = (name = 'Stub') => {
   const handler = {
     get: (target, prop) => {
-      // Standard timers
-      if (prop === 'setImmediate') return (fn, ...args) => setTimeout(fn, 0, ...args);
-      if (prop === 'clearImmediate') return (id) => clearTimeout(id);
-      
-      // Node specifics
-      if (prop === 'promises') return createStub(`${name}.promises`);
-      if (prop === 'constants') return emptyObject;
-      
       // Standard Node environment details
       if (prop === 'cwd') return () => '/';
       if (prop === 'env') return process.env || {};
@@ -26,14 +18,26 @@ const createStub = (name = 'Stub') => {
       if (prop === 'version') return 'v20.0.0';
       if (prop === 'isatty') return () => false;
 
-      // Always return a self-referential Proxy for property access
+      // Special cases for common Node.js properties
+      if (prop === 'promises') return createStub(`${name}.promises`);
+      if (prop === 'constants') return emptyObject;
+      if (prop === 'types') return emptyObject;
+      if (prop === 'codes') return emptyObject;
+      
+      // AsyncLocalStorage mock
+      if (prop === 'AsyncLocalStorage') {
+        return class { 
+          enterWith() {} 
+          run(s, f) { return f(); } 
+          getStore() { return {}; } 
+        };
+      }
+
+      // For everything else, return a recursion of the stub
       return createStub(`${name}.${String(prop)}`);
     },
-    // Allow assignments by returning true for 'set'
-    set: (target, prop, value) => {
-      // Ignore but don't crash
-      return true;
-    },
+    // ALLOW ASSIGNMENTS so it doesn't crash on 'module.exports = ...' or other patches
+    set: () => true,
     apply: () => undefined,
     construct: () => ({})
   };
@@ -43,21 +47,21 @@ const createStub = (name = 'Stub') => {
 const universalStub = createStub('UniversalStub');
 
 // Explicitly export common names to satisfy both CJS and ESM consumers
-// Timers
-export const setTimeout = (fn, delay, ...args) => globalThis.setTimeout(fn, delay, ...args);
-export const clearTimeout = (id) => globalThis.clearTimeout(id);
-export const setInterval = (fn, delay, ...args) => globalThis.setInterval(fn, delay, ...args);
-export const clearInterval = (id) => globalThis.clearInterval(id);
+// Timers (Standard APIs)
+export const setTimeout = globalThis.setTimeout;
+export const clearTimeout = globalThis.clearTimeout;
+export const setInterval = globalThis.setInterval;
+export const clearInterval = globalThis.clearInterval;
+
+// Fallback for Node-specific timers
 export const setImmediate = (fn, ...args) => globalThis.setTimeout(fn, 0, ...args);
 export const clearImmediate = (id) => globalThis.clearTimeout(id);
 
-// Querystring
-export const parse = () => ({});
-export const stringify = () => '';
-export const decode = () => ({});
-export const encode = () => '';
-
-// Common Node internals
+// Querystring/Utils/Common Node internals
+export const parse = (s) => ({});
+export const stringify = (o) => '';
+export const decode = (s) => ({});
+export const encode = (o) => '';
 export const promises = universalStub;
 export const constants = emptyObject;
 export const watch = noop;
@@ -70,12 +74,12 @@ export const createHash = universalStub;
 export const createHmac = universalStub;
 export const randomBytes = (n) => Buffer.alloc(n);
 export const type = () => 'Darwin';
-export const release = () => '23.0.0';
+export const release = () => '24.0.0'; // Modern
 export const arch = () => 'x64';
 export const platform = () => 'darwin';
 export const userInfo = () => ({ username: 'edge' });
 export const cpus = () => emptyArray;
-export const getHeapStatistics = () => emptyObject;
+export const getHeapStatistics = () => ({ total_heap_size: 0, total_heap_size_executable: 0, total_physical_size: 0, total_available_size: 0, used_heap_size: 0, heap_size_limit: 0, malloced_memory: 0, peak_malloced_memory: 0, does_zap_garbage: 0, number_of_native_contexts: 0, number_of_detached_contexts: 0 });
 
 // Export as default for 'import x from "node:x"'
 export default universalStub;

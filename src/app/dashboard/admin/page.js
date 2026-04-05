@@ -23,6 +23,7 @@ import {
   formatDisplayDate,
   getDisplayName,
   getInitials,
+  getSafeAvatarUrl,
 } from '@/lib/demo-content'
 
 const EMPTY_CREATE_FORM = {
@@ -62,6 +63,7 @@ export default function AdminDashboard() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM)
   const [submittingCreate, setSubmittingCreate] = useState(false)
+  const [resetModal, setResetModal] = useState(null) // { user: object, password: String, submitting: boolean }
   const [pendingCredentials, setPendingCredentials] = useState(null)
   const deferredSearch = useDeferredValue(searchTerm)
 
@@ -207,12 +209,15 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleResetCredentials = async (entry) => {
+  const handleResetCredentials = async (targetUser, forcedPassword = null) => {
     try {
-      const response = await fetch(`/api/admin/users/${entry.id}`, {
+      const response = await fetch(`/api/admin/users/${targetUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resetCredentials' }),
+        body: JSON.stringify({
+          action: 'resetCredentials',
+          password: forcedPassword || undefined
+        }),
       })
 
       const payload = await response.json().catch(() => ({}))
@@ -222,13 +227,18 @@ export default function AdminDashboard() {
 
       setPendingCredentials({
         ...payload.credentials,
-        role: entry.role,
-        email: entry.email,
+        role: targetUser.role,
+        email: targetUser.email,
       })
-      toast.success('Temporary credentials generated.')
+      
+      setResetModal(null)
+      toast.success(forcedPassword ? 'Password updated successfully.' : 'Temporary credentials generated.')
       await loadOverview({ background: true })
     } catch (error) {
       toast.error(error.message || 'Could not reset the credentials.')
+      if (resetModal) {
+        setResetModal(prev => ({ ...prev, submitting: false }))
+      }
     }
   }
 
@@ -276,7 +286,7 @@ export default function AdminDashboard() {
 
             <div className="dashboard-profile">
               <div className="dashboard-profile__avatar">
-                <img src={ADMIN_PROFILE.avatar} alt="Admin profile" />
+                <img src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)} alt="Admin profile" />
               </div>
               <div>
                 <strong>{user?.name || getDisplayName(user?.email, ADMIN_PROFILE.name)}</strong>
@@ -322,7 +332,7 @@ export default function AdminDashboard() {
                   <span>{ADMIN_PROFILE.subtitle}</span>
                 </div>
                 <div className="dashboard-profile__avatar">
-                  <img src={ADMIN_PROFILE.avatar} alt="Admin profile" />
+                  <img src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)} alt="Admin profile" />
                 </div>
               </div>
             </div>
@@ -487,15 +497,13 @@ export default function AdminDashboard() {
                             >
                               {entry.status === 'active' ? 'Disable' : 'Enable'}
                             </button>
-                            {entry.authProvider === 'credentials' ? (
-                              <button
-                                type="button"
-                                className="text-action text-action--primary"
-                                onClick={() => handleResetCredentials(entry)}
-                              >
-                                Reset Password
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              className="text-action text-action--primary"
+                              onClick={() => setResetModal({ user: entry, password: '', submitting: false })}
+                            >
+                              Reset Password
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -694,6 +702,61 @@ export default function AdminDashboard() {
                 </button>
                 <button type="submit" className="button-primary" disabled={submittingCreate}>
                   {submittingCreate ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {resetModal ? (
+        <div className="modal-backdrop">
+          <div className="modal-card">
+            <h3>Reset User Password</h3>
+            <p>
+              Set a new password for <strong>{resetModal.user.displayName || resetModal.user.email}</strong>.
+              Leave the field blank for an auto-generated secure password.
+            </p>
+
+            <form 
+              className="modal-form" 
+              onSubmit={(e) => {
+                e.preventDefault()
+                setResetModal(prev => ({ ...prev, submitting: true }))
+                handleResetCredentials(resetModal.user, resetModal.password.trim() || null)
+              }}
+            >
+              <div className="auth-field">
+                <label htmlFor="reset-new-password">Manual Password (Optional)</label>
+                <input
+                  id="reset-new-password"
+                  className="auth-textarea"
+                  type="text"
+                  autoComplete="off"
+                  value={resetModal.password}
+                  onChange={(e) => setResetModal(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Leave blank to auto-generate"
+                />
+              </div>
+
+              <div className="auth-alert">
+                <Shield size={18} color="var(--primary)" />
+                <span>
+                  Resetting the password will create or update the underlying identity record and display the new credentials immediately.
+                </span>
+              </div>
+
+              <div className="modal-form__actions">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  disabled={resetModal.submitting}
+                  onClick={() => setResetModal(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="button-primary" disabled={resetModal.submitting}>
+                  {resetModal.submitting ? 'Processing...' : 'Reset Password Now'}
                 </button>
               </div>
             </form>

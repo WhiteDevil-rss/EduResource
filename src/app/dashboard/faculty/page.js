@@ -21,6 +21,7 @@ import {
   FACULTY_PROFILE,
   formatDisplayDate,
   getDisplayName,
+  getSafeAvatarUrl,
   getSubjectTone,
 } from '@/lib/demo-content'
 
@@ -30,8 +31,12 @@ const EMPTY_DRAFT = {
   class: '',
   subject: '',
   fileUrl: '',
+  fileType: '',
+  fileSize: 0,
+  fileFormat: '',
   summary: '',
   status: 'live',
+  file: null, // Temporary client-side file object
 }
 
 function formatCompactNumber(value) {
@@ -126,8 +131,12 @@ export default function FacultyDashboard() {
       class: entry.class,
       subject: entry.subject,
       fileUrl: entry.fileUrl,
+      fileType: entry.fileType || '',
+      fileSize: entry.fileSize || 0,
+      fileFormat: entry.fileFormat || '',
       summary: entry.summary || '',
       status: entry.status || 'live',
+      file: null,
     })
     setEditorOpen(true)
   }
@@ -137,16 +146,36 @@ export default function FacultyDashboard() {
     setDraft(EMPTY_DRAFT)
   }
 
+  const [isUploading, setIsUploading] = useState(false)
+
   const handleSave = async (event) => {
     event.preventDefault()
 
+    const formData = new FormData()
+    formData.append('title', draft.title)
+    formData.append('class', draft.class)
+    formData.append('subject', draft.subject)
+    formData.append('summary', draft.summary)
+    formData.append('status', draft.status)
+    
+    if (draft.file) {
+      formData.append('file', draft.file)
+    }
+
+    setRefreshing(true)
     try {
+      if (!draft.id && !draft.file) {
+        throw new Error('Please select a file to upload.')
+      }
+
       const response = await fetch(
         draft.id ? `/api/faculty/resources/${draft.id}` : '/api/faculty/resources',
         {
           method: draft.id ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(draft),
+          body: draft.id ? JSON.stringify(Object.fromEntries(formData)) : formData,
+          // For PATCH, we might still want JSON if we're not updating the file, 
+          // but for POST we definitely want FormData.
+          headers: draft.id ? { 'Content-Type': 'application/json' } : undefined,
         }
       )
 
@@ -160,6 +189,8 @@ export default function FacultyDashboard() {
       await loadResources({ background: true })
     } catch (error) {
       toast.error(error.message || 'Could not save the resource.')
+    } finally {
+      setRefreshing(false)
     }
   }
 
@@ -269,7 +300,7 @@ export default function FacultyDashboard() {
 
             <div className="dashboard-profile">
               <div className="dashboard-profile__avatar">
-                <img src={FACULTY_PROFILE.avatar} alt="Faculty profile" />
+                <img src={getSafeAvatarUrl(user?.avatar, FACULTY_PROFILE.avatar)} alt="Faculty profile" />
               </div>
               <div>
                 <strong>{user?.name || getDisplayName(user?.email, FACULTY_PROFILE.name)}</strong>
@@ -557,14 +588,38 @@ export default function FacultyDashboard() {
               </div>
 
               <div className="auth-field">
-                <label htmlFor="faculty-file">File URL</label>
-                <input
-                  id="faculty-file"
-                  className="auth-textarea"
-                  type="url"
-                  value={draft.fileUrl}
-                  onChange={(event) => setDraft((current) => ({ ...current, fileUrl: event.target.value }))}
-                />
+                <label>Resource Material (PDF, DOCX, TXT, etc.)</label>
+                <div 
+                  className={`upload-zone ${draft.file ? 'upload-zone--has-file' : ''}`}
+                  onClick={() => document.getElementById('file-upload-input').click()}
+                >
+                  <Upload size={24} color={draft.file ? 'var(--primary)' : 'var(--secondary)'} />
+                  {draft.file ? (
+                    <div className="upload-zone__file">
+                      <strong>{draft.file.name}</strong>
+                      <span>{(draft.file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    </div>
+                  ) : (
+                    <div className="upload-zone__prompt">
+                      <strong>Click to upload or drag & drop</strong>
+                      <span>Max file size: 25MB</span>
+                    </div>
+                  )}
+                  <input 
+                    id="file-upload-input"
+                    type="file" 
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files[0]
+                      if (file) {
+                        setDraft(curr => ({ ...curr, file }))
+                      }
+                    }}
+                  />
+                </div>
+                {draft.fileUrl && !draft.file ? (
+                  <p className="field-hint">Current file: <a href={draft.fileUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>View existing</a></p>
+                ) : null}
               </div>
 
               <div className="auth-field">
