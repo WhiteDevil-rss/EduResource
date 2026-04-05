@@ -107,6 +107,20 @@ function sanitizeResourceData(docId, data = {}) {
   }
 }
 
+function getDocumentData(document) {
+  if (!document) return {}
+
+  if (typeof document.data === 'function') {
+    return document.data()
+  }
+
+  if (document.data && typeof document.data === 'object') {
+    return document.data
+  }
+
+  return document
+}
+
 async function getCollectionRecords(collectionName) {
   return firestore.listDocs(collectionName)
 }
@@ -184,7 +198,7 @@ export async function findUserRecordByLoginId(loginId) {
 export async function listUserRecords() {
   const records = await getCollectionRecords(USERS_COLLECTION)
   return records
-    .map((document) => sanitizeUserData(document.id, document.data()))
+    .map((document) => sanitizeUserData(document.id, getDocumentData(document)))
     .sort((left, right) =>
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
@@ -193,7 +207,7 @@ export async function listUserRecords() {
 export async function listResourceRecords() {
   const records = await getCollectionRecords(RESOURCES_COLLECTION)
   return records
-    .map((document) => sanitizeResourceData(document.id, document.data()))
+    .map((document) => sanitizeResourceData(document.id, getDocumentData(document)))
     .sort((left, right) =>
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
@@ -226,7 +240,7 @@ export async function searchResourceRecords({
 export async function listAuditRecords(limit = 12) {
   const records = await getCollectionRecords(AUDIT_COLLECTION).catch(() => [])
   return records
-    .map((document) => sanitizeAuditData(document.id, document.data()))
+    .map((document) => sanitizeAuditData(document.id, getDocumentData(document)))
     .sort((left, right) =>
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
