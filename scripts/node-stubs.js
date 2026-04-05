@@ -250,12 +250,14 @@ export const request = () => ({
   emit: () => false,
   listeners: () => emptyArray,
   listenerCount: () => 0,
+  write: () => true,
   end: noop,
   setHeader: noop,
   removeHeader: noop,
   abort: noop,
   destroy: noop,
-  setTimeout: noop
+  setTimeout: noop,
+  flushHeaders: noop
 });
 export const get = request;
 

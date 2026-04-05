@@ -70,7 +70,18 @@ export async function POST(request) {
       )
 
       // 2. Upload Preview to Cloudinary (optional/best-effort)
-      const previewData = await uploadPreview(buffer, file.name, file.type)
+      let previewData = null
+      try {
+        previewData = await uploadPreview(buffer, file.name, file.type)
+      } catch (error) {
+        console.warn('Preview upload failed, continuing without preview:', error?.message || error)
+      }
+
+      const fileUrl =
+        driveData.webViewLink ||
+        (driveData.fileId
+          ? `https://drive.google.com/file/d/${driveData.fileId}/view?usp=drivesdk`
+          : '')
 
       payload = {
         title: formData.get('title') || file.name,
@@ -78,9 +89,9 @@ export async function POST(request) {
         class: formData.get('class'),
         summary: formData.get('summary'),
         category: formData.get('category'),
-        fileUrl: driveData.webViewLink,
+        fileUrl,
         driveFileId: driveData.fileId,
-        driveFileLink: driveData.webViewLink,
+        driveFileLink: fileUrl,
         fileType: file.type,
         fileSize: file.size,
         fileFormat: file.name.split('.').pop(),
