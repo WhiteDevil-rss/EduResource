@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+/node_modules
 /.pnp
 .pnp.js
 
@@ -11,7 +12,6 @@ node_modules/
 /out/
 /.open-next/
 /.npm-cache/
-/.wrangler/
 
 # Production
 /build
@@ -22,6 +22,7 @@ node_modules/
 firebase-functions/node_modules/
 *-debug.log*
 .firebaserc
+eduresourcehub-73f9b-firebase-adminsdk-fbsvc-ce5cd52668.json
 
 # Local env files
 .env*.local
@@ -39,7 +40,14 @@ next-env.d.ts
 *.pem
 *.log
 .gemini/
+.wrangler/
+.github/
+.scripts/
 
 # Keep documentation logs versioned
 !Documents/*.log
 !Documents/**/*.log
+
+# Google Drive
+client_secret_834792094975-vlaen0i3rcd87udlflogr5skj3u11n1n.apps.googleusercontent.com.json
+helical-clock-454307-p9-7337ef3575f6.json

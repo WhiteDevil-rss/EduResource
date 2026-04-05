@@ -1,0 +1,26 @@
+# Cloudflare Pages Configuration
+# This file tells Cloudflare Pages how to build and deploy the application
+
+[build]
+command = "npm run cf:build"
+cwd = "."
+output_dir = ".open-next/assets"
+
+[build.environment]
+NODE_VERSION = "20"
+
+# Environment variables (set these in Cloudflare Pages dashboard)
+# NEXT_PUBLIC_FIREBASE_API_KEY
+# NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+# NEXT_PUBLIC_FIREBASE_PROJECT_ID
+# NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+# NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+# NEXT_PUBLIC_FIREBASE_APP_ID
+# NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+# NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+# CLOUDINARY_API_KEY
+# CLOUDINARY_API_SECRET
+# SESSION_SECRET
+# FIREBASE_CLIENT_EMAIL
+# FIREBASE_PRIVATE_KEY
+# FIREBASE_PROJECT_ID

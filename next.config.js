@@ -1,5 +1,12 @@
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 /** @type {import('next').NextConfig} */
+const projectRoot = dirname(fileURLToPath(import.meta.url))
+
 const nextConfig = {
+  output: 'standalone',
+  outputFileTracingRoot: projectRoot,
   reactStrictMode: false,
   images: {
     remotePatterns: [
@@ -12,7 +19,9 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
+  serverExternalPackages: ['firebase-admin'],
+  allowedDevOrigins: ['10.112.183.165'],
 }
 
-module.exports = nextConfig
+export default nextConfig
 

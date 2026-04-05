@@ -5,18 +5,20 @@ EduResource Hub is a role-based academic resource platform built with Next.js an
 ## Features
 
 - Email/password authentication with Firebase Auth
+- **Change Password**: Secure server-side password management for authenticated users
 - Role-based dashboards for students, faculty, and admins
 - Protected routes with server-side session checks
 - Firestore-backed user profiles and resources
-- Cloudflare-ready deployment using OpenNext
+- **Cloudflare Edge Compatible**: All authentication logic (REST API based) is optimized for Cloudflare Workers/Pages
+- **Security Audited**: 0 vulnerabilities in top-level and transitive dependencies
 
 ## Tech Stack
 
 - Next.js 16
-- React 19
-- Firebase Authentication
+- React 19 (Server Components)
+- Firebase Authentication (via REST API for edge compatibility)
 - Cloud Firestore
-- Cloudinary
+- Cloudinary (Asset Management)
 - Cloudflare Workers with OpenNext
 
 ## Local Development
@@ -24,7 +26,7 @@ EduResource Hub is a role-based academic resource platform built with Next.js an
 ### 1. Install dependencies
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 ```
 
 ### 2. Create environment variables
@@ -45,7 +47,7 @@ Required values include:
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `SESSION_SECRET`
 
-Optional server values:
+Optional server values (required for some admin features):
 
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`
@@ -61,87 +63,45 @@ npm run dev
 
 The app runs at `http://localhost:3000`.
 
-## Authentication Notes
+## Authentication & Security
 
-- Login uses Firebase Auth on the client.
-- Session cookies are signed server-side for protected dashboard routes.
-- Role checks are enforced on the server for dashboard access.
-- Students cannot access admin routes through URL changes alone.
+- **Login**: Uses Firebase Auth on the client.
+- **Session Management**: Secure, signed cookies enforced for all dashboard routes.
+- **Password Updates**: High-security `/api/auth/change-password` route requires the current password for verification.
+- **Edge Deployment**: Firebase Auth operations are migrated to a direct REST architecture to ensure 100% compatibility with Cloudflare's `nodejs_compat` environment.
+- **Dependency Audit**: The project uses `overrides` in `package.json` to force secure versions of transitive dependencies (`protobufjs`, `jsonwebtoken`), maintaining a **0-vulnerability** status.
 
 ## Firestore Rules
 
-This project includes Firestore rules in `firestore.rules`. Make sure your Firebase project uses the matching rules and indexes before testing the app in production.
+This project includes Firestore rules in `firestore.rules` that intentionally deny all client reads and writes. Ensure your Firebase project uses these rules to fully block direct Firestore access from client applications; all Firestore operations are intended to run only through privileged server-side code using the Firebase Admin SDK.
 
-## Cloudflare Deployment
+## Cloudflare Pages Deployment
 
-This project is configured for Cloudflare Workers using OpenNext.
+This project uses **OpenNext** for optimal performance on the Cloudflare global network.
 
-### Pages compatibility note
+### Deployment Commands
 
-Cloudflare Pages auto-detects a top-level `functions/` directory as Pages Functions.
-This repo stores Firebase Cloud Functions in `firebase-functions/` to avoid Pages
-build warnings and keep Firebase code separate from Cloudflare Pages Functions.
+| Command | Action |
+| :--- | :--- |
+| `npm run cf:build` | Build the project for Cloudflare (OpenNext) |
+| `npm run preview` | Preview the production build locally (Wrangler) |
+| `npm run deploy` | Bundles and deploys the assets to Cloudflare Pages |
 
-### 1. Install Wrangler
+### Required Environment Variables (Production)
 
-```bash
-npm install
-```
-
-### 2. Log in to Cloudflare
-
-```bash
-npx wrangler login
-```
-
-### 3. Set production secrets
-
-In the Cloudflare dashboard or via Wrangler, set:
-
+Ensure these are added in your Cloudflare Pages dashboard:
 - `NEXT_PUBLIC_FIREBASE_API_KEY`
 - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
 - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
 - `SESSION_SECRET`
-- `CLOUDINARY_API_KEY`
-- `CLOUDINARY_API_SECRET`
-- `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
-- `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`
+- `FIREBASE_CLIENT_EMAIL`
+- `FIREBASE_PRIVATE_KEY`
 
-### 4. Build for Cloudflare
+## Security Policies
 
-```bash
-npm run cf:build
-```
-
-### 5. Preview locally in Wrangler
-
-```bash
-npm run preview
-```
-
-### 6. Deploy
-
-```bash
-npm run deploy
-```
-
-## Scripts
-
-- `npm run dev` starts local Next.js development
-- `npm run build` builds the Next.js app
-- `npm run cf:build` builds the Cloudflare worker output
-- `npm run preview` previews the Cloudflare build locally
-- `npm run deploy` deploys to Cloudflare
-
-## Security
-
-- Do not commit `.env.local`
-- Use a strong `SESSION_SECRET` in production
-- Keep Cloudinary and Firebase private keys in server-side secrets only
-- Avoid creating admin users from client-side logic
+- Do not commit `.env.local` or Service Account JSON files.
+- All high-risk endpoints require session verification and role checks.
+- Sensitive environment variables are encrypted at rest on Cloudflare.
 
 ## Repository
 

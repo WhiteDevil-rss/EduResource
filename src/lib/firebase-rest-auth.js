@@ -1,6 +1,11 @@
 import 'server-only'
+import {
+  getFirestoreSetupMessage,
+  isFirestoreSetupError,
+} from '@/lib/firestore-service'
 
-const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+const FIREBASE_API_KEY =
+  process.env.FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY
 const FIREBASE_PROJECT_ID =
   process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
 
@@ -12,7 +17,7 @@ function requireEnv(name, value) {
   return value
 }
 
-async function parseJsonResponse(response) {
+async function parseJsonResponse(response, service = 'firebase') {
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
@@ -21,6 +26,10 @@ async function parseJsonResponse(response) {
       payload?.error ||
       payload?.message ||
       'Firebase request failed.'
+
+    if (service === 'firestore' && isFirestoreSetupError(message)) {
+      throw new Error(getFirestoreSetupMessage(FIREBASE_PROJECT_ID))
+    }
 
     throw new Error(message)
   }
@@ -33,7 +42,10 @@ function getFirestoreString(fields, key) {
 }
 
 export async function lookupFirebaseUser(idToken) {
-  const apiKey = requireEnv('NEXT_PUBLIC_FIREBASE_API_KEY', FIREBASE_API_KEY)
+  const apiKey = requireEnv(
+    'FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY',
+    FIREBASE_API_KEY
+  )
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
     {
@@ -54,6 +66,11 @@ export async function lookupFirebaseUser(idToken) {
   return {
     uid: user.localId,
     email: user.email || null,
+    providers: Array.isArray(user.providerUserInfo)
+      ? user.providerUserInfo
+          .map((entry) => entry?.providerId)
+          .filter(Boolean)
+      : [],
   }
 }
 
@@ -74,7 +91,7 @@ export async function getFirestoreUserProfile(idToken, uid) {
     }
   )
 
-  const payload = await parseJsonResponse(response)
+  const payload = await parseJsonResponse(response, 'firestore')
   const fields = payload?.fields || {}
 
   return {
@@ -100,3 +117,51 @@ export async function verifyFirebaseSession(idToken, options = {}) {
     status: profile.status,
   }
 }
+
+export async function signInWithPassword(email, password) {
+  const apiKey = requireEnv(
+    'FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY',
+    FIREBASE_API_KEY
+  )
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true }),
+      cache: 'no-store',
+    }
+  )
+
+  const payload = await parseJsonResponse(response)
+  const uid = payload?.localId
+
+  if (!uid) {
+    throw new Error('INVALID_LOGIN_CREDENTIALS')
+  }
+
+  return { uid, email: payload?.email || email, idToken: payload?.idToken }
+}
+
+export async function updateFirebasePassword(idToken, newPassword) {
+  const apiKey = requireEnv(
+    'FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY',
+    FIREBASE_API_KEY
+  )
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idToken,
+        password: newPassword,
+        returnSecureToken: true,
+      }),
+      cache: 'no-store',
+    }
+  )
+
+  return parseJsonResponse(response)
+}
+

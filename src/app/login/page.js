@@ -1,101 +1,282 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+
+import {
+  AlertCircle,
+  Chrome,
+  Eye,
+  EyeOff,
+  Lock,
+  Loader2,
+  LogIn,
+  Shield,
+  UserCircle,
+  GraduationCap,
+} from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Mail, Lock, LogIn } from 'lucide-react'
-import { motion } from 'framer-motion'
-import toast from 'react-hot-toast'
+import { getRedirectResult } from 'firebase/auth'
+import { auth } from '@/lib/firebase'
+import PublicFooter from '@/components/PublicFooter'
+import PublicHeader from '@/components/PublicHeader'
+import { useAuth } from '@/hooks/useAuth'
+
+const footerLinks = [
+  { label: 'Privacy Policy', href: '/register' },
+  { label: 'Terms of Service', href: '/register' },
+  { label: 'Academic Integrity', href: '/#scholarships' },
+  { label: 'Support', href: '/#archive' },
+]
 
 export default function Login() {
+  const [loginMode, setLoginMode] = useState('staff') // 'staff' or 'student'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { login, user, role, loading, isAuthenticating } = useAuth()
+  const [showPassword, setShowPassword] = useState(false)
+  const [unauthorized, setUnauthorized] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [formSuccess, setFormSuccess] = useState('')
+  
+  const {
+    loginWithCredentials,
+    loginWithGoogle,
+    signInWithGoogleStudent,
+    user,
+    role,
+    loading,
+    isAuthenticating,
+  } = useAuth()
+  
   const router = useRouter()
-  const isSubmitting = isAuthenticating
+  const redirectCheckStartedRef = useRef(false)
 
+  // Redirect if already logged in
   useEffect(() => {
     if (!loading && user && role) {
       router.replace(`/dashboard/${role}`)
     }
-  }, [user, role, loading, router])
+  }, [loading, role, router, user])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  // Handle unauthorized reason from URL
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('reason') === 'unauthorized') {
+      setUnauthorized(true)
+    }
+  }, [])
+
+  // Handle Google Redirect Result
+  useEffect(() => {
+    if (redirectCheckStartedRef.current) return
+    redirectCheckStartedRef.current = true
+
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth)
+        if (result) {
+          const idToken = await result.user.getIdToken()
+          await loginWithGoogle(idToken)
+        }
+      } catch (error) {
+        setFormError(error.message || 'Google sign-in failed.')
+      }
+    }
+    checkRedirect()
+  }, [loginWithGoogle])
+
+  const handleStaffSubmit = async (event) => {
+    event.preventDefault()
+    setFormError('')
+    setFormSuccess('')
+
+    if (!email || !password) {
+      setFormError('Please enter both Email/ID and Password.')
+      return
+    }
+
     try {
-      await login(email, password)
-      toast.success('Successfully logged in!')
+      await loginWithCredentials(email, password)
+      setFormSuccess('Signed in successfully.')
     } catch (error) {
-      toast.error(error.message || 'Failed to login')
+      setFormError(error.message || 'Failed to sign in.')
+    }
+  }
+
+  const handleStudentLogin = async () => {
+    setFormError('')
+    setFormSuccess('')
+    try {
+      await signInWithGoogleStudent()
+    } catch (error) {
+      setFormError(error.message || 'Student login failed.')
     }
   }
 
   return (
-    <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 80px)' }}>
-      <motion.div 
-        className="glass-card" 
-        style={{ width: '100%', maxWidth: '450px', padding: '3rem' }}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <h2 style={{ fontSize: '2rem' }}>Welcome Back</h2>
-          <p style={{ color: '#aaaab7' }}>Continue your academic journey.</p>
+    <div className="auth-page">
+      <PublicHeader
+        links={[
+          { label: 'Explore', href: '/#curriculum' },
+          { label: 'Resources', href: '/#research' },
+          { label: 'Institutions', href: '/#scholarships' },
+          { label: 'About', href: '/#archive' },
+        ]}
+        actions={[{ label: 'Get Access', href: '/register', variant: 'primary' }]}
+        showUtilityIcons
+      />
+
+      <main className="auth-main">
+        <div className="auth-card">
+          <div className="auth-mode-selector">
+            <button
+              className={`auth-mode-btn ${loginMode === 'staff' ? 'active' : ''}`}
+              onClick={() => {
+                setLoginMode('staff')
+                setFormError('')
+                setFormSuccess('')
+              }}
+            >
+              <UserCircle size={20} />
+              <span>Academic Staff</span>
+            </button>
+            <button
+              className={`auth-mode-btn ${loginMode === 'student' ? 'active' : ''}`}
+              onClick={() => {
+                setLoginMode('student')
+                setFormError('')
+                setFormSuccess('')
+              }}
+            >
+              <GraduationCap size={20} />
+              <span>Student Portal</span>
+            </button>
+          </div>
+
+          <div className="auth-header" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <h1>{loginMode === 'staff' ? 'Staff Login' : 'Student Access'}</h1>
+            <p>
+              {loginMode === 'staff'
+                ? 'Sign in with your institutional credentials.'
+                : 'Secure access via your verified Google account.'}
+            </p>
+          </div>
+
+          {unauthorized && (
+            <div className="auth-alert" style={{ marginBottom: '1rem' }}>
+              <AlertCircle size={18} color="var(--tertiary)" />
+              <span>Your account does not have permission to access that area.</span>
+            </div>
+          )}
+
+          {formError && (
+            <div className="auth-alert auth-alert--error">
+              <AlertCircle size={18} color="var(--tertiary)" />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          {formSuccess && (
+            <div className="auth-alert auth-alert--success">
+              <Shield size={18} color="var(--primary)" />
+              <span>{formSuccess}</span>
+            </div>
+          )}
+
+          {loginMode === 'staff' ? (
+            <form className="auth-form" onSubmit={handleStaffSubmit}>
+              <div className="auth-field">
+                <label htmlFor="email">Email or Login ID</label>
+                <div className="auth-input">
+                  <span className="auth-input__icon">
+                    <UserCircle size={18} />
+                  </span>
+                  <input
+                    id="email"
+                    type="text"
+                    placeholder="Enter your email or ID"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="password">Password</label>
+                <div className="auth-input">
+                  <span className="auth-input__icon">
+                    <Lock size={18} />
+                  </span>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="auth-input__toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="button-primary button-block"
+                disabled={isAuthenticating}
+                style={{ marginTop: '1rem' }}
+              >
+                {isAuthenticating ? (
+                  <Loader2 size={18} className="icon-spin" />
+                ) : (
+                  <LogIn size={18} />
+                )}
+                {isAuthenticating ? 'Signing In...' : 'Sign In'}
+              </button>
+            </form>
+          ) : (
+            <div className="auth-student-flow">
+              <div className="auth-alert" style={{ background: 'var(--background-secondary)', border: 'none' }}>
+                <Chrome size={18} color="var(--secondary)" />
+                <span>Single Sign-On is required for all students.</span>
+              </div>
+              
+              <button
+                type="button"
+                className="button-primary button-block"
+                onClick={handleStudentLogin}
+                disabled={isAuthenticating}
+                style={{ marginTop: '2rem', height: '3.5rem', fontSize: '1rem' }}
+              >
+                {isAuthenticating ? (
+                  <Loader2 size={18} className="icon-spin" />
+                ) : (
+                  <Chrome size={20} />
+                )}
+                {isAuthenticating ? 'Authenticating...' : 'Sign in with Google'}
+              </button>
+              
+              <p className="auth-footer-note" style={{ textAlign: 'center', marginTop: '1.5rem', opacity: 0.7, fontSize: '0.875rem' }}>
+                New students will be automatically registered on their first login.
+              </p>
+            </div>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ position: 'relative' }}>
-            <label htmlFor="login-email" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Email Address</label>
-            <Mail aria-hidden="true" style={{ position: 'absolute', left: '1rem', top: 'calc(50% + 0.75rem)', transform: 'translateY(-50%)', width: '1.25rem', height: '1.25rem', color: '#aaaab7' }} />
-            <input
-              id="login-email"
-              type="email"
-              name="email"
-              autoComplete="email"
-              spellCheck={false}
-              placeholder="name@institution.edu…"
-              className="input-glass"
-              style={{ width: '100%', paddingLeft: '3.5rem' }}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+        <div className="auth-footer__trust">Authenticated Ecosystem</div>
+      </main>
 
-          <div style={{ position: 'relative' }}>
-            <label htmlFor="login-password" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Password</label>
-            <Lock aria-hidden="true" style={{ position: 'absolute', left: '1rem', top: 'calc(50% + 0.75rem)', transform: 'translateY(-50%)', width: '1.25rem', height: '1.25rem', color: '#aaaab7' }} />
-            <input 
-              id="login-password"
-              type="password" 
-              name="password"
-              autoComplete="current-password"
-              className="input-glass" 
-              placeholder="Enter your password…"
-              style={{ width: '100%', paddingLeft: '3.5rem' }}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '0.9rem', color: '#aaaab7' }}>
-              Contact an administrator if you need help resetting your password.
-            </span>
-          </div>
-
-          <button type="submit" className="btn-primary" style={{ width: '100%', padding: '1rem' }} disabled={isSubmitting}>
-            <LogIn aria-hidden="true" className="w-5 h-5 mr-2" />
-            {isSubmitting ? 'Signing In…' : 'Sign In'}
-          </button>
-        </form>
-
-        <div style={{ textAlign: 'center', marginTop: '2.5rem', fontSize: '0.95rem', color: '#aaaab7' }}>
-          New here? <Link href="/register" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: '600' }}>Create an account</Link>
-        </div>
-      </motion.div>
+      <PublicFooter
+        links={footerLinks}
+        tagline={`© ${new Date().getFullYear()} EduResource Hub. Zembaa Solution.`}
+      />
     </div>
   )
 }

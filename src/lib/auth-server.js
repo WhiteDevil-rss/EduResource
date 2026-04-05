@@ -2,10 +2,12 @@ import 'server-only'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { SESSION_COOKIE_NAME } from '@/lib/auth-constants'
+import { getSessionRecordById } from '@/lib/server-data'
 import { readSessionCookie } from '@/lib/session-cookie'
 
 export async function getSessionUser() {
-  const sessionCookie = cookies().get(SESSION_COOKIE_NAME)?.value
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value
   if (!sessionCookie) {
     return { user: null, role: null, status: null }
   }
@@ -16,13 +18,24 @@ export async function getSessionUser() {
     return { user: null, role: null, status: null }
   }
 
+  if (session.sid) {
+    const sessionRecord = await getSessionRecordById(session.sid)
+    if (!sessionRecord || sessionRecord.uid !== session.uid) {
+      console.warn('Session verification failed: revoked or missing session record')
+      return { user: null, role: null, status: null }
+    }
+  }
+
   return {
     user: {
       uid: session.uid,
       email: session.email || null,
+      name: session.name || null,
+      loginId: session.loginId || null,
     },
     role: session.role,
     status: session.status || 'active',
+    authProvider: session.authProvider || null,
   }
 }
 

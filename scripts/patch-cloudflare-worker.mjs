@@ -1,95 +1,153 @@
-import fs from 'node:fs'
-import path from 'node:path'
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, mkdirSync, copyFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { build } from 'esbuild';
 
-const workerPath = path.join(process.cwd(), '.open-next', 'worker.js')
-const handlerPath = path.join(process.cwd(), '.open-next', 'server-functions', 'default', 'handler.mjs')
-const openNextRoot = path.join(process.cwd(), '.open-next')
-const pagesOutputRoot = path.join(openNextRoot, 'assets')
+const sourcePath = join(process.cwd(), '.open-next', 'worker.js');
+const tempPatchedPath = join(process.cwd(), '.open-next', 'worker-patched.js');
+const destPath = join(process.cwd(), '.open-next', 'assets', '_worker.js');
+const assetsDir = join(process.cwd(), '.open-next', 'assets');
+const stubPath = join(process.cwd(), 'scripts', 'node-stubs.js');
 
-if (!fs.existsSync(workerPath)) {
-  console.error('Missing .open-next/worker.js. Run the OpenNext build first.')
-  process.exit(1)
-}
+/**
+ * esbuild Plugin to dynamically stub unsupported Node.js modules.
+ */
+const nodeStubPlugin = {
+  name: 'node-stub',
+  setup(build) {
+    const safeModules = new Set([
+      'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
+      'path', 'process', 'stream', 'string_decoder', 'url',
+      'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
+      'module', 'util'
+    ]);
 
-const polyfillBanner = `// Cloudflare runtime polyfills for Next server bundles\nif (typeof globalThis.WeakRef === 'undefined') {\n  globalThis.WeakRef = class WeakRef {\n    constructor(value) {\n      this._value = value\n    }\n    deref() {\n      return this._value\n    }\n  }\n}\n\nif (typeof globalThis.FinalizationRegistry === 'undefined') {\n  globalThis.FinalizationRegistry = class FinalizationRegistry {\n    register() {}\n    unregister() {\n      return false\n    }\n  }\n}\n\n`
+    // Handle all node:* and bare Node modules
+    build.onResolve({ filter: /^(node:)?([a-z_][a-z0-9_]*|timers\/promises)$/ }, (args) => {
+        // Normalize the module name
+        const originalPath = args.path.replace(/^node:/, '');
+        const baseName = originalPath.split('/')[0];
+        
+        const isNodeModule = args.path.startsWith('node:') || 
+          ['fs', 'os', 'vm', 'v8', 'inspector', 'child_process', 'cluster', 'dns', 'http', 'https', 'net', 'tls', 'dgram', 'readline', 'repl', 'tty', 'zlib', 'crypto', 'path', 'util', 'stream', 'events', 'buffer', 'process', 'timers', 'querystring'].includes(baseName);
 
-let workerSource = fs.readFileSync(workerPath, 'utf8')
-if (!workerSource.startsWith('// Cloudflare runtime polyfills for Next server bundles')) {
-  workerSource = polyfillBanner + workerSource
-}
+        if (!isNodeModule) return null;
 
-const staticPassthroughSnippet = `
-            // Serve static assets directly from Pages asset binding.
-            if (
-                url.pathname.startsWith('/_next/static/') ||
-                url.pathname === '/favicon.ico' ||
-                url.pathname.startsWith('/static/')
-            ) {
-                if (env?.ASSETS?.fetch) {
-                    return env.ASSETS.fetch(request);
-                }
-            }
-`
+        if (!safeModules.has(baseName)) {
+            // Redirect EVERYTHING from problematic modules (including sub-paths) to the stub
+            return { path: stubPath };
+        }
+        
+        return { path: args.path, external: true };
+    });
 
-if (!workerSource.includes("url.pathname.startsWith('/_next/static/')")) {
-  workerSource = workerSource.replace(
-    '// - `Request`s are handled by the Next server',
-    `${staticPassthroughSnippet}\n            // - \`Request\`s are handled by the Next server`
-  )
-}
+    build.onResolve({ filter: /^cloudflare:.*$/ }, (args) => {
+      return { path: args.path, external: true };
+    });
+  },
+};
 
-fs.writeFileSync(workerPath, workerSource)
+async function runPatch() {
+  try {
+    console.log(`Reading worker from: ${sourcePath}`);
+    let workerCode = readFileSync(sourcePath, 'utf-8');
 
-const pagesWorkerPath = path.join(pagesOutputRoot, '_worker.js')
-fs.writeFileSync(pagesWorkerPath, workerSource)
+    console.log('Promoting dynamic imports to static for deep bundling...');
+    // Replace dynamic imports of handlers to make them visible to esbuild
+    const dynamicImportRegex = /const\s+\{\s*handler\s*\}\s+=\s+await\s+import\(\"\.\/server-functions\/default\/handler\.mjs\"\);/;
+    if (dynamicImportRegex.test(workerCode)) {
+      workerCode = 'import { handler as _handler } from "./server-functions/default/handler.mjs";\n' + workerCode;
+      workerCode = workerCode.replace(dynamicImportRegex, 'const handler = _handler;');
+      console.log('Successfully promoted dynamic handler to static import.');
+    }
 
-const pagesHeadersPath = path.join(pagesOutputRoot, '_headers')
-const pagesHeaders = `/secure/page
-  X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: no-referrer
+    console.log('Injecting ASSETS passthrough logic...');
+    // Static asset passthrough logic for Cloudflare
+    const fetchStartIdx = workerCode.indexOf('async fetch(request, env, ctx) {');
+    if (fetchStartIdx !== -1) {
+      const insertionPoint = workerCode.indexOf('{', fetchStartIdx) + 1;
+      const passthroughLogic = `
+        const url = new URL(request.url);
+        if (url.pathname.startsWith('/_next/static/') || url.pathname.includes('.')) {
+          return env.ASSETS.fetch(request);
+        }
+`;
+      workerCode = workerCode.slice(0, insertionPoint) + passthroughLogic + workerCode.slice(insertionPoint);
+    }
 
-/_next/static/*
-  Cache-Control: public, max-age=31536000, immutable
+    // Wrap in diagnostic try/catch
+    workerCode = workerCode.replace(
+      /return handler\(reqOrResp, env, ctx, request\.signal\);/,
+      `try {
+                return await handler(reqOrResp, env, ctx, request.signal);
+            } catch (err) {
+                console.error('Edge Runtime Exception:', err);
+                return new Response(JSON.stringify({
+                    status: 'error',
+                    code: 'RUNTIME_EXCEPTION',
+                    message: err.message,
+                    stack: err.stack,
+                    diagnostics: 'If this is a "setImmediate" TypeError, the post-bundle sanitizer failed to defuse a frozen namespace mutation.'
+                }, null, 2), { 
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }`
+    );
 
-/static/*
-  Access-Control-Allow-Origin: *
-  X-Robots-Tag: nosnippet
+    writeFileSync(tempPatchedPath, workerCode);
 
-/*
-  Cache-Control: no-cache
+    console.log('Deep Bundling everything into a single _worker.js...');
+    const banner = 'import { createRequire } from "node:module"; const require = createRequire("file:///worker.js");';
+    
+    await build({
+      entryPoints: [tempPatchedPath],
+      bundle: true,
+      outfile: destPath,
+      format: 'esm',
+      target: 'esnext',
+      platform: 'node',
+      plugins: [nodeStubPlugin],
+      resolveExtensions: ['.mjs', '.js', '.ts'],
+      loader: {
+        '.wasm': 'dataurl',
+      },
+      banner: {
+        js: banner,
+      },
+      define: {
+        'process.env.NODE_ENV': '"production"',
+      },
+      // Remove 'alias' for node:* sub-paths as the plugin's regex handles it more flexibly
+      minify: false,
+      logLevel: 'info',
+    });
 
-https://edu-resource.pages.dev/*
-  X-Robots-Tag: noindex
-`
-fs.writeFileSync(pagesHeadersPath, pagesHeaders)
+    console.log(`Bundled worker saved to: ${destPath}`);
 
-function copyRuntimePath(relativePath) {
-  const source = path.join(openNextRoot, relativePath)
-  const target = path.join(pagesOutputRoot, relativePath)
+    // FINAL DEFUSE: Surgical String Patching the final bundle
+    console.log('Post-Processing: Defusing illegal namespace mutations in the final bundle...');
+    let finalBundle = readFileSync(destPath, 'utf-8');
+    
+    // We replace specific mutation targets with innocuous dummy property writes.
+    // This circumvents "Cannot set property ... which has only a getter" on Edge.
+    const mutations = [
+        /nodeTimers[a-zA-Z]*\.setImmediate\s*=/g,
+        /nodeTimers[a-zA-Z]*\.clearImmediate\s*=/g,
+        /nodeTimersPromises[a-zA-Z]*\.setImmediate\s*=/g
+    ];
 
-  if (!fs.existsSync(source)) {
-    return
+    mutations.forEach(m => {
+        finalBundle = finalBundle.replace(m, 'globalThis.___defused_mutation =');
+    });
+    
+    console.log('Applied surgical patches to defuse frozen module TypeErrors.');
+    writeFileSync(destPath, finalBundle);
+
+    console.log('Worker deeply patched, bundled, and sanitized successfully.');
+  } catch (error) {
+    console.error('Deep Patching process failed:', error);
+    process.exit(1);
   }
-
-  fs.cpSync(source, target, { recursive: true, force: true })
 }
 
-// _worker.js generated by OpenNext imports these directories with relative paths.
-copyRuntimePath('cloudflare')
-copyRuntimePath('middleware')
-copyRuntimePath('server-functions')
-copyRuntimePath('.build')
-
-if (fs.existsSync(handlerPath)) {
-  let handlerSource = fs.readFileSync(handlerPath, 'utf8')
-  const before = handlerSource
-  handlerSource = handlerSource.split('eval("quire".replace(/^/,"re"))').join('globalThis.__non_webpack_require__')
-
-  if (handlerSource !== before) {
-    fs.writeFileSync(handlerPath, handlerSource)
-    console.log('Patched handler to remove eval-based require shim')
-  }
-}
-
-console.log('Patched worker runtime bundle and prepared Pages runtime files and headers')
+runPatch();

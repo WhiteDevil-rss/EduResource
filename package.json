@@ -2,31 +2,47 @@
   "name": "edu-resource-hub",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.2",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack .",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "cf:build": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && wrangler dev",
-    "deploy": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs",
-    "deploy:worker": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs && opennextjs-cloudflare deploy",
+    "lint": "eslint .",
+    "cf:build": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs",
+    "preview": "npm run cf:build && wrangler pages dev .open-next/assets",
+    "deploy": "npm run cf:build && wrangler pages deploy .open-next/assets",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
   },
   "dependencies": {
-    "cloudinary": "^2.0.0",
-    "firebase": "^12.11.0",
-    "framer-motion": "^11.0.0",
-    "lucide-react": "latest",
-    "next": "15.5.14",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "@google-cloud/firestore": "^7.11.0",
+    "cloudinary": "^2.5.1",
+    "firebase": "^11.5.0",
+    "framer-motion": "^11.18.2",
+    "jose": "^6.2.2",
+    "lucide-react": "^0.460.0",
+    "next": "^15.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.18.0",
-    "eslint": "latest",
-    "eslint-config-next": "15.5.14",
-    "wrangler": "^4.79.0"
+    "esbuild": "^0.28.0",
+    "eslint": "^9.22.0",
+    "eslint-config-next": "^15.2.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.80.0"
+  },
+  "overrides": {
+    "protobufjs": "^7.2.4",
+    "jsonwebtoken": "^9.0.0",
+    "http-proxy-agent": "^7.0.0",
+    "teeny-request": "^9.0.0",
+    "retry-request": "^8.0.2",
+    "glob": "^12.0.0",
+    "formdata-node": "^6.0.3"
   }
 }
