@@ -14,6 +14,39 @@ const SERVICE_ACCOUNT = {
   private_key: process.env.FIREBASE_PRIVATE_KEY
 }
 
+async function parseResponsePayload(response) {
+  const text = await response.text()
+  if (!text) {
+    return {}
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { raw: text }
+  }
+}
+
+function extractApiErrorMessage(payload, fallback) {
+  if (payload?.error?.message) {
+    return payload.error.message
+  }
+
+  if (typeof payload?.error === 'string') {
+    return payload.error
+  }
+
+  if (typeof payload?.message === 'string') {
+    return payload.message
+  }
+
+  if (typeof payload?.raw === 'string' && payload.raw.trim().startsWith('<!DOCTYPE')) {
+    return `${fallback} (received HTML response from upstream API)`
+  }
+
+  return fallback
+}
+
 function normalizePrivateKey(privateKey) {
   if (!privateKey) return privateKey
 
@@ -95,7 +128,7 @@ async function getGoogleAccessToken() {
 
     // Create Signed JWT (Assertion)
     const jwt = await new jose.SignJWT({
-      scope: 'https://www.googleapis.com/auth/datastore'
+      scope: 'https://www.googleapis.com/auth/cloud-platform'
     })
       .setProtectedHeader({ alg })
       .setIssuer(client_email)
@@ -112,12 +145,18 @@ async function getGoogleAccessToken() {
       body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
     })
 
+    const data = await parseResponsePayload(response)
     if (!response.ok) {
-      const data = await response.json()
-      throw new Error(`Cloudflare Edge Auth Error: ${data.error_description || data.error}`)
+      throw new Error(
+        `Cloudflare Edge Auth Error: ${extractApiErrorMessage(data, 'Token exchange failed.')}`
+      )
     }
 
-    const { access_token } = await response.json()
+    const { access_token } = data
+    if (!access_token) {
+      throw new Error('Cloudflare Edge Auth Error: Missing access token in response.')
+    }
+
     return access_token
   } catch (err) {
     console.error('Failed to generate access token:', err)
@@ -145,12 +184,14 @@ async function firestoreRequest(method, path, body = null) {
   }
 
   const response = await fetch(url, options)
-  const data = await response.json()
+  const data = await parseResponsePayload(response)
 
   if (!response.ok) {
     // Return null for 404s on GET requests (common check for document existence)
     if (response.status === 404 && method === 'GET') return null
-    throw new Error(`Firestore REST Error [${response.status}]: ${data.error?.message || response.statusText}`)
+    throw new Error(
+      `Firestore REST Error [${response.status}]: ${extractApiErrorMessage(data, response.statusText)}`
+    )
   }
 
   return data
@@ -226,8 +267,10 @@ export const auth = {
       })
     })
     
-    const data = await response.json()
-    if (!response.ok) throw new Error(`Auth REST Error: ${data.error?.message || 'Create failed'}`)
+    const data = await parseResponsePayload(response)
+    if (!response.ok) {
+      throw new Error(`Auth REST Error: ${extractApiErrorMessage(data, 'Create failed')}`)
+    }
     
     return { uid: data.localId, ...data }
   },
@@ -237,7 +280,7 @@ export const auth = {
    */
   updateUser: async (uid, userData) => {
     const token = await getGoogleAccessToken()
-    const url = `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:batchUpdate`
+    const url = `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:update`
     
     const response = await fetch(url, {
       method: 'POST',
@@ -246,16 +289,18 @@ export const auth = {
         'Content-Type': 'application/json' 
       },
       body: JSON.stringify({
-        localId: [uid],
+        localId: uid,
         email: userData.email,
         password: userData.password,
         displayName: userData.displayName,
-        disabled: userData.disabled === true
+        disableUser: userData.disabled === true
       })
     })
     
-    const data = await response.json()
-    if (!response.ok) throw new Error(`Auth REST Error: ${data.error?.message || 'Update failed'}`)
+    const data = await parseResponsePayload(response)
+    if (!response.ok) {
+      throw new Error(`Auth REST Error: ${extractApiErrorMessage(data, 'Update failed')}`)
+    }
     
     return { uid, ...data }
   }
