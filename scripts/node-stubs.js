@@ -90,13 +90,22 @@ export const globalAgent = new Agent();
 export const METHODS = [];
 export const STATUS_CODES = emptyObject;
 export const request = () => ({
+  addListener: noop,
   on: noop,
+  prependListener: noop,
   once: noop,
+  prependOnceListener: noop,
+  removeListener: noop,
+  off: noop,
+  emit: () => false,
+  listeners: () => emptyArray,
+  listenerCount: () => 0,
   end: noop,
   setHeader: noop,
   removeHeader: noop,
   abort: noop,
-  destroy: noop
+  destroy: noop,
+  setTimeout: noop
 });
 export const get = request;
 
