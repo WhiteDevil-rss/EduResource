@@ -14,6 +14,19 @@ const SERVICE_ACCOUNT = {
   private_key: process.env.FIREBASE_PRIVATE_KEY
 }
 
+function normalizePrivateKey(privateKey) {
+  if (!privateKey) return privateKey
+
+  const trimmed = String(privateKey).trim()
+  const unquoted =
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      ? trimmed.slice(1, -1)
+      : trimmed
+
+  return unquoted.replace(/\\n/g, '\n').trim()
+}
+
 // Cache for Google's public keys (JWKS)
 let cachedJwks = null
 let jwksExpiry = 0
@@ -74,7 +87,7 @@ async function getGoogleAccessToken() {
   }
 
   // Import private key for signing
-  const pk = private_key.replace(/\\n/g, '\n').trim()
+  const pk = normalizePrivateKey(private_key)
   const alg = 'RS256'
   
   try {

@@ -4,7 +4,8 @@ import {
   isFirestoreSetupError,
 } from '@/lib/firestore-service'
 
-const FIREBASE_API_KEY = process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+const FIREBASE_API_KEY =
+  process.env.FIREBASE_API_KEY || process.env.NEXT_PUBLIC_FIREBASE_API_KEY
 const FIREBASE_PROJECT_ID =
   process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
 
@@ -41,7 +42,10 @@ function getFirestoreString(fields, key) {
 }
 
 export async function lookupFirebaseUser(idToken) {
-  const apiKey = requireEnv('NEXT_PUBLIC_FIREBASE_API_KEY', FIREBASE_API_KEY)
+  const apiKey = requireEnv(
+    'FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY',
+    FIREBASE_API_KEY
+  )
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
     {
@@ -115,7 +119,10 @@ export async function verifyFirebaseSession(idToken, options = {}) {
 }
 
 export async function signInWithPassword(email, password) {
-  const apiKey = requireEnv('NEXT_PUBLIC_FIREBASE_API_KEY', FIREBASE_API_KEY)
+  const apiKey = requireEnv(
+    'FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY',
+    FIREBASE_API_KEY
+  )
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
     {
@@ -137,7 +144,10 @@ export async function signInWithPassword(email, password) {
 }
 
 export async function updateFirebasePassword(idToken, newPassword) {
-  const apiKey = requireEnv('NEXT_PUBLIC_FIREBASE_API_KEY', FIREBASE_API_KEY)
+  const apiKey = requireEnv(
+    'FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY',
+    FIREBASE_API_KEY
+  )
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`,
     {

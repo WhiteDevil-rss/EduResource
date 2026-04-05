@@ -55,6 +55,8 @@ function isCredentialAuthError(message = '') {
 function isConfigurationError(message = '') {
   return (
     message.includes('Missing NEXT_PUBLIC_FIREBASE_API_KEY') ||
+    message.includes('Missing FIREBASE_API_KEY') ||
+    message.includes('Missing FIREBASE_API_KEY or NEXT_PUBLIC_FIREBASE_API_KEY') ||
     message.includes('CONFIGURATION_NOT_FOUND') ||
     message.includes('API key not valid')
   )
@@ -135,7 +137,7 @@ export async function POST(request) {
           NextResponse.json(
             {
               error:
-                'Authentication provider is not configured correctly. Check NEXT_PUBLIC_FIREBASE_API_KEY and Firebase project settings.',
+                'Authentication provider is not configured correctly. Check FIREBASE_API_KEY (or NEXT_PUBLIC_FIREBASE_API_KEY) and Firebase project settings.',
             },
             { status: 500 }
           )
