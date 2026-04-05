@@ -6,6 +6,14 @@ function noop() {}
 const emptyObject = {};
 const emptyArray = [];
 
+class StubAgent {
+  constructor() {}
+  addRequest() {}
+  createConnection() {
+    return {};
+  }
+}
+
 // A base proxy that behaves like an object, a function, or a class.
 const createStub = (name = 'Stub') => {
   const handler = {
@@ -56,6 +64,23 @@ export const clearInterval = globalThis.clearInterval;
 // Fallback for Node-specific timers
 export const setImmediate = (fn, ...args) => globalThis.setTimeout(fn, 0, ...args);
 export const clearImmediate = (id) => globalThis.clearTimeout(id);
+
+// HTTP/HTTPS compatibility shims
+export class Agent extends StubAgent {}
+export class Server extends StubAgent {}
+export const globalAgent = new Agent();
+export const METHODS = [];
+export const STATUS_CODES = emptyObject;
+export const request = () => ({
+  on: noop,
+  once: noop,
+  end: noop,
+  setHeader: noop,
+  removeHeader: noop,
+  abort: noop,
+  destroy: noop
+});
+export const get = request;
 
 // Querystring/Utils/Common Node internals
 export const parse = (s) => ({});
