@@ -61,6 +61,7 @@ export default function FacultyDashboard() {
   const [totalDownloads, setTotalDownloads] = useState(0)
   const [editorOpen, setEditorOpen] = useState(false)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const deferredSearch = useDeferredValue(searchTerm)
 
   // Password change states
@@ -197,13 +198,16 @@ export default function FacultyDashboard() {
   }
 
   const handleDelete = async (entry) => {
-    const confirmed = window.confirm(`Delete "${entry.title}" from the publication list?`)
-    if (!confirmed) {
+    setDeleteTarget(entry)
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) {
       return
     }
 
     try {
-      const response = await fetch(`/api/faculty/resources/${entry.id}`, {
+      const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, {
         method: 'DELETE',
       })
 
@@ -214,6 +218,7 @@ export default function FacultyDashboard() {
 
       toast.success('Publication deleted.')
       await loadResources({ background: true })
+      setDeleteTarget(null)
     } catch (error) {
       toast.error(error.message || 'Could not delete the resource.')
     }
@@ -266,6 +271,32 @@ export default function FacultyDashboard() {
 
   return (
     <div className="dashboard-page">
+      {deleteTarget ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setDeleteTarget(null)}>
+          <div
+            className="modal-card modal-card--compact"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="faculty-delete-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="faculty-delete-title">Delete publication?</h3>
+            <p>
+              Remove "{deleteTarget.title}" from the publication list. This cannot be undone.
+            </p>
+
+            <div className="modal-form__actions" style={{ marginTop: '1.5rem' }}>
+              <button type="button" className="button-secondary" onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </button>
+              <button type="button" className="button-primary" onClick={confirmDelete}>
+                Delete publication
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="dashboard-layout">
         <aside className="dashboard-sidebar">
           <div className="dashboard-sidebar__brand">

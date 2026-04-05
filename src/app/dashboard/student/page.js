@@ -14,7 +14,7 @@ import {
   Settings,
   User,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useState, useTransition } from 'react'
+import { useDeferredValue, useEffect, useRef, useState, useTransition } from 'react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -75,6 +75,7 @@ export default function StudentDashboard() {
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [notificationsSaving, setNotificationsSaving] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsError, setNotificationsError] = useState('')
@@ -82,6 +83,7 @@ export default function StudentDashboard() {
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const [isFiltering, startTransition] = useTransition()
   const deferredSearch = useDeferredValue(searchTerm)
+  const notificationsPanelRef = useRef(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -189,6 +191,32 @@ export default function StudentDashboard() {
     }
   }, [user?.uid])
 
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!notificationsOpen) {
+        return
+      }
+
+      if (notificationsPanelRef.current && !notificationsPanelRef.current.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false)
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [notificationsOpen])
+
   const catalog = resources
   const subjectOptions = ['All Subjects', ...new Set(catalog.map((entry) => entry.subject))]
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
@@ -206,9 +234,7 @@ export default function StudentDashboard() {
   }
 
   const openNotifications = () => {
-    if (typeof window !== 'undefined') {
-      window.location.hash = '#student-notifications'
-    }
+    setNotificationsOpen((current) => !current)
   }
 
   const markNotificationRead = async (notificationId) => {
@@ -341,7 +367,14 @@ export default function StudentDashboard() {
             </div>
 
             <div className="dashboard-topbar__actions">
-              <button type="button" className="dashboard-topbar__icon" aria-label="Notifications" onClick={openNotifications}>
+              <button
+                type="button"
+                className="dashboard-topbar__icon"
+                aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={notificationsOpen}
+                onClick={openNotifications}
+              >
                 <Bell size={18} />
                 {unreadNotificationCount > 0 ? <span className="dashboard-topbar__badge">{unreadNotificationCount}</span> : null}
               </button>
@@ -353,6 +386,65 @@ export default function StudentDashboard() {
                   {getDisplayName(user?.email, 'S').charAt(0)}
                 </div>
               </div>
+              {notificationsOpen ? (
+                <div className="notification-popover" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
+                  <div className="notification-popover__header">
+                    <div>
+                      <strong>Notifications</strong>
+                      <span>{unreadNotificationCount} unread</span>
+                    </div>
+                    <button type="button" className="dashboard-topbar__icon" aria-label="Close notifications" onClick={() => setNotificationsOpen(false)}>
+                      <Circle size={16} />
+                    </button>
+                  </div>
+
+                  <div className="notification-shell notification-shell--popover">
+                    {notificationsError ? (
+                      <div className="auth-alert">
+                        <HelpCircle size={18} color="var(--tertiary)" />
+                        <span>{notificationsError}</span>
+                      </div>
+                    ) : null}
+
+                    {notificationsLoading ? (
+                      <div className="empty-state">Loading notifications...</div>
+                    ) : notifications.length > 0 ? (
+                      notifications.slice(0, 5).map((notification) => (
+                        <article
+                          key={notification.id}
+                          className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
+                        >
+                          <button type="button" className="notification-card__mark" onClick={() => markNotificationRead(notification.id)}>
+                            {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                          </button>
+                          <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
+                            <strong>{notification.resourceTitle || 'New resource uploaded'}</strong>
+                            <p>{notification.message || 'A faculty member uploaded a new learning resource.'}</p>
+                            <span>
+                              {notification.facultyName || notification.facultyEmail || 'Faculty member'} · {formatRelativeUpdate(notification.createdAt)}
+                            </span>
+                          </div>
+                          {!notification.readAt ? <span className="notification-card__dot" /> : null}
+                        </article>
+                      ))
+                    ) : (
+                      <div className="empty-state">You do not have any notifications yet.</div>
+                    )}
+                  </div>
+
+                  <div className="notification-popover__footer">
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={readAllNotifications}
+                      disabled={notificationsSaving || unreadNotificationCount === 0}
+                    >
+                      <CheckCircle2 size={16} />
+                      {notificationsSaving ? 'Updating...' : 'Read all at once'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </header>
 
@@ -362,60 +454,6 @@ export default function StudentDashboard() {
               <span>{errorMessage}</span>
             </div>
           ) : null}
-
-          <section className="dashboard-section" id="student-notifications">
-            <div className="section-header">
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span className="pill-label">Alerts</span>
-                  <span style={{ color: 'rgba(240,240,253,0.4)' }}>/</span>
-                  <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Notifications</span>
-                </div>
-                <h2>New resource alerts</h2>
-                <p>
-                  Faculty uploads are delivered here automatically. Unread items stay marked until you open them or clear everything at once.
-                </p>
-              </div>
-              <button type="button" className="button-secondary" onClick={readAllNotifications} disabled={notificationsSaving || unreadNotificationCount === 0}>
-                <CheckCircle2 size={16} />
-                {notificationsSaving ? 'Updating...' : 'Read all at once'}
-              </button>
-            </div>
-
-            {notificationsError ? (
-              <div className="auth-alert" style={{ marginBottom: '1rem' }}>
-                <HelpCircle size={18} color="var(--tertiary)" />
-                <span>{notificationsError}</span>
-              </div>
-            ) : null}
-
-            <div className="notification-shell">
-              {notificationsLoading ? (
-                <div className="empty-state">Loading notifications...</div>
-              ) : notifications.length > 0 ? (
-                notifications.slice(0, 5).map((notification) => (
-                  <article
-                    key={notification.id}
-                    className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
-                  >
-                    <button type="button" className="notification-card__mark" onClick={() => markNotificationRead(notification.id)}>
-                      {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                    </button>
-                    <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
-                      <strong>{notification.resourceTitle || 'New resource uploaded'}</strong>
-                      <p>{notification.message || 'A faculty member uploaded a new learning resource.'}</p>
-                      <span>
-                        {notification.facultyName || notification.facultyEmail || 'Faculty member'} · {formatRelativeUpdate(notification.createdAt)}
-                      </span>
-                    </div>
-                    {!notification.readAt ? <span className="notification-card__dot" /> : null}
-                  </article>
-                ))
-              ) : (
-                <div className="empty-state">You do not have any notifications yet.</div>
-              )}
-            </div>
-          </section>
 
           <section className="dashboard-section" id="student-library">
             <div className="section-header">

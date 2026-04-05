@@ -381,11 +381,11 @@ export default function AdminDashboard() {
               </article>
 
               <article className="status-panel">
-                <h3>Access Posture</h3>
-                <p>Student Google OAuth is isolated from faculty/admin credential access, and server-side sessions enforce role boundaries across the application.</p>
+                <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Total Resources Uploaded</span>
+                <strong className="metric-card__value" style={{ fontSize: '2rem' }}>{resources.length}</strong>
                 <div className="status-panel__state">
                   <span className="status-panel__dot" />
-                  {refreshing ? 'Refreshing' : 'Policies Active'}
+                  {refreshing ? 'Refreshing' : 'Live Count'}
                 </div>
               </article>
             </div>

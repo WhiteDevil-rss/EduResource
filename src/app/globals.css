@@ -1280,9 +1280,64 @@ h6 {
 }
 
 .dashboard-topbar__actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.notification-popover {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  z-index: 40;
+  width: min(100vw - 2rem, 26rem);
+  border-radius: 24px;
+  padding: 1rem;
+  background: rgba(17, 19, 29, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-bloom);
+  backdrop-filter: blur(18px);
+}
+
+.notification-popover__header,
+.notification-popover__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.notification-popover__header {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.notification-popover__header strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.notification-popover__header span {
+  color: rgba(240, 240, 253, 0.5);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.notification-popover__footer {
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.notification-shell--popover {
+  margin-top: 0.85rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.modal-card--compact {
+  width: min(100%, 28rem);
 }
 
 .dashboard-topbar__icon {
@@ -2586,6 +2641,22 @@ h6 {
   height: 100%;
   object-fit: cover;
   transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dashboard-content #student-library .resource-card {
+  min-height: 24rem;
+}
+
+.dashboard-content #student-library .resource-card__preview {
+  aspect-ratio: 16 / 8.5;
+}
+
+.dashboard-content #student-library .resource-card__body {
+  margin-bottom: 1rem;
+}
+
+.dashboard-content #student-library .resource-card__body p {
+  -webkit-line-clamp: 2;
 }
 
 .resource-card:hover .resource-card__preview img {
