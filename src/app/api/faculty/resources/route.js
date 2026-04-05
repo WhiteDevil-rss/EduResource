@@ -11,7 +11,7 @@ import { uploadPreview } from '@/lib/cloudinary'
 
 export async function GET(request) {
   try {
-    const session = requireApiSession(request, ['faculty'])
+    const session = await requireApiSession(request, ['faculty'])
     const resources = await listResourceRecords()
     const visibleResources = resources.filter(
       (entry) => entry.uploadedBy === session.uid || entry.facultyId === session.uid
@@ -46,7 +46,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     assertSameOrigin(request)
-    const session = requireApiSession(request, ['faculty'])
+    const session = await requireApiSession(request, ['faculty'])
     
     const contentType = request.headers.get('content-type') || ''
     let payload = {}
