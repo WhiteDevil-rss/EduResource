@@ -8,6 +8,15 @@ import {
 import { createResourceRecord, listResourceRecords } from '@/lib/server-data'
 import { uploadToDrive } from '@/lib/google-drive'
 
+function withTimeout(promise, timeoutMs, fallbackValue = null) {
+  return Promise.race([
+    promise,
+    new Promise((resolve) => {
+      setTimeout(() => resolve(fallbackValue), timeoutMs)
+    }),
+  ])
+}
+
 export async function GET(request) {
   try {
     const session = await requireApiSession(request, ['faculty'])
@@ -71,8 +80,18 @@ export async function POST(request) {
       // 2. Upload Preview to Cloudinary (optional/best-effort)
       let previewData = null
       try {
-        const { uploadPreview } = await import('@/lib/cloudinary')
-        previewData = await uploadPreview(buffer, file.name, file.type)
+        previewData = await withTimeout(
+          (async () => {
+            const { uploadPreview } = await import('@/lib/cloudinary')
+            return uploadPreview(buffer, file.name, file.type)
+          })(),
+          3500,
+          null
+        )
+
+        if (!previewData) {
+          console.warn('Preview upload timed out or unavailable, continuing without preview.')
+        }
       } catch (error) {
         console.warn('Preview upload failed, continuing without preview:', error?.message || error)
       }
