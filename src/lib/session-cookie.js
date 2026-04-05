@@ -1,3 +1,4 @@
+/* global TextEncoder, btoa, atob */
 import 'server-only'
 
 /**

@@ -142,15 +142,14 @@ export async function getRawUserRecordById(userId) {
     console.error('getRawUserRecordById: Invalid or missing userId');
     return null;
   }
-  const adminDb = await requireAdminDb()
-  const snapshot = await adminDb.collection(USERS_COLLECTION).doc(userId).get()
-  if (!snapshot.exists) {
+  const data = await firestore.getDoc(`${USERS_COLLECTION}/${userId}`)
+  if (!data) {
     return null
   }
 
   return {
-    id: snapshot.id,
-    data: snapshot.data() || {},
+    id: userId,
+    data: data,
   }
 }
 
@@ -648,7 +647,7 @@ export async function createResourceRecord({ session, payload }) {
   }
 
   const createdAt = nowIso()
-  const document = await adminDb.collection(RESOURCES_COLLECTION).add({
+  const result = await firestore.addDoc(RESOURCES_COLLECTION, {
     title,
     titleLower: title.toLowerCase(),
     subject,
