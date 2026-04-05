@@ -29,6 +29,154 @@ class StubIncomingMessage extends Readable {
   _read() {}
 }
 
+class StubServerResponse {
+  constructor() {
+    this.headers = {};
+    this.statusCode = 200;
+    this.statusMessage = '';
+    this.finished = false;
+    this.headersSent = false;
+    this.writableFinished = false;
+    this.writableEnded = false;
+    this.errored = null;
+    this.destroyed = false;
+    this._chunks = [];
+    this._listeners = new Map();
+  }
+
+  _getListeners(eventName) {
+    return this._listeners.get(eventName) || [];
+  }
+
+  _setListeners(eventName, listeners) {
+    this._listeners.set(eventName, listeners);
+  }
+
+  addListener(eventName, listener) {
+    const listeners = this._getListeners(eventName).concat(listener);
+    this._setListeners(eventName, listeners);
+    return this;
+  }
+
+  on(eventName, listener) {
+    return this.addListener(eventName, listener);
+  }
+
+  once(eventName, listener) {
+    const wrapped = (...args) => {
+      this.removeListener(eventName, wrapped);
+      listener(...args);
+    };
+    return this.addListener(eventName, wrapped);
+  }
+
+  prependListener(eventName, listener) {
+    const listeners = this._getListeners(eventName);
+    this._setListeners(eventName, [listener, ...listeners]);
+    return this;
+  }
+
+  prependOnceListener(eventName, listener) {
+    const wrapped = (...args) => {
+      this.removeListener(eventName, wrapped);
+      listener(...args);
+    };
+    return this.prependListener(eventName, wrapped);
+  }
+
+  removeListener(eventName, listener) {
+    const listeners = this._getListeners(eventName).filter((entry) => entry !== listener);
+    this._setListeners(eventName, listeners);
+    return this;
+  }
+
+  off(eventName, listener) {
+    return this.removeListener(eventName, listener);
+  }
+
+  emit(eventName, ...args) {
+    for (const listener of this._getListeners(eventName)) {
+      listener(...args);
+    }
+    return this._getListeners(eventName).length > 0;
+  }
+
+  listeners(eventName) {
+    return this._getListeners(eventName).slice();
+  }
+
+  listenerCount(eventName) {
+    return this._getListeners(eventName).length;
+  }
+
+  setHeader(name, value) {
+    this.headers[String(name).toLowerCase()] = value;
+    return this;
+  }
+
+  getHeader(name) {
+    return this.headers[String(name).toLowerCase()];
+  }
+
+  getHeaders() {
+    return { ...this.headers };
+  }
+
+  hasHeader(name) {
+    return Object.prototype.hasOwnProperty.call(this.headers, String(name).toLowerCase());
+  }
+
+  removeHeader(name) {
+    delete this.headers[String(name).toLowerCase()];
+    return this;
+  }
+
+  writeHead(statusCode, headers = {}) {
+    this.statusCode = statusCode;
+    for (const [key, value] of Object.entries(headers)) {
+      this.setHeader(key, value);
+    }
+    return this;
+  }
+
+  flushHeaders() {
+    this.headersSent = true;
+    return this;
+  }
+
+  write(chunk) {
+    this.headersSent = true;
+    this._chunks.push(chunk);
+    return true;
+  }
+
+  end(chunk) {
+    if (chunk !== undefined) {
+      this.write(chunk);
+    }
+    this.finished = true;
+    this.writableFinished = true;
+    this.writableEnded = true;
+    this.emit('finish');
+    this.emit('close');
+    return this;
+  }
+
+  destroy(error = null) {
+    this.destroyed = true;
+    this.errored = error;
+    if (error) {
+      this.emit('error', error);
+    }
+    this.emit('close');
+    return this;
+  }
+
+  setTimeout() {
+    return this;
+  }
+}
+
 // A base proxy that behaves like an object, a function, or a class.
 const createStub = (name = 'Stub') => {
   const handler = {
@@ -47,6 +195,7 @@ const createStub = (name = 'Stub') => {
       if (prop === 'types') return emptyObject;
       if (prop === 'codes') return emptyObject;
       if (prop === 'IncomingMessage') return StubIncomingMessage;
+      if (prop === 'ServerResponse') return StubServerResponse;
       if (prop === 'TextEncoder') return globalThis.TextEncoder;
       if (prop === 'TextDecoder') return globalThis.TextDecoder;
       
@@ -86,6 +235,7 @@ export const clearImmediate = (id) => globalThis.clearTimeout(id);
 // HTTP/HTTPS compatibility shims
 export class Agent extends StubAgent {}
 export class Server extends StubAgent {}
+export class ServerResponse extends StubServerResponse {}
 export const globalAgent = new Agent();
 export const METHODS = [];
 export const STATUS_CODES = emptyObject;
