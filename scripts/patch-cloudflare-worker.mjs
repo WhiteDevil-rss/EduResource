@@ -18,7 +18,7 @@ const nodeStubPlugin = {
       'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
       'path', 'process', 'stream', 'string_decoder', 'url',
       'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
-      'module'
+      'module', 'util'
     ]);
 
     // Handle all node:* and bare Node modules

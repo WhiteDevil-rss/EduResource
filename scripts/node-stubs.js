@@ -2,6 +2,8 @@
  * Comprehensive, Universal Stub for Unsupported Node.js Modules in Cloudflare Workers.
  */
 
+import { Readable } from 'node:stream';
+
 function noop() {}
 const emptyObject = {};
 const emptyArray = [];
@@ -12,6 +14,19 @@ class StubAgent {
   createConnection() {
     return {};
   }
+}
+
+class StubIncomingMessage extends Readable {
+  constructor(socket = {}) {
+    super();
+    this.socket = socket;
+    this.headers = {};
+    this.method = 'GET';
+    this.url = '/';
+    this.complete = true;
+  }
+
+  _read() {}
 }
 
 // A base proxy that behaves like an object, a function, or a class.
@@ -31,6 +46,9 @@ const createStub = (name = 'Stub') => {
       if (prop === 'constants') return emptyObject;
       if (prop === 'types') return emptyObject;
       if (prop === 'codes') return emptyObject;
+      if (prop === 'IncomingMessage') return StubIncomingMessage;
+      if (prop === 'TextEncoder') return globalThis.TextEncoder;
+      if (prop === 'TextDecoder') return globalThis.TextDecoder;
       
       // AsyncLocalStorage mock
       if (prop === 'AsyncLocalStorage') {
