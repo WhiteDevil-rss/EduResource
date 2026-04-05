@@ -3,10 +3,13 @@
 import {
   AlertCircle,
   Bell,
+  CheckCircle2,
   Edit3,
   FileText,
   Filter,
+  Circle,
   LogOut,
+  HelpCircle,
   Plus,
   Search,
   Settings,
@@ -14,12 +17,13 @@ import {
   Upload,
   UserCircle2,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
 import {
   FACULTY_PROFILE,
   formatDisplayDate,
+  formatRelativeUpdate,
   getDisplayName,
   getSafeAvatarUrl,
   getSubjectTone,
@@ -54,14 +58,20 @@ function statusClassName(status) {
 export default function FacultyDashboard() {
   const { user, logout } = useAuth()
   const [resources, setResources] = useState([])
+  const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [notificationsLoading, setNotificationsLoading] = useState(true)
+  const [notificationsSaving, setNotificationsSaving] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationsError, setNotificationsError] = useState('')
   const [totalDownloads, setTotalDownloads] = useState(0)
   const [editorOpen, setEditorOpen] = useState(false)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const notificationsPanelRef = useRef(null)
   const deferredSearch = useDeferredValue(searchTerm)
 
   // Password change states
@@ -96,13 +106,62 @@ export default function FacultyDashboard() {
     }
   }
 
+  const loadNotifications = async () => {
+    setNotificationsLoading(true)
+
+    try {
+      const response = await fetch('/api/notifications', { cache: 'no-store' })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not load notifications.')
+      }
+
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+      setNotificationsError('')
+    } catch (error) {
+      console.error('Faculty notifications error:', error)
+      setNotifications([])
+      setNotificationsError(error.message || 'Could not load notifications.')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!user?.uid) {
       return
     }
 
     loadResources()
+    loadNotifications()
   }, [user?.uid])
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!notificationsOpen) {
+        return
+      }
+
+      if (notificationsPanelRef.current && !notificationsPanelRef.current.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false)
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [notificationsOpen])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === '#faculty-upload') {
@@ -121,6 +180,8 @@ export default function FacultyDashboard() {
       .toLowerCase()
       .includes(term)
   })
+
+  const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
   const openCreateModal = () => {
     setDraft(EMPTY_DRAFT)
@@ -222,6 +283,58 @@ export default function FacultyDashboard() {
       toast.success(`${entry.title} is now ${nextStatus}.`)
     } catch (error) {
       toast.error(error.message || 'Could not update the resource status.')
+    }
+  }
+
+  const openNotifications = () => {
+    setNotificationsOpen((current) => !current)
+  }
+
+  const markNotificationRead = async (notificationId) => {
+    setNotificationsSaving(true)
+
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not update notifications.')
+      }
+
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+      toast.success('Notification marked as read.')
+    } catch (error) {
+      toast.error(error.message || 'Could not update notifications.')
+    } finally {
+      setNotificationsSaving(false)
+    }
+  }
+
+  const readAllNotifications = async () => {
+    setNotificationsSaving(true)
+
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'read-all' }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not clear notifications.')
+      }
+
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+      toast.success('All notifications marked as read.')
+    } catch (error) {
+      toast.error(error.message || 'Could not clear notifications.')
+    } finally {
+      setNotificationsSaving(false)
     }
   }
 
@@ -382,8 +495,16 @@ export default function FacultyDashboard() {
             </div>
 
             <div className="dashboard-topbar__actions">
-              <button type="button" className="dashboard-topbar__icon" aria-label="Notifications">
+              <button
+                type="button"
+                className="dashboard-topbar__icon"
+                aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={notificationsOpen}
+                onClick={openNotifications}
+              >
                 <Bell size={18} />
+                {unreadNotificationCount > 0 ? <span className="dashboard-topbar__badge">{unreadNotificationCount}</span> : null}
               </button>
               <button
                 type="button"
@@ -396,6 +517,75 @@ export default function FacultyDashboard() {
               <button type="button" className="dashboard-topbar__icon" aria-label="Log out" onClick={logout}>
                 <LogOut size={18} />
               </button>
+
+              {notificationsOpen ? (
+                <div className="notification-popover" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
+                  <div className="notification-popover__header">
+                    <div>
+                      <strong>Notifications</strong>
+                      <span>{unreadNotificationCount} unread</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="dashboard-topbar__icon"
+                      aria-label="Close notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                    >
+                      <Circle size={16} />
+                    </button>
+                  </div>
+
+                  <div className="notification-shell notification-shell--popover">
+                    {notificationsError ? (
+                      <div className="auth-alert">
+                        <HelpCircle size={18} color="var(--tertiary)" />
+                        <span>{notificationsError}</span>
+                      </div>
+                    ) : null}
+
+                    {notificationsLoading ? (
+                      <div className="empty-state">Loading notifications...</div>
+                    ) : notifications.length > 0 ? (
+                      notifications.slice(0, 5).map((notification) => (
+                        <article
+                          key={notification.id}
+                          className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
+                        >
+                          <button
+                            type="button"
+                            className="notification-card__mark"
+                            onClick={() => markNotificationRead(notification.id)}
+                          >
+                            {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                          </button>
+                          <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
+                            <strong>{notification.resourceTitle || notification.message || 'New notification'}</strong>
+                            <p>{notification.message || 'A new dashboard update is available.'}</p>
+                            <span>
+                              {notification.facultyName || notification.studentName || notification.facultyEmail || notification.studentEmail || 'System'} · {formatRelativeUpdate(notification.createdAt)}
+                            </span>
+                          </div>
+                          {!notification.readAt ? <span className="notification-card__dot" /> : null}
+                        </article>
+                      ))
+                    ) : (
+                      <div className="empty-state">You do not have any notifications yet.</div>
+                    )}
+                  </div>
+
+                  <div className="notification-popover__footer">
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={readAllNotifications}
+                      disabled={notificationsSaving || unreadNotificationCount === 0}
+                    >
+                      <CheckCircle2 size={16} />
+                      {notificationsSaving ? 'Updating...' : 'Read all at once'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </header>
 

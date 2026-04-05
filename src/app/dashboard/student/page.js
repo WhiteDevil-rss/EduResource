@@ -24,6 +24,32 @@ import {
 } from '@/lib/demo-content'
 
 const DOWNLOADS_STORAGE_KEY = 'eduresourcehub.downloads.v1'
+const RESOURCE_PREVIEW_FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Preview unavailable">
+      <defs>
+        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#10131d"/>
+          <stop offset="100%" stop-color="#1b2030"/>
+        </linearGradient>
+        <linearGradient id="accent" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0%" stop-color="#b6a0ff"/>
+          <stop offset="100%" stop-color="#00affe"/>
+        </linearGradient>
+      </defs>
+      <rect width="960" height="540" rx="36" fill="url(#bg)"/>
+      <circle cx="768" cy="126" r="104" fill="rgba(182,160,255,0.16)"/>
+      <circle cx="184" cy="396" r="124" fill="rgba(0,175,254,0.10)"/>
+      <rect x="168" y="132" width="624" height="276" rx="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
+      <rect x="228" y="188" width="206" height="164" rx="20" fill="rgba(255,255,255,0.08)"/>
+      <path d="M264 300l52-62 38 43 28-32 60 51z" fill="url(#accent)" opacity="0.9"/>
+      <circle cx="288" cy="236" r="22" fill="#f0f0fd" opacity="0.9"/>
+      <text x="500" y="232" fill="#f0f0fd" font-family="Arial, sans-serif" font-size="34" font-weight="700">Preview unavailable</text>
+      <text x="500" y="274" fill="rgba(240,240,253,0.68)" font-family="Arial, sans-serif" font-size="20">Cloudinary preview failed to load.</text>
+      <text x="500" y="308" fill="rgba(240,240,253,0.68)" font-family="Arial, sans-serif" font-size="20">The fallback image is shown instead.</text>
+    </svg>
+  `)
 
 function inferResourceFormat(fileUrl) {
   const value = String(fileUrl || '').toLowerCase()
@@ -249,6 +275,18 @@ export default function StudentDashboard() {
   }
 
   const previewSrcForResource = (entry) => entry.previewUrl || entry.fileUrl || ''
+
+  const handlePreviewImageError = (event) => {
+    const image = event.currentTarget
+
+    if (image.dataset.fallbackApplied === 'true') {
+      return
+    }
+
+    image.dataset.fallbackApplied = 'true'
+    image.src = RESOURCE_PREVIEW_FALLBACK_IMAGE
+    image.removeAttribute('srcset')
+  }
 
   const openRequestModal = () => {
     setResourceRequest({
@@ -645,7 +683,12 @@ export default function StudentDashboard() {
                       </div>
                       {previewSrcForResource(entry) ? (
                         <div className="resource-card__preview">
-                          <img src={previewSrcForResource(entry)} alt={entry.title} loading="lazy" />
+                          <img
+                            src={previewSrcForResource(entry)}
+                            alt={entry.title}
+                            loading="lazy"
+                            onError={handlePreviewImageError}
+                          />
                         </div>
                       ) : null}
                       <div className="resource-card__body">
@@ -681,7 +724,12 @@ export default function StudentDashboard() {
                     </div>
                     {previewSrcForResource(entry) ? (
                       <div className="resource-card__preview">
-                        <img src={previewSrcForResource(entry)} alt={entry.title} loading="lazy" />
+                        <img
+                          src={previewSrcForResource(entry)}
+                          alt={entry.title}
+                          loading="lazy"
+                          onError={handlePreviewImageError}
+                        />
                       </div>
                     ) : null}
                     <div className="resource-card__body">

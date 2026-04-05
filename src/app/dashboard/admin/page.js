@@ -3,9 +3,12 @@
 import {
   AlertCircle,
   Bell,
+  CheckCircle2,
+  Circle,
   Download,
   FileText,
   KeyRound,
+  HelpCircle,
   LayoutPanelTop,
   LogOut,
   RefreshCw,
@@ -15,12 +18,13 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useState } from 'react'
+import { useDeferredValue, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
 import {
   ADMIN_PROFILE,
   formatDisplayDate,
+  formatRelativeUpdate,
   getDisplayName,
   getInitials,
   getSafeAvatarUrl,
@@ -68,17 +72,30 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([])
   const [resources, setResources] = useState([])
   const [requests, setRequests] = useState([])
+  const [notifications, setNotifications] = useState([])
   const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [userSearchTerm, setUserSearchTerm] = useState('')
+  const [userStatusFilter, setUserStatusFilter] = useState('all')
+  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
+  const [resourceStatusFilter, setResourceStatusFilter] = useState('all')
+  const [requestSearchTerm, setRequestSearchTerm] = useState('')
+  const [requestStatusFilter, setRequestStatusFilter] = useState('all')
   const [errorMessage, setErrorMessage] = useState('')
+  const [notificationsLoading, setNotificationsLoading] = useState(true)
+  const [notificationsSaving, setNotificationsSaving] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationsError, setNotificationsError] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM)
   const [submittingCreate, setSubmittingCreate] = useState(false)
   const [resetModal, setResetModal] = useState(null) // { user: object, password: String, submitting: boolean }
   const [pendingCredentials, setPendingCredentials] = useState(null)
-  const deferredSearch = useDeferredValue(searchTerm)
+  const notificationsPanelRef = useRef(null)
+  const deferredUserSearch = useDeferredValue(userSearchTerm)
+  const deferredResourceSearch = useDeferredValue(resourceSearchTerm)
+  const deferredRequestSearch = useDeferredValue(requestSearchTerm)
 
   const loadOverview = async ({ background = false } = {}) => {
     if (background) {
@@ -132,6 +149,28 @@ export default function AdminDashboard() {
     }
   }
 
+  const loadNotifications = async () => {
+    setNotificationsLoading(true)
+
+    try {
+      const response = await fetch('/api/notifications', { cache: 'no-store' })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not load notifications.')
+      }
+
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+      setNotificationsError('')
+    } catch (error) {
+      console.error('Admin notifications error:', error)
+      setNotifications([])
+      setNotificationsError(error.message || 'Could not load notifications.')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!user?.uid) {
       return
@@ -139,15 +178,46 @@ export default function AdminDashboard() {
 
     loadOverview()
     loadRequests()
+    loadNotifications()
   }, [user?.uid])
 
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!notificationsOpen) {
+        return
+      }
+
+      if (notificationsPanelRef.current && !notificationsPanelRef.current.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setNotificationsOpen(false)
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [notificationsOpen])
+
   const filteredUsers = users.filter((entry) => {
-    const term = deferredSearch.trim().toLowerCase()
+    const term = deferredUserSearch.trim().toLowerCase()
     if (!term) {
+      if (userStatusFilter !== 'all' && entry.status !== userStatusFilter) {
+        return false
+      }
+
       return true
     }
 
-    return [
+    const matchesTerm = [
       entry.displayName,
       entry.email,
       entry.loginId,
@@ -158,6 +228,54 @@ export default function AdminDashboard() {
       .join(' ')
       .toLowerCase()
       .includes(term)
+
+    if (!matchesTerm) {
+      return false
+    }
+
+    if (userStatusFilter !== 'all' && entry.status !== userStatusFilter) {
+      return false
+    }
+
+    return true
+  })
+
+  const filteredResources = resources.filter((entry) => {
+    const term = deferredResourceSearch.trim().toLowerCase()
+    const matchesTerm = !term || [entry.title, entry.class, entry.subject, entry.summary, entry.status]
+      .join(' ')
+      .toLowerCase()
+      .includes(term)
+
+    if (!matchesTerm) {
+      return false
+    }
+
+    if (resourceStatusFilter !== 'all' && entry.status !== resourceStatusFilter) {
+      return false
+    }
+
+    return true
+  })
+
+  const filteredRequests = requests.filter((entry) => {
+    const term = deferredRequestSearch.trim().toLowerCase()
+    const matchesTerm =
+      !term ||
+      [entry.studentName, entry.studentEmail, entry.courseName, entry.titleName, entry.preferredFormat, entry.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
+
+    if (!matchesTerm) {
+      return false
+    }
+
+    if (requestStatusFilter !== 'all' && entry.status !== requestStatusFilter) {
+      return false
+    }
+
+    return true
   })
 
   const activeStudents = users.filter(
@@ -166,6 +284,7 @@ export default function AdminDashboard() {
   const facultyCount = users.filter((entry) => entry.role === 'faculty').length
   const disabledUsers = users.filter((entry) => entry.status !== 'active').length
   const openRequests = requests.filter((entry) => entry.status !== 'done').length
+  const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
   const exportUsers = () => {
     const headers = ['Name', 'Email', 'Login ID', 'Role', 'Auth Provider', 'Status']
@@ -304,6 +423,58 @@ export default function AdminDashboard() {
     }
   }
 
+  const openNotifications = () => {
+    setNotificationsOpen((current) => !current)
+  }
+
+  const markNotificationRead = async (notificationId) => {
+    setNotificationsSaving(true)
+
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not update notifications.')
+      }
+
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+      toast.success('Notification marked as read.')
+    } catch (error) {
+      toast.error(error.message || 'Could not update notifications.')
+    } finally {
+      setNotificationsSaving(false)
+    }
+  }
+
+  const readAllNotifications = async () => {
+    setNotificationsSaving(true)
+
+    try {
+      const response = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'read-all' }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not clear notifications.')
+      }
+
+      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+      toast.success('All notifications marked as read.')
+    } catch (error) {
+      toast.error(error.message || 'Could not clear notifications.')
+    } finally {
+      setNotificationsSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="loading-state">
@@ -330,9 +501,9 @@ export default function AdminDashboard() {
               <FileText size={18} />
               Resource Audit
             </a>
-            <a href="#admin-requests" className="dashboard-nav__link">
+            <a href="#admin-requests" className="dashboard-nav__link dashboard-nav__link--requests">
               <LayoutPanelTop size={18} />
-              Resource Requests
+              <span className="dashboard-nav__label">Resource Requests</span>
               {openRequests > 0 ? <span className="dashboard-nav__count">{openRequests}</span> : null}
             </a>
             <a href="#admin-activity" className="dashboard-nav__link">
@@ -346,6 +517,11 @@ export default function AdminDashboard() {
           </nav>
 
           <div className="dashboard-sidebar__footer">
+            <button type="button" className="button-secondary" onClick={openNotifications}>
+              <Bell size={16} />
+              Notifications
+              {unreadNotificationCount > 0 ? <span className="dashboard-nav__count">{unreadNotificationCount}</span> : null}
+            </button>
             <button type="button" className="button-primary" onClick={() => setCreateOpen(true)}>
               <Sparkles size={16} />
               Create Account
@@ -367,20 +543,17 @@ export default function AdminDashboard() {
 
         <div className="dashboard-content">
           <header className="dashboard-topbar">
-            <div className="dashboard-topbar__search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Search users, login IDs, or roles..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-              />
-            </div>
-
             <div className="dashboard-topbar__actions">
-              <button type="button" className="dashboard-topbar__icon" aria-label="Notifications">
+              <button
+                type="button"
+                className="dashboard-topbar__icon"
+                aria-label="Notifications"
+                aria-haspopup="dialog"
+                aria-expanded={notificationsOpen}
+                onClick={openNotifications}
+              >
                 <Bell size={18} />
-                {openRequests > 0 ? <span className="dashboard-topbar__badge">{openRequests}</span> : null}
+                {unreadNotificationCount > 0 ? <span className="dashboard-topbar__badge">{unreadNotificationCount}</span> : null}
               </button>
               <button
                 type="button"
@@ -406,6 +579,75 @@ export default function AdminDashboard() {
                   <img src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)} alt="Admin profile" />
                 </div>
               </div>
+
+              {notificationsOpen ? (
+                <div className="notification-popover" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
+                  <div className="notification-popover__header">
+                    <div>
+                      <strong>Notifications</strong>
+                      <span>{unreadNotificationCount} unread</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="dashboard-topbar__icon"
+                      aria-label="Close notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                    >
+                      <Circle size={16} />
+                    </button>
+                  </div>
+
+                  <div className="notification-shell notification-shell--popover">
+                    {notificationsError ? (
+                      <div className="auth-alert">
+                        <HelpCircle size={18} color="var(--tertiary)" />
+                        <span>{notificationsError}</span>
+                      </div>
+                    ) : null}
+
+                    {notificationsLoading ? (
+                      <div className="empty-state">Loading notifications...</div>
+                    ) : notifications.length > 0 ? (
+                      notifications.slice(0, 5).map((notification) => (
+                        <article
+                          key={notification.id}
+                          className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
+                        >
+                          <button
+                            type="button"
+                            className="notification-card__mark"
+                            onClick={() => markNotificationRead(notification.id)}
+                          >
+                            {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                          </button>
+                          <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
+                            <strong>{notification.resourceTitle || notification.message || 'New notification'}</strong>
+                            <p>{notification.message || 'A new dashboard update is available.'}</p>
+                            <span>
+                              {notification.facultyName || notification.studentName || notification.facultyEmail || notification.studentEmail || 'System'} · {formatRelativeUpdate(notification.createdAt)}
+                            </span>
+                          </div>
+                          {!notification.readAt ? <span className="notification-card__dot" /> : null}
+                        </article>
+                      ))
+                    ) : (
+                      <div className="empty-state">You do not have any notifications yet.</div>
+                    )}
+                  </div>
+
+                  <div className="notification-popover__footer">
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      onClick={readAllNotifications}
+                      disabled={notificationsSaving || unreadNotificationCount === 0}
+                    >
+                      <CheckCircle2 size={16} />
+                      {notificationsSaving ? 'Updating...' : 'Read all at once'}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </header>
 
@@ -505,6 +747,29 @@ export default function AdminDashboard() {
                 <p>Enable or disable account access, review role assignment, and reset credentials for managed staff accounts.</p>
               </div>
               <div className="filter-row__actions">
+                <div className="filter-input" style={{ width: 'min(100%, 18rem)' }}>
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={userSearchTerm}
+                    onChange={(event) => setUserSearchTerm(event.target.value)}
+                  />
+                </div>
+                {[
+                  ['all', 'All'],
+                  ['active', 'Active'],
+                  ['disabled', 'Disabled'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={userStatusFilter === value ? 'filter-chip filter-chip--active' : 'filter-chip'}
+                    onClick={() => setUserStatusFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
                 <button type="button" className="button-secondary" onClick={() => setCreateOpen(true)}>
                   <Sparkles size={16} />
                   Create Account
@@ -582,14 +847,14 @@ export default function AdminDashboard() {
                   ) : (
                     <tr>
                       <td data-label="User Entity" colSpan={6}>
-                        <div className="empty-state">No accounts matched the current search.</div>
+                        <div className="empty-state">No accounts matched the current search or filter.</div>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
               <div className="table-shell__footer">
-                <span>{filteredUsers.length} account(s) matched your search.</span>
+                <span>{filteredUsers.length} account(s) matched your search and filter.</span>
                 <span>{disabledUsers} account(s) currently disabled.</span>
               </div>
             </div>
@@ -600,6 +865,38 @@ export default function AdminDashboard() {
               <div>
                 <h3>Resource Oversight</h3>
                 <p>Review recently published academic materials and verify the owner attached to each faculty upload.</p>
+              </div>
+            </div>
+
+            <div className="filter-row" style={{ marginBottom: '1rem' }}>
+              <div>
+                <h4 className="filter-row__title">Search and Filter</h4>
+                <p>Review live or draft publications by title, class, or subject.</p>
+              </div>
+              <div className="filter-row__actions">
+                <div className="filter-input" style={{ width: 'min(100%, 18rem)' }}>
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search resources..."
+                    value={resourceSearchTerm}
+                    onChange={(event) => setResourceSearchTerm(event.target.value)}
+                  />
+                </div>
+                {[
+                  ['all', 'All'],
+                  ['live', 'Live'],
+                  ['draft', 'Draft'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={resourceStatusFilter === value ? 'filter-chip filter-chip--active' : 'filter-chip'}
+                    onClick={() => setResourceStatusFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -615,7 +912,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {resources.slice(0, 6).map((entry) => (
+                  {filteredResources.slice(0, 6).map((entry) => (
                     <tr key={entry.id}>
                       <td data-label="Title">{entry.title}</td>
                       <td data-label="Class">{entry.class}</td>
@@ -633,6 +930,9 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+              {filteredResources.length === 0 ? (
+                <div className="empty-state" style={{ margin: '1rem 1.5rem' }}>No resources matched the current search or filter.</div>
+              ) : null}
             </div>
           </section>
 
@@ -641,6 +941,39 @@ export default function AdminDashboard() {
               <div>
                 <h3>Resource Requests</h3>
                 <p>Track student requests, assign status, and follow up when a resource needs a human review.</p>
+              </div>
+            </div>
+
+            <div className="filter-row" style={{ marginBottom: '1rem' }}>
+              <div>
+                <h4 className="filter-row__title">Search and Filter</h4>
+                <p>Review requests by student, course, title, or current status.</p>
+              </div>
+              <div className="filter-row__actions">
+                <div className="filter-input" style={{ width: 'min(100%, 18rem)' }}>
+                  <Search size={18} />
+                  <input
+                    type="text"
+                    placeholder="Search requests..."
+                    value={requestSearchTerm}
+                    onChange={(event) => setRequestSearchTerm(event.target.value)}
+                  />
+                </div>
+                {[
+                  ['all', 'All'],
+                  ['pending', 'Pending'],
+                  ['underreview', 'Under Review'],
+                  ['done', 'Done'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={requestStatusFilter === value ? 'filter-chip filter-chip--active' : 'filter-chip'}
+                    onClick={() => setRequestStatusFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -657,8 +990,8 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requests.length > 0 ? (
-                    requests.map((entry) => (
+                  {filteredRequests.length > 0 ? (
+                    filteredRequests.map((entry) => (
                       <tr key={entry.id}>
                         <td data-label="Student">
                           <div className="table-entity__copy">
@@ -713,14 +1046,14 @@ export default function AdminDashboard() {
                   ) : (
                     <tr>
                       <td data-label="Student" colSpan={6}>
-                        <div className="empty-state">No resource requests have been submitted yet.</div>
+                        <div className="empty-state">No resource requests matched the current search or filter.</div>
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
               <div className="table-shell__footer">
-                <span>{requests.length} request(s) in the queue.</span>
+                <span>{filteredRequests.length} request(s) in the queue.</span>
                 <span>Statuses available: pending, under review, done.</span>
               </div>
             </div>
