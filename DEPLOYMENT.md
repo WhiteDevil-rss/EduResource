@@ -12,8 +12,8 @@ This application is configured for deployment on Cloudflare Pages with full supp
 3. Environment variables configured in Cloudflare Pages dashboard
 
 ## Build Configuration
-- **Build Command**: `npm run build`
-- **Build Output Directory**: `.next`
+- **Build Command**: `npm run cf:build`
+- **Build Output Directory**: `.open-next/assets`
 - **Node Version**: 20.x
 
 ## Environment Variables (Cloudflare Pages Dashboard)
@@ -68,9 +68,9 @@ In the Cloudflare Pages project settings:
 ## Post-Deployment Verification
 
 ### 1. Authentication Testing
-- **Student Registration**: Visit `/register` → Google OAuth should work
+- **Student Registration**: Visit `/register` → Google OAuth for students
 - **Student Login**: Visit `/login` → Select "Student" → Google OAuth only
-- **Faculty Login**: Admin creates account → Faculty uses provided credentials
+- **Faculty/Staff Login**: Visit `/login` → Select "Staff" → Email/password credentials (admin-provisioned)
 - **Admin Access**: Full dashboard access for user management
 
 ### 2. API Functionality

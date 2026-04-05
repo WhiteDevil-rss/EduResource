@@ -2,9 +2,9 @@
 # This file tells Cloudflare Pages how to build and deploy the application
 
 [build]
-command = "npm run build"
+command = "npm run cf:build"
 cwd = "."
-output_dir = ".next"
+output_dir = ".open-next/assets"
 
 [build.environment]
 NODE_VERSION = "20"

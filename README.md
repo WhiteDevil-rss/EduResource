@@ -73,7 +73,7 @@ The app runs at `http://localhost:3000`.
 
 ## Firestore Rules
 
-This project includes Firestore rules in `firestore.rules`. Ensure your Firebase project uses these rules to maintain role-based isolation.
+This project includes Firestore rules in `firestore.rules` that intentionally deny all client reads and writes. Ensure your Firebase project uses these rules to fully block direct Firestore access from client applications; all Firestore operations are intended to run only through privileged server-side code using the Firebase Admin SDK.
 
 ## Cloudflare Pages Deployment
 
