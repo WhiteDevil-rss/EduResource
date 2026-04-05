@@ -1,5 +1,5 @@
 import 'server-only'
-import { getAdminAuth, getAdminDb, assertPrivilegedFirebaseAccess } from '@/lib/firebase-admin'
+import { auth, firestore } from '@/lib/firebase-edge'
 
 const USERS_COLLECTION = 'users'
 const RESOURCES_COLLECTION = 'resources'
@@ -40,21 +40,11 @@ function randomIndex(max) {
 }
 
 async function requireAdminAuth() {
-  const adminAuth = await getAdminAuth()
-  if (!adminAuth) {
-    throw new Error('Privileged Firebase access is not configured.')
-  }
-
-  return adminAuth
+  return auth
 }
 
 async function requireAdminDb() {
-  const adminDb = await getAdminDb()
-  if (!adminDb) {
-    throw new Error('Privileged Firebase access is not configured.')
-  }
-
-  return adminDb
+  return firestore
 }
 
 function generateTemporaryPassword(length = 14) {
@@ -126,37 +116,25 @@ function sanitizeResourceData(docId, data = {}) {
 }
 
 async function getCollectionRecords(collectionName) {
-  const adminDb = await requireAdminDb()
-  const snapshot = await adminDb.collection(collectionName).get()
-  return snapshot.docs
+  return firestore.listDocs(collectionName)
 }
 
 export async function getUserRecordById(userId) {
   if (!userId || typeof userId !== 'string' || userId.trim() === '') {
-    console.error('getUserRecordById: Invalid or missing userId');
     return null;
   }
-  const adminDb = await requireAdminDb()
-  const snapshot = await adminDb.collection(USERS_COLLECTION).doc(userId).get()
-  if (!snapshot.exists) {
-    return null
-  }
-
-  return sanitizeUserData(snapshot.id, snapshot.data())
+  const data = await firestore.getDoc(`${USERS_COLLECTION}/${userId}`)
+  if (!data) return null
+  return sanitizeUserData(data.id, data)
 }
 
 export async function getResourceRecordById(resourceId) {
   if (!resourceId || typeof resourceId !== 'string' || resourceId.trim() === '') {
-    console.error('getResourceRecordById: Invalid or missing resourceId');
     return null;
   }
-  const adminDb = await requireAdminDb()
-  const snapshot = await adminDb.collection('resources').doc(resourceId).get()
-  if (!snapshot.exists) {
-    return null
-  }
-
-  return sanitizeResourceData(snapshot.id, snapshot.data())
+  const data = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+  if (!data) return null
+  return sanitizeResourceData(data.id, data)
 }
 
 export async function getRawUserRecordById(userId) {
@@ -177,52 +155,38 @@ export async function getRawUserRecordById(userId) {
 }
 
 export async function findUserRecordByEmail(email) {
-  const adminDb = await requireAdminDb()
   const emailLower = normalizeEmail(email)
   if (!emailLower) {
     return null
   }
 
-  const snapshot = await adminDb
-    .collection(USERS_COLLECTION)
-    .where('emailLower', '==', emailLower)
-    .limit(1)
-    .get()
-
-  const match = snapshot.docs[0]
+  const match = await firestore.runQuery(USERS_COLLECTION, ['emailLower', '==', emailLower])
   if (!match) {
     return null
   }
 
   return {
     id: match.id,
-    data: match.data() || {},
-    user: sanitizeUserData(match.id, match.data()),
+    data: match,
+    user: sanitizeUserData(match.id, match),
   }
 }
 
 export async function findUserRecordByLoginId(loginId) {
-  const adminDb = await requireAdminDb()
   const loginIdLower = normalizeLoginId(loginId)
   if (!loginIdLower) {
     return null
   }
 
-  const snapshot = await adminDb
-    .collection(USERS_COLLECTION)
-    .where('loginIdLower', '==', loginIdLower)
-    .limit(1)
-    .get()
-
-  const match = snapshot.docs[0]
+  const match = await firestore.runQuery(USERS_COLLECTION, ['loginIdLower', '==', loginIdLower])
   if (!match) {
     return null
   }
 
   return {
     id: match.id,
-    data: match.data() || {},
-    user: sanitizeUserData(match.id, match.data()),
+    data: match,
+    user: sanitizeUserData(match.id, match),
   }
 }
 
@@ -287,8 +251,7 @@ export async function createAuditRecord({
   message,
 }) {
   try {
-    const adminDb = await requireAdminDb()
-    await adminDb.collection(AUDIT_COLLECTION).add({
+    await firestore.addDoc(AUDIT_COLLECTION, {
       actorUid: actorUid || null,
       actorRole: actorRole || null,
       action: action || 'activity',
@@ -319,21 +282,16 @@ async function ensureUniqueLoginId(baseValue) {
 }
 
 export async function touchUserLogin(userId) {
-  const adminDb = await requireAdminDb()
-  await adminDb.collection(USERS_COLLECTION).doc(userId).set(
+  await firestore.setDoc(`${USERS_COLLECTION}/${userId}`,
     {
       lastLoginAt: nowIso(),
       updatedAt: nowIso(),
     },
-    { merge: true }
+    true
   )
 }
 
 export async function createManagedUser({ role, email, displayName, actorUid, actorRole }) {
-  assertPrivilegedFirebaseAccess()
-  const adminAuth = await requireAdminAuth()
-  const adminDb = await requireAdminDb()
-
   const normalizedRole = role === 'admin' ? 'admin' : role === 'faculty' ? 'faculty' : 'student'
   const normalizedEmail = normalizeEmail(email)
   const safeDisplayName = String(displayName || '').trim()
@@ -364,7 +322,7 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
       updatedAt: createdAt,
     }
 
-    await adminDb.collection(USERS_COLLECTION).doc(documentId).set(payload, { merge: true })
+    await firestore.setDoc(`${USERS_COLLECTION}/${documentId}`, payload, true)
     await createAuditRecord({
       actorUid,
       actorRole,
@@ -388,7 +346,7 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
     normalizedEmail.split('@')[0] || safeDisplayName || normalizedRole
   )
   const temporaryPassword = generateTemporaryPassword()
-  const authUser = await adminAuth.createUser({
+  const authUser = await auth.createUser({
     email: normalizedEmail,
     password: temporaryPassword,
     displayName: safeDisplayName || undefined,
@@ -411,7 +369,7 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
     lastLoginAt: null,
   }
 
-  await adminDb.collection(USERS_COLLECTION).doc(authUser.uid).set(payload)
+  await firestore.setDoc(`${USERS_COLLECTION}/${authUser.uid}`, payload)
   await createAuditRecord({
     actorUid,
     actorRole,
@@ -431,10 +389,6 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
 }
 
 export async function setManagedUserStatus({ userId, nextStatus, actorUid, actorRole }) {
-  assertPrivilegedFirebaseAccess()
-  const adminAuth = await requireAdminAuth()
-  const adminDb = await requireAdminDb()
-
   const record = await getRawUserRecordById(userId)
   if (!record) {
     throw new Error('User account not found.')
@@ -451,11 +405,11 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
     updatedAt: nowIso(),
   }
 
-  await adminDb.collection(USERS_COLLECTION).doc(record.id).set(updated, { merge: true })
+  await firestore.setDoc(`${USERS_COLLECTION}/${record.id}`, updated, true)
 
   if (updated.uid) {
     try {
-      await adminAuth.updateUser(updated.uid, {
+      await auth.updateUser(updated.uid, {
         disabled: normalizedStatus !== 'active',
       })
     } catch (error) {
@@ -476,10 +430,6 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
 }
 
 export async function resetManagedCredentials({ userId, actorUid, actorRole, newPassword }) {
-  assertPrivilegedFirebaseAccess()
-  const adminAuth = await requireAdminAuth()
-  const adminDb = await requireAdminDb()
-
   const record = await getRawUserRecordById(userId)
   if (!record) {
     throw new Error('User account not found.')
@@ -500,7 +450,7 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole, new
     )
   }
 
-  await adminAuth.updateUser(record.data.uid, {
+  await auth.updateUser(record.data.uid, {
     password: temporaryPassword,
     disabled: record.data.status !== 'active',
   })
@@ -516,7 +466,7 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole, new
     updatedData.authProvider = 'credentials'
   }
 
-  await adminDb.collection(USERS_COLLECTION).doc(record.id).set(updatedData, { merge: true })
+  await firestore.setDoc(`${USERS_COLLECTION}/${record.id}`, updatedData, true)
 
   await createAuditRecord({
     actorUid,
@@ -537,9 +487,6 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole, new
 }
 
 export async function resolveStudentGoogleUser(decodedToken) {
-  assertPrivilegedFirebaseAccess()
-  const adminDb = await requireAdminDb()
-
   const email = normalizeEmail(decodedToken?.email)
   if (!decodedToken?.uid || !email) {
     throw new Error('A verified Google email is required for student access.')
@@ -571,7 +518,7 @@ export async function resolveStudentGoogleUser(decodedToken) {
       lastLoginAt: nowIso(),
     }
 
-    await adminDb.collection(USERS_COLLECTION).doc(decodedToken.uid).set(merged, { merge: true })
+    await firestore.setDoc(`${USERS_COLLECTION}/${decodedToken.uid}`, merged, true)
     return sanitizeUserData(decodedToken.uid, merged)
   }
 
@@ -596,12 +543,13 @@ export async function resolveStudentGoogleUser(decodedToken) {
       lastLoginAt: nowIso(),
     }
 
-    const batch = adminDb.batch()
-    batch.set(adminDb.collection(USERS_COLLECTION).doc(decodedToken.uid), merged, { merge: true })
+    const ops = [
+      { type: 'set', path: `${USERS_COLLECTION}/${decodedToken.uid}`, data: merged, merge: true }
+    ]
     if (existingByEmail.id !== decodedToken.uid) {
-      batch.delete(adminDb.collection(USERS_COLLECTION).doc(existingByEmail.id))
+      ops.push({ type: 'delete', path: `${USERS_COLLECTION}/${existingByEmail.id}` })
     }
-    await batch.commit()
+    await firestore.commit(ops)
     return sanitizeUserData(decodedToken.uid, merged)
   }
 
@@ -620,7 +568,7 @@ export async function resolveStudentGoogleUser(decodedToken) {
     lastLoginAt: nowIso(),
   }
 
-  await adminDb.collection(USERS_COLLECTION).doc(decodedToken.uid).set(payload)
+  await firestore.setDoc(`${USERS_COLLECTION}/${decodedToken.uid}`, payload)
   await createAuditRecord({
     actorUid: decodedToken.uid,
     actorRole: 'student',
@@ -634,10 +582,6 @@ export async function resolveStudentGoogleUser(decodedToken) {
 }
 
 export async function createStudentAccount({ email, password, displayName, googleIdToken }) {
-  assertPrivilegedFirebaseAccess()
-  const adminAuth = await requireAdminAuth()
-  const adminDb = await requireAdminDb()
-
   const normalizedEmail = normalizeEmail(email)
   if (!normalizedEmail) {
     throw new Error('Invalid email address.')
@@ -649,7 +593,7 @@ export async function createStudentAccount({ email, password, displayName, googl
   }
 
   const createdAt = nowIso()
-  const authUser = await adminAuth.createUser({
+  const authUser = await auth.createUser({
     email: normalizedEmail,
     password,
     displayName: displayName || undefined,
@@ -671,7 +615,7 @@ export async function createStudentAccount({ email, password, displayName, googl
     lastLoginAt: null,
   }
 
-  await adminDb.collection(USERS_COLLECTION).doc(authUser.uid).set(payload)
+  await firestore.setDoc(`${USERS_COLLECTION}/${authUser.uid}`, payload)
   await createAuditRecord({
     actorUid: authUser.uid,
     actorRole: 'student',
@@ -687,9 +631,6 @@ export async function createStudentAccount({ email, password, displayName, googl
 }
 
 export async function createResourceRecord({ session, payload }) {
-  assertPrivilegedFirebaseAccess()
-  const adminDb = await requireAdminDb()
-
   const title = String(payload?.title || '').trim()
   const subject = String(payload?.subject || '').trim()
   const courseClass = String(payload?.class || '').trim()
@@ -764,89 +705,78 @@ export async function createResourceRecord({ session, payload }) {
 }
 
 export async function updateResourceRecord({ resourceId, session, payload }) {
-  assertPrivilegedFirebaseAccess()
-  const adminDb = await requireAdminDb()
+    const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+    if (!current) {
+      throw new Error('Resource not found.')
+    }
+  
+    if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
+      throw new Error('You can only manage resources that you uploaded.')
+    }
+  
+    const title = String(payload?.title || '').trim()
+    const subject = String(payload?.subject || '').trim()
+    const courseClass = String(payload?.class || '').trim()
+    const fileUrl = String(payload?.fileUrl || '').trim()
+    const summary = String(payload?.summary || '').trim()
+    const status = payload?.status === 'draft' ? 'draft' : 'live'
 
-  const snapshot = await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).get()
-  if (!snapshot.exists) {
-    throw new Error('Resource not found.')
+    if (!title || !subject || !courseClass || !fileUrl) {
+      throw new Error('Title, subject, class, and file URL are required.')
+    }
+  
+    const updated = {
+      ...current,
+      title,
+      titleLower: title.toLowerCase(),
+      subject,
+      class: courseClass,
+      fileUrl,
+      summary,
+      status,
+      updatedAt: nowIso(),
+    }
+  
+    // Update metadata fields if present in payload
+    if (payload?.fileType !== undefined) updated.fileType = String(payload.fileType).trim()
+    if (payload?.fileSize !== undefined) updated.fileSize = Number(payload.fileSize)
+    if (payload?.fileFormat !== undefined) updated.fileFormat = String(payload.fileFormat).trim()
+    if (payload?.driveFileId !== undefined) updated.driveFileId = String(payload.driveFileId).trim()
+    if (payload?.driveFileLink !== undefined) updated.driveFileLink = String(payload.driveFileLink).trim()
+    if (payload?.previewUrl !== undefined) updated.previewUrl = String(payload.previewUrl).trim()
+    if (payload?.previewPublicId !== undefined) updated.previewPublicId = String(payload.previewPublicId).trim()
+    if (payload?.category !== undefined) updated.category = String(payload.category).trim()
+  
+    await firestore.setDoc(`${RESOURCES_COLLECTION}/${resourceId}`, updated, true)
+    await createAuditRecord({
+      actorUid: session.uid,
+      actorRole: session.role,
+      action: 'resource.updated',
+      targetId: resourceId,
+      targetRole: 'resource',
+      message: `Updated resource "${title}".`,
+    })
+  
+    return sanitizeResourceData(resourceId, updated)
   }
-
-  const current = snapshot.data() || {}
-  if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
-    throw new Error('You can only manage resources that you uploaded.')
+  
+  export async function deleteResourceRecord({ resourceId, session }) {
+    const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+    if (!current) {
+      throw new Error('Resource not found.')
+    }
+  
+    if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
+      throw new Error('You can only manage resources that you uploaded.')
+    }
+  
+    await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+    await createAuditRecord({
+      actorUid: session.uid,
+      actorRole: session.role,
+      action: 'resource.deleted',
+      targetId: resourceId,
+      targetRole: 'resource',
+      message: `Deleted resource "${current.title || resourceId}".`,
+    })
   }
-
-  const title = String(payload?.title || '').trim()
-  const subject = String(payload?.subject || '').trim()
-  const courseClass = String(payload?.class || '').trim()
-  const fileUrl = String(payload?.fileUrl || '').trim()
-  const summary = String(payload?.summary || '').trim()
-  const status = payload?.status === 'draft' ? 'draft' : 'live'
-  // New metadata fields
-  const fileType = payload?.fileType ? String(payload.fileType).trim() : undefined
-  const fileSize = payload?.fileSize !== undefined ? Number(payload.fileSize) : undefined
-  const fileFormat = payload?.fileFormat ? String(payload.fileFormat).trim() : undefined
-
-  if (!title || !subject || !courseClass || !fileUrl) {
-    throw new Error('Title, subject, class, and file URL are required.')
-  }
-
-  const updated = {
-    ...current,
-    title,
-    titleLower: title.toLowerCase(),
-    subject,
-    class: courseClass,
-    fileUrl,
-    summary,
-    status,
-    updatedAt: nowIso(),
-  }
-
-  if (fileType !== undefined) updated.fileType = fileType
-  if (fileSize !== undefined) updated.fileSize = fileSize
-  if (fileFormat !== undefined) updated.fileFormat = fileFormat
-  if (payload?.driveFileId !== undefined) updated.driveFileId = String(payload.driveFileId).trim()
-  if (payload?.driveFileLink !== undefined) updated.driveFileLink = String(payload.driveFileLink).trim()
-  if (payload?.previewUrl !== undefined) updated.previewUrl = String(payload.previewUrl).trim()
-  if (payload?.previewPublicId !== undefined) updated.previewPublicId = String(payload.previewPublicId).trim()
-  if (payload?.category !== undefined) updated.category = String(payload.category).trim()
-
-  await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).set(updated, { merge: true })
-  await createAuditRecord({
-    actorUid: session.uid,
-    actorRole: session.role,
-    action: 'resource.updated',
-    targetId: resourceId,
-    targetRole: 'resource',
-    message: `Updated resource "${title}".`,
-  })
-
-  return sanitizeResourceData(resourceId, updated)
-}
-
-export async function deleteResourceRecord({ resourceId, session }) {
-  assertPrivilegedFirebaseAccess()
-  const adminDb = await requireAdminDb()
-
-  const snapshot = await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).get()
-  if (!snapshot.exists) {
-    throw new Error('Resource not found.')
-  }
-
-  const current = snapshot.data() || {}
-  if (current.uploadedBy !== session.uid && current.facultyId !== session.uid) {
-    throw new Error('You can only manage resources that you uploaded.')
-  }
-
-  await adminDb.collection(RESOURCES_COLLECTION).doc(resourceId).delete()
-  await createAuditRecord({
-    actorUid: session.uid,
-    actorRole: session.role,
-    action: 'resource.deleted',
-    targetId: resourceId,
-    targetRole: 'resource',
-    message: `Deleted resource "${current.title || resourceId}".`,
-  })
-}

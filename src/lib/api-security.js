@@ -28,13 +28,13 @@ export function assertSameOrigin(request) {
   }
 }
 
-export function getSessionFromRequest(request) {
+export async function getSessionFromRequest(request) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value
   if (!sessionCookie) {
     return null
   }
 
-  const session = readSessionCookie(sessionCookie)
+  const session = await readSessionCookie(sessionCookie)
   if (!session?.uid || !session?.role) {
     return null
   }
@@ -42,8 +42,8 @@ export function getSessionFromRequest(request) {
   return session
 }
 
-export function requireApiSession(request, allowedRoles = null) {
-  const session = getSessionFromRequest(request)
+export async function requireApiSession(request, allowedRoles = null) {
+  const session = await getSessionFromRequest(request)
 
   if (!session) {
     throw new ApiError(401, 'Authentication required.')

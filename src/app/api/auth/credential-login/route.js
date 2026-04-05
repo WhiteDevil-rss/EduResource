@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
 import { assertSameOrigin, withNoStore } from '@/lib/api-security'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
-import { assertPrivilegedFirebaseAccess } from '@/lib/firebase-admin'
 import { createSessionCookie } from '@/lib/session-cookie'
 import {
   createAuditRecord,
@@ -64,7 +63,6 @@ function isConfigurationError(message = '') {
 export async function POST(request) {
   try {
     assertSameOrigin(request)
-    assertPrivilegedFirebaseAccess()
 
     const body = await request.json()
     const loginIdentifier = String(body?.email || '').trim().toLowerCase()
@@ -243,7 +241,7 @@ export async function POST(request) {
       console.warn(`Post-login persistence failed: ${String(error?.message || error)}`)
     }
 
-    const sessionCookie = createSessionCookie({
+    const sessionCookie = await createSessionCookie({
       uid: result.uid,
       email: effectiveUser.email,
       role: effectiveUser.role,
@@ -274,7 +272,6 @@ export async function POST(request) {
   } catch (error) {
     const message = String(error?.message || '')
     if (
-      message.includes('Privileged Firebase access is not configured') ||
       message.includes('FIREBASE_PRIVATE_KEY') ||
       message.includes('FIREBASE_CLIENT_EMAIL')
     ) {

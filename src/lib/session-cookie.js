@@ -1,5 +1,8 @@
 import 'server-only'
-import crypto from 'node:crypto'
+
+/**
+ * Edge-compatible session cookie management using Web Crypto API.
+ */
 
 const DEV_SESSION_SECRET = 'codex-dev-session-secret'
 
@@ -7,28 +10,57 @@ function getSessionSecret() {
   return process.env.SESSION_SECRET || DEV_SESSION_SECRET
 }
 
-function toBase64Url(value) {
-  return Buffer.from(value).toString('base64url')
+/**
+ * Base64URL encoding/decoding helpers (Edge safe)
+ */
+function toBase64Url(str) {
+  const base64 = btoa(str)
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
 
-function fromBase64Url(value) {
-  return Buffer.from(value, 'base64url').toString('utf8')
+function fromBase64Url(base64url) {
+  const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
+  return atob(base64 + padding)
 }
 
-function sign(value) {
-  return crypto
-    .createHmac('sha256', getSessionSecret())
-    .update(value)
-    .digest('base64url')
+/**
+ * HMAC SHA-256 Signing using Web Crypto API
+ */
+async function sign(value) {
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(getSessionSecret())
+  const data = encoder.encode(value)
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+
+  const signature = await crypto.subtle.sign('HMAC', key, data)
+  const hashArray = Array.from(new Uint8Array(signature))
+  const hashString = hashArray.map(b => String.fromCharCode(b)).join('')
+  return toBase64Url(hashString)
 }
 
-export function createSessionCookie(payload) {
+/**
+ * HMAC SHA-256 Verification using Web Crypto API
+ */
+async function verify(value, signature) {
+  const expectedSignature = await sign(value)
+  return expectedSignature === signature
+}
+
+export async function createSessionCookie(payload) {
   const encodedPayload = toBase64Url(JSON.stringify(payload))
-  const signature = sign(encodedPayload)
+  const signature = await sign(encodedPayload)
   return `${encodedPayload}.${signature}`
 }
 
-export function readSessionCookie(cookieValue) {
+export async function readSessionCookie(cookieValue) {
   if (!cookieValue || !cookieValue.includes('.')) {
     return null
   }
@@ -38,14 +70,8 @@ export function readSessionCookie(cookieValue) {
     return null
   }
 
-  const expectedSignature = sign(encodedPayload)
-  const signatureBuffer = Buffer.from(signature)
-  const expectedBuffer = Buffer.from(expectedSignature)
-  if (signatureBuffer.length !== expectedBuffer.length) {
-    return null
-  }
-
-  if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+  const isValid = await verify(encodedPayload, signature)
+  if (!isValid) {
     return null
   }
 

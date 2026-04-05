@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
 import { assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
-import { getAdminAuth, assertPrivilegedFirebaseAccess } from '@/lib/firebase-admin'
+import { auth } from '@/lib/firebase-edge'
 import { createSessionCookie } from '@/lib/session-cookie'
 import { createAuditRecord, resolveStudentGoogleUser } from '@/lib/server-data'
 
 export async function POST(request) {
   try {
     assertSameOrigin(request)
-    assertPrivilegedFirebaseAccess()
 
     const body = await request.json()
     const idToken = String(body?.idToken || '').trim()
@@ -18,16 +17,9 @@ export async function POST(request) {
       )
     }
 
-    const adminAuth = await getAdminAuth()
-    if (!adminAuth) {
-      return withNoStore(
-        NextResponse.json({ error: 'Firebase Admin not configured. Check environment variables.' }, { status: 500 })
-      )
-    }
-
     let decoded
     try {
-      decoded = await adminAuth.verifyIdToken(idToken)
+      decoded = await auth.verifyIdToken(idToken)
     } catch (error) {
       console.error('Token verification failed:', error.message)
       return withNoStore(
@@ -71,7 +63,7 @@ export async function POST(request) {
       message: `Student login granted for ${student.email}.`,
     })
 
-    const sessionCookie = createSessionCookie({
+    const sessionCookie = await createSessionCookie({
       uid: student.uid,
       email: student.email,
       role: 'student',
