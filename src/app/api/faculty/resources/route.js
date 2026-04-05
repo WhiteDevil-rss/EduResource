@@ -7,7 +7,6 @@ import {
 } from '@/lib/api-security'
 import { createResourceRecord, listResourceRecords } from '@/lib/server-data'
 import { uploadToDrive } from '@/lib/google-drive'
-import { uploadPreview } from '@/lib/cloudinary'
 
 export async function GET(request) {
   try {
@@ -72,6 +71,7 @@ export async function POST(request) {
       // 2. Upload Preview to Cloudinary (optional/best-effort)
       let previewData = null
       try {
+        const { uploadPreview } = await import('@/lib/cloudinary')
         previewData = await uploadPreview(buffer, file.name, file.type)
       } catch (error) {
         console.warn('Preview upload failed, continuing without preview:', error?.message || error)
