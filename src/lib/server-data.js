@@ -848,6 +848,7 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole, new
 
   const temporaryPassword = newPassword || generateTemporaryPassword()
   let loginId = record.data.loginId
+  const normalizedStatus = record.data.status === 'disabled' ? 'disabled' : 'active'
 
   // If the user doesn't have a Login ID (e.g. Google-only student), generate one
   if (!loginId) {
@@ -858,11 +859,12 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole, new
 
   await auth.updateUser(record.data.uid, {
     password: temporaryPassword,
-    disabled: record.data.status !== 'active',
+    disabled: normalizedStatus !== 'active',
   })
 
   const updatedData = {
     ...record.data,
+    status: normalizedStatus,
     loginId,
     updatedAt: nowIso(),
   }
