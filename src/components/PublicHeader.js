@@ -15,7 +15,7 @@ export default function PublicHeader({
   const closeMenu = () => setMenuOpen(false)
 
   return (
-    <nav className="public-nav">
+    <nav className={menuOpen ? 'public-nav public-nav--menu-open' : 'public-nav'}>
       <div className="public-nav__inner">
         <Link href="/" className="public-nav__brand" onClick={closeMenu}>
           {brand}

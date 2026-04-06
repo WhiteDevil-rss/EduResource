@@ -247,6 +247,12 @@ h6 {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+.public-nav--menu-open {
+  background: rgba(8, 10, 16, 0.98);
+  backdrop-filter: none;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
 .public-nav__inner {
   width: min(100%, var(--max-width));
   margin: 0 auto;
@@ -330,6 +336,12 @@ h6 {
   flex-direction: column;
   gap: 2.5rem;
   animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.public-nav--menu-open .public-nav__mobile-panel {
+  top: 0;
+  padding-top: 6.25rem;
+  background: rgba(8, 10, 16, 0.995);
 }
 
 @keyframes slideDown {
@@ -2315,6 +2327,13 @@ h6 {
     margin: 0 auto;
     padding: 0 1.25rem 1.25rem;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .public-nav--menu-open .public-nav__mobile-panel {
+    width: 100%;
+    margin: 0;
+    border-top: 0;
+    padding: 6.25rem 1.25rem 1.5rem;
   }
 
   .public-nav__mobile-links,

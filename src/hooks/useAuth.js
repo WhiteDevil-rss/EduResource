@@ -14,6 +14,18 @@ const AuthContext = createContext(null);
 const studentGoogleProvider = new GoogleAuthProvider();
 studentGoogleProvider.setCustomParameters({ prompt: "select_account" });
 
+function mapFirebaseAuthError(error, fallbackMessage) {
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || "");
+
+  if (code === "auth/unauthorized-domain" || message.includes("auth/unauthorized-domain")) {
+    const host = typeof window !== "undefined" ? window.location.hostname : "this domain";
+    return `Google sign-in is not enabled for ${host}. Add this domain to Firebase Authentication -> Settings -> Authorized domains, then retry.`;
+  }
+
+  return message || fallbackMessage;
+}
+
 async function fetchSessionSnapshot() {
   try {
     const response = await fetch("/api/session", { cache: "no-store" });
@@ -123,6 +135,13 @@ export function AuthProvider({ children }) {
         const idToken = await result.user.getIdToken();
         await loginWithGoogle(idToken);
       } catch (error) {
+        if (
+          error?.code === "auth/unauthorized-domain" ||
+          String(error?.message || "").includes("auth/unauthorized-domain")
+        ) {
+          throw new Error(mapFirebaseAuthError(error, "Google student sign-in failed."));
+        }
+
         if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
           await signInWithRedirect(auth, provider);
         } else {
@@ -131,7 +150,7 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       if (error.code !== 'auth/popup-closed-by-user') {
-        throw new Error(error?.message || "Google student sign-in failed.");
+        throw new Error(mapFirebaseAuthError(error, "Google student sign-in failed."));
       }
     } finally {
       setIsAuthenticating(false);
