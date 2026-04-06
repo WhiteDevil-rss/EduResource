@@ -57,7 +57,18 @@ function normalizePrivateKey(privateKey) {
       ? trimmed.slice(1, -1)
       : trimmed
 
-  return unquoted.replace(/\\n/g, '\n').trim()
+  const normalized = unquoted.replace(/\\n/g, '\n').trim()
+
+  // Some deployments store the body only (base64) without PEM guards.
+  if (!normalized.includes('BEGIN PRIVATE KEY') && !normalized.includes('END PRIVATE KEY')) {
+    const compact = normalized.replace(/\s+/g, '')
+    if (/^[A-Za-z0-9+/=]+$/.test(compact)) {
+      const lines = compact.match(/.{1,64}/g) || [compact]
+      return `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`
+    }
+  }
+
+  return normalized
 }
 
 // Cache for Google's public keys (JWKS)
@@ -159,6 +170,17 @@ async function getGoogleAccessToken() {
 
     return access_token
   } catch (err) {
+    const message = String(err?.message || err)
+    if (
+      message.includes('base64 input') ||
+      message.includes('PKCS8') ||
+      message.includes('private key')
+    ) {
+      throw new Error(
+        'Privileged Firebase access is not configured correctly (invalid FIREBASE_PRIVATE_KEY format).'
+      )
+    }
+
     console.error('Failed to generate access token:', err)
     throw err
   }

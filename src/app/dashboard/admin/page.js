@@ -114,7 +114,7 @@ export default function AdminDashboard() {
       setUsers(Array.isArray(payload?.users) ? payload.users : [])
       setResources(Array.isArray(payload?.resources) ? payload.resources : [])
       setActivity(Array.isArray(payload?.activity) ? payload.activity : [])
-      setErrorMessage('')
+      setErrorMessage(payload?.warning ? String(payload.warning) : '')
     } catch (error) {
       console.error('Admin overview error:', error)
       setErrorMessage(error.message || 'Could not load the admin overview.')

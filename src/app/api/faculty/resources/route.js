@@ -42,6 +42,17 @@ export async function GET(request) {
       )
     }
 
+    if (message.includes('FIREBASE_PRIVATE_KEY')) {
+      return withNoStore(
+        NextResponse.json({
+          resources: [],
+          totalDownloads: 0,
+          warning:
+            'Faculty resources are unavailable: FIREBASE_PRIVATE_KEY is malformed. Update the private key in environment variables and redeploy.',
+        })
+      )
+    }
+
     if (message.includes('NOT_FOUND')) {
       return withNoStore(
         NextResponse.json({
