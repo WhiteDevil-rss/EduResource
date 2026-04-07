@@ -11,6 +11,7 @@ import {
   SESSION_SETTINGS_DEFAULTS,
   SESSION_SETTINGS_LIMITS,
 } from '@/lib/session-settings'
+import { logAction } from '@/lib/audit-log'
 import { getSessionSettingsRecord, upsertSessionSettingsRecord } from '@/lib/server-data'
 
 function validateTimeoutInput(settings) {
@@ -81,6 +82,16 @@ export async function PUT(request) {
       actorUid: session.uid,
     })
 
+    await logAction({
+      user: session,
+      action: 'UPDATE_SESSION_SETTINGS',
+      description: 'Updated global session timeout settings.',
+      module: 'Security Settings',
+      status: 'SUCCESS',
+      request,
+      metadata: settings,
+    })
+
     return withNoStore(
       NextResponse.json({
         message: 'Session settings updated successfully.',
@@ -88,6 +99,15 @@ export async function PUT(request) {
       })
     )
   } catch (error) {
+    await logAction({
+      user: await requireApiSession(request, ['admin']).catch(() => null),
+      action: 'UPDATE_SESSION_SETTINGS',
+      description: 'Failed to update global session timeout settings.',
+      module: 'Security Settings',
+      status: 'FAILED',
+      request,
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error, 'Could not update session settings.')
   }
 }

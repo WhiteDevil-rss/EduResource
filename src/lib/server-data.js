@@ -10,6 +10,7 @@ const SESSIONS_COLLECTION = 'active_sessions'
 const NOTIFICATIONS_COLLECTION = 'notifications'
 const APP_CONFIG_COLLECTION = 'app_config'
 const SESSION_SETTINGS_DOC_ID = 'session_timeout'
+const EXPORT_VERIFICATIONS_COLLECTION = 'admin_export_verifications'
 
 function nowIso() {
   return new Date().toISOString()
@@ -77,13 +78,31 @@ function sanitizeUserData(docId, data = {}) {
 function sanitizeAuditData(docId, data = {}) {
   return {
     id: docId,
+    userId: data.userId || data.actorUid || null,
+    userName: data.userName || null,
+    userEmail: data.userEmail || null,
+    role: data.role || data.actorRole || null,
     action: data.action || 'activity',
-    message: data.message || '',
-    actorUid: data.actorUid || null,
-    actorRole: data.actorRole || null,
+    description: data.description || data.message || '',
+    module: data.module || 'General',
+    timestamp: data.timestamp || data.createdAt || null,
+    ipAddress: data.ipAddress || null,
+    location: data.location || 'Unknown',
+    device: {
+      browser: data?.device?.browser || 'Unknown',
+      os: data?.device?.os || 'Unknown',
+      deviceType: data?.device?.deviceType || 'desktop',
+    },
+    status: data.status || 'SUCCESS',
+    metadata: data.metadata || null,
+
+    // Backward-compatible aliases for existing UI and counters
+    message: data.message || data.description || '',
+    actorUid: data.actorUid || data.userId || null,
+    actorRole: data.actorRole || data.role || null,
     targetId: data.targetId || null,
     targetRole: data.targetRole || null,
-    createdAt: data.createdAt || null,
+    createdAt: data.createdAt || data.timestamp || null,
   }
 }
 
@@ -152,6 +171,17 @@ function sanitizeSessionSettingsData(data = {}) {
     maxSessionTimeout: normalized.maxSessionTimeout,
     updatedAt: data.updatedAt || null,
     updatedBy: data.updatedBy || null,
+  }
+}
+
+function sanitizeExportVerificationData(docId, data = {}) {
+  return {
+    id: docId,
+    actorUid: data.actorUid || null,
+    actorEmail: data.actorEmail || null,
+    createdAt: data.createdAt || null,
+    expiresAt: data.expiresAt || null,
+    usedAt: data.usedAt || null,
   }
 }
 
@@ -484,6 +514,80 @@ export async function listAuditRecords(limit = 12) {
     .slice(0, limit)
 }
 
+export async function listAuditRecordsWithFilters({
+  page = 1,
+  limit = 20,
+  search = '',
+  action = '',
+  status = '',
+  fromDate = '',
+  toDate = '',
+} = {}) {
+  const records = await getCollectionRecords(AUDIT_COLLECTION).catch(() => [])
+  const normalizedSearch = String(search || '').trim().toLowerCase()
+  const normalizedAction = String(action || '').trim().toLowerCase()
+  const normalizedStatus = String(status || '').trim().toUpperCase()
+  const fromTime = fromDate ? Date.parse(String(fromDate)) : null
+  const toTime = toDate ? Date.parse(String(toDate)) : null
+
+  const filtered = records
+    .map((document) => sanitizeAuditData(document.id, getDocumentData(document)))
+    .filter((entry) => {
+      const entryTime = getTimestampValue(entry.timestamp || entry.createdAt)
+
+      if (normalizedAction && String(entry.action || '').toLowerCase() !== normalizedAction) {
+        return false
+      }
+
+      if (normalizedStatus && String(entry.status || '').toUpperCase() !== normalizedStatus) {
+        return false
+      }
+
+      if (Number.isFinite(fromTime) && (!entryTime || entryTime < fromTime)) {
+        return false
+      }
+
+      if (Number.isFinite(toTime) && (!entryTime || entryTime > toTime)) {
+        return false
+      }
+
+      if (!normalizedSearch) {
+        return true
+      }
+
+      return [
+        entry.userName,
+        entry.userEmail,
+        entry.action,
+        entry.description,
+        entry.module,
+        entry.location,
+        entry.device?.browser,
+        entry.device?.os,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch)
+    })
+    .sort((left, right) => String(right.timestamp || right.createdAt || '').localeCompare(String(left.timestamp || left.createdAt || '')))
+
+  const safePage = Math.max(1, Number(page) || 1)
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 20))
+  const total = filtered.length
+  const start = (safePage - 1) * safeLimit
+  const entries = filtered.slice(start, start + safeLimit)
+
+  return {
+    entries,
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      total,
+      pages: Math.max(1, Math.ceil(total / safeLimit)),
+    },
+  }
+}
+
 export async function countAuditRecords({ action = null, targetIds = [] } = {}) {
   const records = await getCollectionRecords(AUDIT_COLLECTION).catch(() => [])
   const normalizedTargets = Array.isArray(targetIds)
@@ -703,22 +807,46 @@ export async function deleteSessionRecord(sessionId) {
 }
 
 export async function createAuditRecord({
+  userId,
+  userName,
+  userEmail,
+  role,
   actorUid,
   actorRole,
   action,
+  description,
+  module,
+  status,
+  ipAddress,
+  location,
+  device,
   targetId = null,
   targetRole = null,
   message,
+  metadata = null,
 }) {
   try {
+    const createdAt = nowIso()
     await firestore.addDoc(AUDIT_COLLECTION, {
-      actorUid: actorUid || null,
-      actorRole: actorRole || null,
+      userId: userId || actorUid || null,
+      userName: userName || null,
+      userEmail: normalizeEmail(userEmail),
+      role: role || actorRole || null,
+      actorUid: actorUid || userId || null,
+      actorRole: actorRole || role || null,
       action: action || 'activity',
+      description: description || message || '',
+      module: module || 'General',
+      status: status || 'SUCCESS',
+      timestamp: createdAt,
+      ipAddress: ipAddress || null,
+      location: location || 'Unknown',
+      device: device || { browser: 'Unknown', os: 'Unknown', deviceType: 'desktop' },
       targetId,
       targetRole,
       message: message || '',
-      createdAt: nowIso(),
+      metadata,
+      createdAt,
     })
   } catch (error) {
     console.warn('Audit log warning:', error?.message || error)
@@ -751,6 +879,56 @@ export async function upsertSessionSettingsRecord({ settings, actorUid }) {
 
   await firestore.setDoc(`${APP_CONFIG_COLLECTION}/${SESSION_SETTINGS_DOC_ID}`, payload, true)
   return sanitizeSessionSettingsData(payload)
+}
+
+export async function createExportVerificationToken({ actorUid, actorEmail, ttlMs = 5 * 60 * 1000 }) {
+  const token = crypto.randomUUID()
+  const createdAt = nowIso()
+  const expiresAt = new Date(Date.now() + Math.max(60000, Number(ttlMs) || 0)).toISOString()
+  const payload = {
+    actorUid: String(actorUid || '').trim() || null,
+    actorEmail: normalizeEmail(actorEmail),
+    createdAt,
+    expiresAt,
+    usedAt: null,
+  }
+
+  await firestore.setDoc(`${EXPORT_VERIFICATIONS_COLLECTION}/${token}`, payload, true)
+  return { token, expiresAt }
+}
+
+export async function consumeExportVerificationToken({ token, actorUid }) {
+  const normalizedToken = String(token || '').trim()
+  const normalizedActorUid = String(actorUid || '').trim()
+  if (!normalizedToken || !normalizedActorUid) {
+    return false
+  }
+
+  const existing = await firestore
+    .getDoc(`${EXPORT_VERIFICATIONS_COLLECTION}/${normalizedToken}`)
+    .catch(() => null)
+  if (!existing) {
+    return false
+  }
+
+  const record = sanitizeExportVerificationData(existing.id, existing)
+  const expiresAt = getTimestampValue(record.expiresAt)
+  const now = Date.now()
+
+  if (record.actorUid !== normalizedActorUid || record.usedAt || !expiresAt || now > expiresAt) {
+    await firestore.deleteDoc(`${EXPORT_VERIFICATIONS_COLLECTION}/${normalizedToken}`).catch(() => null)
+    return false
+  }
+
+  await firestore.setDoc(
+    `${EXPORT_VERIFICATIONS_COLLECTION}/${normalizedToken}`,
+    {
+      usedAt: nowIso(),
+    },
+    true
+  )
+
+  return true
 }
 
 async function ensureUniqueLoginId(baseValue) {

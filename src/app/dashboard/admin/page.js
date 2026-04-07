@@ -18,17 +18,17 @@ import {
   UserX,
   Users,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AdminDashboardSkeleton } from '@/components/LoadingStates'
 import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
-import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
   DialogBody,
@@ -39,7 +39,9 @@ import {
 } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/hooks/useAuth'
+import { getUserManagementActionPolicy, isProtectedAdminEmail, requiresProtectedAdminPasswordForExport } from '@/lib/admin-protection'
 import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 import { minutesToMs, msToMinutes, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
@@ -110,7 +112,6 @@ export default function AdminDashboard() {
   const [resources, setResources] = useState([])
   const [requests, setRequests] = useState([])
   const [notifications, setNotifications] = useState([])
-  const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -125,7 +126,6 @@ export default function AdminDashboard() {
   const [pendingCredentials, setPendingCredentials] = useState(null)
   const [deleteModalTarget, setDeleteModalTarget] = useState(null)
   const [statusModalTarget, setStatusModalTarget] = useState(null)
-  const [confirmText, setConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [activeSection, setActiveSection] = useState('overview')
@@ -141,7 +141,24 @@ export default function AdminDashboard() {
   const [sessionTimeoutsLoading, setSessionTimeoutsLoading] = useState(false)
   const [sessionTimeoutsSaving, setSessionTimeoutsSaving] = useState(false)
   const [sessionTimeoutError, setSessionTimeoutError] = useState('')
+  const [saveTimeoutConfirmOpen, setSaveTimeoutConfirmOpen] = useState(false)
+  const [resetTimeoutConfirmOpen, setResetTimeoutConfirmOpen] = useState(false)
+  const [exportVerifyOpen, setExportVerifyOpen] = useState(false)
+  const [exportPassword, setExportPassword] = useState('')
+  const [exportVerifyError, setExportVerifyError] = useState('')
+  const [isExportVerifying, setIsExportVerifying] = useState(false)
+  const [isExportingCsv, setIsExportingCsv] = useState(false)
+  const [auditLogs, setAuditLogs] = useState([])
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [auditError, setAuditError] = useState('')
+  const [auditPage, setAuditPage] = useState(1)
+  const [auditPagination, setAuditPagination] = useState({ page: 1, limit: 20, total: 0, pages: 1 })
+  const [auditActionFilter, setAuditActionFilter] = useState('')
+  const [auditStatusFilter, setAuditStatusFilter] = useState('')
+  const [auditFromDate, setAuditFromDate] = useState('')
+  const [auditToDate, setAuditToDate] = useState('')
   const notificationsPanelRef = useRef(null)
+  const isProtectedAuditAdmin = isProtectedAdminEmail(user?.email)
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
@@ -164,7 +181,6 @@ export default function AdminDashboard() {
 
       setUsers(Array.isArray(payload?.users) ? payload.users : [])
       setResources(Array.isArray(payload?.resources) ? payload.resources : [])
-      setActivity(Array.isArray(payload?.activity) ? payload.activity : [])
       setErrorMessage(payload?.warning ? String(payload.warning) : '')
     } catch (error) {
       console.error('Admin overview error:', error)
@@ -242,6 +258,46 @@ export default function AdminDashboard() {
     }
   }
 
+  const loadAuditLogs = useCallback(async ({ nextPage = auditPage } = {}) => {
+    if (!isProtectedAuditAdmin) {
+      setAuditLogs([])
+      setAuditError('')
+      return
+    }
+
+    setAuditLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: String(nextPage),
+        limit: '20',
+      })
+
+      if (searchTerm.trim()) params.set('search', searchTerm.trim())
+      if (auditActionFilter) params.set('action', auditActionFilter)
+      if (auditStatusFilter) params.set('status', auditStatusFilter)
+      if (auditFromDate) params.set('fromDate', auditFromDate)
+      if (auditToDate) params.set('toDate', auditToDate)
+
+      const response = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
+        cache: 'no-store',
+      })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not load audit logs.')
+      }
+
+      setAuditLogs(Array.isArray(payload?.logs) ? payload.logs : [])
+      setAuditPagination(payload?.pagination || { page: 1, limit: 20, total: 0, pages: 1 })
+      setAuditError('')
+    } catch (error) {
+      setAuditLogs([])
+      setAuditError(error.message || 'Could not load audit logs.')
+    } finally {
+      setAuditLoading(false)
+    }
+  }, [auditActionFilter, auditFromDate, auditPage, auditStatusFilter, auditToDate, isProtectedAuditAdmin, searchTerm])
+
   useEffect(() => {
     if (!user?.uid) {
       return
@@ -252,6 +308,14 @@ export default function AdminDashboard() {
     loadNotifications()
     loadSessionTimeoutSettings()
   }, [user?.uid])
+
+  useEffect(() => {
+    if (!user?.uid) {
+      return
+    }
+
+    loadAuditLogs({ nextPage: auditPage })
+  }, [auditPage, loadAuditLogs, user?.uid])
 
   const parsedTimeoutForm = useMemo(() => parseTimeoutForm(sessionTimeoutForm), [sessionTimeoutForm])
   const sessionTimeoutHasChanges = useMemo(() => {
@@ -304,6 +368,11 @@ export default function AdminDashboard() {
     } finally {
       setSessionTimeoutsSaving(false)
     }
+  }
+
+  const resetSessionTimeoutFormToDefaults = () => {
+    setSessionTimeoutForm(buildTimeoutForm(SESSION_SETTINGS_DEFAULTS))
+    setSessionTimeoutError('')
   }
 
   useEffect(() => {
@@ -389,28 +458,84 @@ export default function AdminDashboard() {
   const openRequests = requests.filter((entry) => entry.status !== 'done').length
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
-  const exportUsers = () => {
-    const headers = ['Name', 'Email', 'Login ID', 'Role', 'Auth Provider', 'Status']
-    const rows = filteredUsers.map((entry) => [
-      entry.displayName || getDisplayName(entry.email, 'User'),
-      entry.email,
-      entry.loginId || '-',
-      entry.role,
-      authProviderLabel(entry),
-      entry.status,
-    ])
+  const downloadCsvFromApi = async (verificationToken = null) => {
+    setIsExportingCsv(true)
+    try {
+      const response = await fetch('/api/admin/users/export-csv', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verificationToken,
+          searchTerm,
+          roleFilter: userRoleFilter,
+        }),
+      })
 
-    const csv = [headers, ...rows]
-      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.error || 'Could not export CSV.')
+      }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'sps-educationam-access-control.csv'
-    link.click()
-    URL.revokeObjectURL(url)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'sps-educationam-access-control.csv'
+      link.click()
+      URL.revokeObjectURL(url)
+      toast.success('CSV export downloaded successfully.')
+    } catch (error) {
+      toast.error(error.message || 'Could not export CSV.')
+    } finally {
+      setIsExportingCsv(false)
+    }
+  }
+
+  const exportUsers = async () => {
+    if (!user?.email) {
+      toast.error('You must be signed in as admin to export users.')
+      return
+    }
+
+    if (requiresProtectedAdminPasswordForExport(user.email)) {
+      setExportPassword('')
+      setExportVerifyError('')
+      setExportVerifyOpen(true)
+      return
+    }
+
+    await downloadCsvFromApi(null)
+  }
+
+  const confirmExportVerification = async () => {
+    setIsExportVerifying(true)
+    setExportVerifyError('')
+
+    try {
+      const response = await fetch('/api/admin/verify-export-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: exportPassword }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Incorrect admin password')
+      }
+
+      const token = payload?.verificationToken
+      if (!token) {
+        throw new Error('Verification token not issued. Please retry.')
+      }
+
+      setExportVerifyOpen(false)
+      setExportPassword('')
+      await downloadCsvFromApi(token)
+    } catch (error) {
+      setExportVerifyError(error.message || 'Incorrect admin password')
+    } finally {
+      setIsExportVerifying(false)
+    }
   }
 
   const handleCreateUser = async (event) => {
@@ -450,7 +575,7 @@ export default function AdminDashboard() {
   }
 
   const confirmHardDelete = async () => {
-    if (!deleteModalTarget || confirmText !== 'DELETE') {
+    if (!deleteModalTarget) {
       return
     }
 
@@ -473,16 +598,6 @@ export default function AdminDashboard() {
     } finally {
       setIsDeleting(false)
     }
-  }
-
-  const isCurrentAdminUser = (entry) => {
-    if (!entry) {
-      return false
-    }
-
-    const sameUid = Boolean(user?.uid) && entry.id === user.uid
-    const sameEmail = Boolean(user?.email) && entry.email?.toLowerCase() === user.email.toLowerCase()
-    return sameUid || sameEmail
   }
 
   const handleUserStatusChange = async (targetUser, nextStatus) => {
@@ -632,7 +747,7 @@ export default function AdminDashboard() {
           { id: 'users', label: 'Users', href: '#admin-users', icon: Users },
           { id: 'resources', label: 'Resources', href: '#admin-resources', icon: FileText },
           { id: 'requests', label: 'Requests', href: '#admin-requests', icon: Library },
-          { id: 'activity', label: 'Activity', href: '#admin-activity', icon: Shield },
+          ...(isProtectedAuditAdmin ? [{ id: 'activity', label: 'Audit Logs', href: '#admin-activity', icon: Shield }] : []),
         ]}
         mobileOpen={mobileNavOpen}
         onMobileOpenChange={setMobileNavOpen}
@@ -841,7 +956,7 @@ export default function AdminDashboard() {
                 <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
                   <Button
                     type="button"
-                    onClick={saveSessionTimeoutSettings}
+                    onClick={() => setSaveTimeoutConfirmOpen(true)}
                     disabled={!sessionTimeoutHasChanges || Boolean(parsedTimeoutForm.error) || sessionTimeoutsSaving || sessionTimeoutsLoading}
                   >
                     {sessionTimeoutsSaving ? 'Saving...' : 'Save Changes'}
@@ -850,10 +965,7 @@ export default function AdminDashboard() {
                     type="button"
                     variant="outline"
                     disabled={sessionTimeoutsSaving || sessionTimeoutsLoading}
-                    onClick={() => {
-                      setSessionTimeoutForm(buildTimeoutForm(SESSION_SETTINGS_DEFAULTS))
-                      setSessionTimeoutError('')
-                    }}
+                    onClick={() => setResetTimeoutConfirmOpen(true)}
                   >
                     Reset to Default
                   </Button>
@@ -922,7 +1034,7 @@ export default function AdminDashboard() {
                     Reset Filters
                   </Button>
                 </div>
-                <Button type="button" variant="outline" onClick={exportUsers}><Download size={14} />Export CSV</Button>
+                <Button type="button" variant="outline" onClick={exportUsers} disabled={isExportingCsv || isExportVerifying}><Download size={14} />{isExportingCsv ? 'Exporting...' : 'Export CSV'}</Button>
                 <Button type="button" onClick={() => setCreateOpen(true)}><Sparkles size={14} />Create Account</Button>
               </CardContent>
             </Card>
@@ -930,7 +1042,10 @@ export default function AdminDashboard() {
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
             ) : (
               <div className="student-resource-grid">
-                {filteredUsers.map((entry) => (
+                {filteredUsers.map((entry) => {
+                  const actionPolicy = getUserManagementActionPolicy(user, entry)
+
+                  return (
                   <Card key={entry.id} className="student-resource-card">
                     <CardHeader className="student-resource-card__header">
                       <div className="student-resource-card__meta">
@@ -946,56 +1061,62 @@ export default function AdminDashboard() {
                       <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
                     </CardContent>
                     <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="outline" aria-label={`Open actions for ${entry.displayName || entry.email}`}>
-                            <MoreVertical size={14} />
-                            Actions
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" sideOffset={4} className="z-50 user-actions-menu">
-                          <DropdownMenuItem
-                            className="user-actions-menu__item"
-                            onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}
-                          >
-                            <KeyRound size={14} />
-                            Reset Password
-                          </DropdownMenuItem>
+                      {actionPolicy.showMenu ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button type="button" variant="outline" aria-label={`Open actions for ${entry.displayName || entry.email}`}>
+                              <MoreVertical size={14} />
+                              Actions
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" sideOffset={4} className="z-50 user-actions-menu">
+                            {actionPolicy.allowResetPassword ? (
+                              <DropdownMenuItem
+                                className="user-actions-menu__item"
+                                onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}
+                              >
+                                <KeyRound size={14} />
+                                Reset Password
+                              </DropdownMenuItem>
+                            ) : null}
 
-                          {!isCurrentAdminUser(entry) ? (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="user-actions-menu__item"
-                                onSelect={() => {
-                                  const nextStatus = entry.status === 'disabled' ? 'active' : 'disabled'
-                                  if (nextStatus === 'disabled') {
-                                    setStatusModalTarget({ user: entry, nextStatus })
-                                    return
-                                  }
-                                  handleUserStatusChange(entry, nextStatus)
-                                }}
-                              >
-                                {entry.status === 'disabled' ? <UserCheck size={14} /> : <UserX size={14} />}
-                                {entry.status === 'disabled' ? 'Enable User' : 'Disable User'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="user-actions-menu__item"
-                                onSelect={() => {
-                                  setDeleteModalTarget(entry)
-                                  setConfirmText('')
-                                }}
-                              >
-                                <Trash2 size={14} />
-                                Delete User
-                              </DropdownMenuItem>
-                            </>
-                          ) : null}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            {actionPolicy.allowSensitiveActions ? (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="user-actions-menu__item"
+                                  onSelect={() => {
+                                    const nextStatus = entry.status === 'disabled' ? 'active' : 'disabled'
+                                    if (nextStatus === 'disabled') {
+                                      setStatusModalTarget({ user: entry, nextStatus })
+                                      return
+                                    }
+                                    handleUserStatusChange(entry, nextStatus)
+                                  }}
+                                >
+                                  {entry.status === 'disabled' ? <UserCheck size={14} /> : <UserX size={14} />}
+                                  {entry.status === 'disabled' ? 'Enable User' : 'Disable User'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="user-actions-menu__item"
+                                  onSelect={() => {
+                                    setDeleteModalTarget(entry)
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                  Delete User
+                                </DropdownMenuItem>
+                              </>
+                            ) : null}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className="student-muted-text" title="This user cannot be modified.">Protected user</span>
+                      )}
                     </CardContent>
                   </Card>
-                ))}
+                  )
+                })}
               </div>
             )}
           </DashboardScrollableSection>
@@ -1153,30 +1274,142 @@ export default function AdminDashboard() {
             )}
           </DashboardScrollableSection>
 
-          <DashboardScrollableSection
-            id="admin-activity"
-            ariaLabel="Activity log"
-            title="Activity"
-            description="Recent access-control and moderation events."
-          >
-            <Card>
-              <CardContent className="student-download-list">
-                {activity.length > 0 ? (
-                  activity.map((entry) => (
-                    <div key={entry.id} className="student-download-item">
-                      <div>
-                        <strong>{entry.message || entry.action}</strong>
-                        <p>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
-                      </div>
-                      <Badge variant="outline">{entry.action}</Badge>
+          {isProtectedAuditAdmin ? (
+            <DashboardScrollableSection
+              id="admin-activity"
+              ariaLabel="Audit log"
+              title="Audit Logs"
+              description="Track who did what, when, where, and from which device."
+            >
+              <Card className="student-filter-card">
+                <CardContent className="student-filter-card__content">
+                  <label className="student-filter-control student-filter-control--search">
+                    <span>Search</span>
+                    <Input
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      placeholder="Search user, action, module"
+                      aria-label="Search audit logs"
+                    />
+                  </label>
+                  <label className="student-filter-control">
+                    <span>Action</span>
+                    <Input value={auditActionFilter} onChange={(event) => setAuditActionFilter(event.target.value)} placeholder="e.g. LOGIN" />
+                  </label>
+                  <label className="student-filter-control">
+                    <span>Status</span>
+                    <select className="ui-input" value={auditStatusFilter} onChange={(event) => setAuditStatusFilter(event.target.value)}>
+                      <option value="">All</option>
+                      <option value="SUCCESS">SUCCESS</option>
+                      <option value="FAILED">FAILED</option>
+                    </select>
+                  </label>
+                  <label className="student-filter-control">
+                    <span>From</span>
+                    <Input type="date" value={auditFromDate} onChange={(event) => setAuditFromDate(event.target.value)} />
+                  </label>
+                  <label className="student-filter-control">
+                    <span>To</span>
+                    <Input type="date" value={auditToDate} onChange={(event) => setAuditToDate(event.target.value)} />
+                  </label>
+                  <div className="student-filter-actions">
+                    <Button type="button" variant="outline" onClick={() => setAuditPage(1)}>Apply</Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setAuditActionFilter('')
+                        setAuditStatusFilter('')
+                        setAuditFromDate('')
+                        setAuditToDate('')
+                        setSearchInput('')
+                        setSearchTerm('')
+                        setAuditPage(1)
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  {auditError ? (
+                    <div className="student-inline-message student-inline-message--error" role="alert">
+                      <AlertCircle size={16} />
+                      <span>{auditError}</span>
                     </div>
-                  ))
-                ) : (
-                  <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
-                )}
-              </CardContent>
-            </Card>
-          </DashboardScrollableSection>
+                  ) : null}
+
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Module</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Device</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {!auditLoading && auditLogs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7}>No audit logs found for current filters.</TableCell>
+                        </TableRow>
+                      ) : null}
+
+                      {auditLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={7}>Loading audit logs...</TableCell>
+                        </TableRow>
+                      ) : null}
+
+                      {!auditLoading
+                        ? auditLogs.map((entry) => (
+                            <TableRow key={entry.id}>
+                              <TableCell>
+                                <strong>{entry.userName || entry.userEmail || 'Unknown user'}</strong>
+                                <p className="student-muted-text">{entry.userEmail || 'No email'}</p>
+                              </TableCell>
+                              <TableCell>
+                                <strong>{entry.action}</strong>
+                                <p className="student-muted-text">{entry.description || '-'}</p>
+                              </TableCell>
+                              <TableCell>{entry.module || 'General'}</TableCell>
+                              <TableCell>
+                                <Badge variant={entry.status === 'FAILED' ? 'outline' : 'secondary'}>
+                                  {entry.status || 'SUCCESS'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{formatDisplayDate(entry.timestamp || entry.createdAt, 'N/A')}</TableCell>
+                              <TableCell>{entry.location || 'Unknown'}</TableCell>
+                              <TableCell>
+                                {entry.device?.browser || 'Unknown'} / {entry.device?.os || 'Unknown'} / {entry.device?.deviceType || 'desktop'}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        : null}
+                    </TableBody>
+                  </Table>
+
+                  <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
+                    <Button type="button" variant="outline" disabled={auditPagination.page <= 1 || auditLoading} onClick={() => setAuditPage((current) => Math.max(1, current - 1))}>
+                      Previous
+                    </Button>
+                    <Badge variant="outline">
+                      Page {auditPagination.page} of {auditPagination.pages} ({auditPagination.total} logs)
+                    </Badge>
+                    <Button type="button" variant="outline" disabled={auditPagination.page >= auditPagination.pages || auditLoading} onClick={() => setAuditPage((current) => Math.min(auditPagination.pages, current + 1))}>
+                      Next
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </DashboardScrollableSection>
+          ) : null}
         </main>
       </div>
 
@@ -1304,62 +1537,135 @@ export default function AdminDashboard() {
         </DialogFooter>
       </Dialog>
 
-      <AlertDialog open={Boolean(deleteModalTarget)} onOpenChange={(open) => !open && setDeleteModalTarget(null)}>
-        {deleteModalTarget ? (
-          <div className="ui-dialog__content">
-            <div className="ui-dialog__header">
-              <h3 className="ui-dialog__title">Permanently delete account?</h3>
-              <p className="ui-dialog__description">
-                Remove "{deleteModalTarget.displayName || deleteModalTarget.email}" from the system and revoke authentication.
-              </p>
+      <Dialog
+        open={exportVerifyOpen}
+        onOpenChange={(open) => {
+          setExportVerifyOpen(open)
+          if (!open) {
+            setExportPassword('')
+            setExportVerifyError('')
+          }
+        }}
+        labelledBy="admin-export-verify-title"
+        className="student-request-modal"
+      >
+        <DialogHeader>
+          <DialogTitle id="admin-export-verify-title">Admin Verification Required</DialogTitle>
+          <DialogDescription>
+            Enter password for ss7051017@gmail.com to continue CSV export.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <label>
+            <span>Password</span>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={exportPassword}
+              onChange={(event) => {
+                setExportPassword(event.target.value)
+                setExportVerifyError('')
+              }}
+              placeholder="Enter admin password"
+            />
+          </label>
+          {exportVerifyError ? (
+            <div className="student-inline-message student-inline-message--error" style={{ marginTop: '0.8rem' }}>
+              <AlertCircle size={16} />
+              <span>{exportVerifyError}</span>
             </div>
-            <div className="student-request-form" style={{ marginTop: '1rem' }}>
-              <label>
-                <span>Type DELETE to confirm</span>
-                <Input
-                  type="text"
-                  value={confirmText}
-                  onChange={(event) => setConfirmText(event.target.value)}
-                  placeholder="DELETE"
-                />
-              </label>
-            </div>
-            <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
-              <Button type="button" variant="ghost" onClick={() => setDeleteModalTarget(null)} disabled={isDeleting}>
-                Keep Account
-              </Button>
-              <Button type="button" onClick={confirmHardDelete} disabled={isDeleting || confirmText !== 'DELETE'}>
-                {isDeleting ? 'Removing...' : 'Permanently Delete'}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </AlertDialog>
+          ) : null}
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isExportVerifying}
+            onClick={() => {
+              setExportVerifyOpen(false)
+              setExportPassword('')
+              setExportVerifyError('')
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={isExportVerifying || !exportPassword.trim()}
+            onClick={confirmExportVerification}
+          >
+            {isExportVerifying ? 'Verifying...' : 'Confirm'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
-      <AlertDialog open={Boolean(statusModalTarget)} onOpenChange={(open) => !open && setStatusModalTarget(null)}>
-        {statusModalTarget ? (
-          <div className="ui-dialog__content">
-            <div className="ui-dialog__header">
-              <h3 className="ui-dialog__title">Disable this user?</h3>
-              <p className="ui-dialog__description">
-                "{statusModalTarget.user.displayName || statusModalTarget.user.email}" will lose dashboard access until re-enabled.
-              </p>
-            </div>
-            <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
-              <Button type="button" variant="ghost" disabled={isUpdatingStatus} onClick={() => setStatusModalTarget(null)}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={isUpdatingStatus}
-                onClick={() => handleUserStatusChange(statusModalTarget.user, statusModalTarget.nextStatus)}
-              >
-                {isUpdatingStatus ? 'Updating...' : 'Disable User'}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </AlertDialog>
+      <ConfirmDialog
+        open={saveTimeoutConfirmOpen}
+        onOpenChange={setSaveTimeoutConfirmOpen}
+        title="Apply session timeout changes?"
+        description="This updates global session security settings for all users. Current and new sessions will adopt these limits after refresh."
+        confirmLabel="Apply Changes"
+        cancelLabel="Cancel"
+        confirmVariant="outline"
+        isConfirming={sessionTimeoutsSaving}
+        confirmDisabled={!sessionTimeoutHasChanges || Boolean(parsedTimeoutForm.error) || sessionTimeoutsLoading}
+        onConfirm={async () => {
+          await saveSessionTimeoutSettings()
+          setSaveTimeoutConfirmOpen(false)
+        }}
+      />
+
+      <ConfirmDialog
+        open={resetTimeoutConfirmOpen}
+        onOpenChange={setResetTimeoutConfirmOpen}
+        title="Reset timeout fields to defaults?"
+        description="This will replace your current form values with recommended defaults. You still need to select Save Changes to apply them globally."
+        confirmLabel="Reset to Default"
+        cancelLabel="Cancel"
+        confirmVariant="destructive"
+        confirmDisabled={sessionTimeoutsSaving || sessionTimeoutsLoading}
+        onConfirm={() => {
+          resetSessionTimeoutFormToDefaults()
+          setResetTimeoutConfirmOpen(false)
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteModalTarget)}
+        onOpenChange={(open) => !open && setDeleteModalTarget(null)}
+        title="Are you sure?"
+        description={
+          deleteModalTarget
+            ? `This action cannot be undone. This will permanently delete ${deleteModalTarget.displayName || deleteModalTarget.email}.`
+            : ''
+        }
+        confirmLabel="Delete User"
+        cancelLabel="Cancel"
+        confirmVariant="destructive"
+        isConfirming={isDeleting}
+        onConfirm={confirmHardDelete}
+      />
+
+      <ConfirmDialog
+        open={Boolean(statusModalTarget)}
+        onOpenChange={(open) => !open && setStatusModalTarget(null)}
+        title="Are you sure?"
+        description={
+          statusModalTarget
+            ? `This will disable ${statusModalTarget.user.displayName || statusModalTarget.user.email} and block dashboard access until re-enabled.`
+            : ''
+        }
+        confirmLabel="Disable User"
+        cancelLabel="Cancel"
+        confirmVariant="destructive"
+        isConfirming={isUpdatingStatus}
+        onConfirm={() => {
+          if (!statusModalTarget) {
+            return
+          }
+          handleUserStatusChange(statusModalTarget.user, statusModalTarget.nextStatus)
+        }}
+      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
 import { assertSameOrigin, withNoStore } from '@/lib/api-security'
+import { logAction } from '@/lib/audit-log'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
 import {
@@ -73,6 +74,14 @@ export async function POST(request) {
     const isEmailIdentifier = loginIdentifier.includes('@')
 
     if (!loginIdentifier || !password) {
+      await logAction({
+        user: { email: loginIdentifier || null, role: 'admin' },
+        action: 'LOGIN',
+        description: 'Credential login failed: missing email/login ID or password.',
+        module: 'Auth',
+        status: 'FAILED',
+        request,
+      }).catch(() => {})
       return withNoStore(
         NextResponse.json(
           { error: 'Email/login ID and password are required.' },
@@ -100,6 +109,14 @@ export async function POST(request) {
 
     if (!isEmailIdentifier) {
       if (lookupFailed) {
+        await logAction({
+          user: { email: loginIdentifier || null, role: 'admin' },
+          action: 'LOGIN',
+          description: 'Credential login failed: login directory lookup unavailable.',
+          module: 'Auth',
+          status: 'FAILED',
+          request,
+        }).catch(() => {})
         return withNoStore(
           NextResponse.json(
             { error: 'Login directory lookup failed. Please try again in a moment.' },
@@ -109,6 +126,14 @@ export async function POST(request) {
       }
 
       if (!resolvedRecord?.user?.email) {
+        await logAction({
+          user: { email: loginIdentifier || null, role: 'admin' },
+          action: 'LOGIN',
+          description: 'Credential login failed: invalid login ID.',
+          module: 'Auth',
+          status: 'FAILED',
+          request,
+        }).catch(() => {})
         return withNoStore(
           NextResponse.json(
             { error: 'Invalid login ID or password.' },
@@ -128,6 +153,14 @@ export async function POST(request) {
     } catch (error) {
       const message = String(error?.message || '')
       if (message.includes('USER_DISABLED')) {
+        await logAction({
+          user: { email: accountEmail || null, role: 'admin' },
+          action: 'LOGIN',
+          description: 'Credential login blocked: disabled account.',
+          module: 'Auth',
+          status: 'FAILED',
+          request,
+        }).catch(() => {})
         return withNoStore(
           NextResponse.json({ error: 'This account is currently disabled.' }, { status: 403 })
         )
@@ -146,6 +179,14 @@ export async function POST(request) {
       }
 
       if (isCredentialAuthError(message)) {
+        await logAction({
+          user: { email: accountEmail || null, role: 'admin' },
+          action: 'LOGIN',
+          description: 'Credential login failed: invalid credentials.',
+          module: 'Auth',
+          status: 'FAILED',
+          request,
+        }).catch(() => {})
         return withNoStore(
           NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
         )
@@ -194,6 +235,14 @@ export async function POST(request) {
     }
 
     if (effectiveUser.role === 'student') {
+      await logAction({
+        user: { uid: effectiveUser.uid || null, name: effectiveUser.displayName, email: effectiveUser.email, role: effectiveUser.role },
+        action: 'LOGIN',
+        description: 'Credential login rejected: student must use Google portal.',
+        module: 'Auth',
+        status: 'FAILED',
+        request,
+      }).catch(() => {})
       return withNoStore(
         NextResponse.json(
           { error: 'Students must sign in using the Google Student Portal.' },
@@ -299,6 +348,22 @@ export async function POST(request) {
       path: '/',
     })
 
+    await logAction({
+      user: {
+        uid: result.uid,
+        name: effectiveUser.displayName || null,
+        email: effectiveUser.email,
+        role: effectiveUser.role,
+      },
+      action: 'LOGIN',
+      description: 'Credential login successful.',
+      module: 'Auth',
+      status: 'SUCCESS',
+      request,
+      targetId: result.uid,
+      targetRole: effectiveUser.role,
+    }).catch(() => {})
+
     return response
   } catch (error) {
     const message = String(error?.message || '')
@@ -337,6 +402,16 @@ export async function POST(request) {
         )
       )
     }
+
+    await logAction({
+      user: null,
+      action: 'LOGIN',
+      description: 'Credential login failed.',
+      module: 'Auth',
+      status: 'FAILED',
+      request,
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
 
     return withNoStore(
       NextResponse.json(

@@ -6,6 +6,7 @@ import {
   withNoStore,
   ApiError,
 } from '@/lib/api-security'
+import { logAction } from '@/lib/audit-log'
 import { 
   countAuditRecords, 
   createResourceRecord, 
@@ -28,6 +29,15 @@ export async function GET(request) {
 
     return withNoStore(NextResponse.json({ resources: visibleResources, totalDownloads }))
   } catch (error) {
+    await logAction({
+      user: await requireApiSession(request, ['faculty']).catch(() => null),
+      action: 'VIEW_RESOURCES',
+      description: 'Failed to load faculty resources.',
+      module: 'Resources',
+      status: 'FAILED',
+      request,
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     const message = String(error?.message || '')
     if (message.includes('Privileged Firebase access is not configured')) {
       return withNoStore(
@@ -126,9 +136,29 @@ export async function POST(request) {
       payload,
     })
 
+    await logAction({
+      user: session,
+      action: 'UPLOAD_RESOURCE',
+      description: `Uploaded resource ${resource.title || resource.id}.`,
+      module: 'Resources',
+      status: 'SUCCESS',
+      request,
+      targetId: resource.id,
+      targetRole: 'resource',
+    })
+
     return withNoStore(NextResponse.json({ resource }, { status: 201 }))
   } catch (error) {
     console.error('Resource Creation Error:', error)
+    await logAction({
+      user: await requireApiSession(request, ['faculty']).catch(() => null),
+      action: 'UPLOAD_RESOURCE',
+      description: 'Failed resource upload attempt.',
+      module: 'Resources',
+      status: 'FAILED',
+      request,
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error, 'Could not create the resource.')
   }
 }

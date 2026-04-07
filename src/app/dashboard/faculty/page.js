@@ -21,10 +21,10 @@ import { DashboardScrollableSection } from '@/components/dashboard/DashboardScro
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
-import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
   DialogBody,
@@ -74,6 +74,7 @@ export default function FacultyDashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [uploadJobs, setUploadJobs] = useState([])
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeletingResource, setIsDeletingResource] = useState(false)
   const [activeSection, setActiveSection] = useState('overview')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
@@ -427,6 +428,7 @@ export default function FacultyDashboard() {
       return
     }
 
+    setIsDeletingResource(true)
     try {
       const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, {
         method: 'DELETE',
@@ -442,6 +444,8 @@ export default function FacultyDashboard() {
       setDeleteTarget(null)
     } catch (error) {
       toast.error(error.message || 'Could not delete the resource.')
+    } finally {
+      setIsDeletingResource(false)
     }
   }
 
@@ -920,26 +924,21 @@ export default function FacultyDashboard() {
         </DialogFooter>
       </Dialog>
 
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        {deleteTarget ? (
-          <div className="ui-dialog__content">
-            <div className="ui-dialog__header">
-              <h3 className="ui-dialog__title">Delete publication?</h3>
-              <p className="ui-dialog__description">
-                Remove "{deleteTarget.title}" from your publication list. This cannot be undone.
-              </p>
-            </div>
-            <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
-              <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)}>
-                Cancel
-              </Button>
-              <Button type="button" onClick={confirmDelete}>
-                Delete Publication
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </AlertDialog>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Are you sure?"
+        description={
+          deleteTarget
+            ? `This action cannot be undone. This will permanently delete publication "${deleteTarget.title}".`
+            : ''
+        }
+        confirmLabel="Delete Publication"
+        cancelLabel="Cancel"
+        confirmVariant="destructive"
+        isConfirming={isDeletingResource}
+        onConfirm={confirmDelete}
+      />
     </div>
   )
 }

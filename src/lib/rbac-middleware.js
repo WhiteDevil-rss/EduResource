@@ -26,6 +26,8 @@ export const ADMIN_ROUTES = {
   'GET /api/admin/audit-logs': ['admin'],
   'GET /api/admin/session-settings': ['admin'],
   'PUT /api/admin/session-settings': ['admin'],
+  'POST /api/admin/verify-export-password': ['admin'],
+  'POST /api/admin/users/export-csv': ['admin'],
 }
 
 export const FACULTY_ROUTES = {

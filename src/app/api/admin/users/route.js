@@ -12,6 +12,7 @@ import {
   validateDisplayName,
   validatePagination,
 } from '@/lib/request-validation'
+import { logAction } from '@/lib/audit-log'
 import { createManagedUser, listUserRecords } from '@/lib/server-data'
 
 /**
@@ -54,6 +55,17 @@ export async function POST(request) {
       actorRole: session.role,
     })
 
+    await logAction({
+      user: session,
+      action: 'CREATE_USER',
+      description: `Created ${role} user account for ${email}.`,
+      module: 'User Management',
+      status: 'SUCCESS',
+      request,
+      targetId: result?.user?.id || null,
+      targetRole: role,
+    })
+
     return withNoStore(
       NextResponse.json(
         {
@@ -65,6 +77,15 @@ export async function POST(request) {
       )
     )
   } catch (error) {
+    await logAction({
+      user: await requireApiSession(request).catch(() => null),
+      action: 'CREATE_USER',
+      description: 'Failed user creation attempt.',
+      module: 'User Management',
+      status: 'FAILED',
+      request,
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error, 'Could not create the requested user account.')
   }
 }

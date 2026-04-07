@@ -5,6 +5,7 @@ import {
   requireApiSession,
   withNoStore,
 } from '@/lib/api-security'
+import { logAction } from '@/lib/audit-log'
 import {
   deleteResourceRecord,
   updateResourceRecord,
@@ -40,8 +41,30 @@ export async function PATCH(request, { params }) {
           payload: body,
         })
 
+    await logAction({
+      user: session,
+      action: 'UPDATE_RESOURCE',
+      description: `Updated resource ${resource.title || resource.id}.`,
+      module: 'Resources',
+      status: 'SUCCESS',
+      request,
+      targetId: resource.id,
+      targetRole: 'resource',
+    })
+
     return withNoStore(NextResponse.json({ resource }))
   } catch (error) {
+    await logAction({
+      user: await requireApiSession(request, ['faculty']).catch(() => null),
+      action: 'UPDATE_RESOURCE',
+      description: 'Failed resource update attempt.',
+      module: 'Resources',
+      status: 'FAILED',
+      request,
+      targetId: (await params)?.resourceId || null,
+      targetRole: 'resource',
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error, 'Could not update the resource.')
   }
 }
@@ -64,8 +87,30 @@ export async function DELETE(request, { params }) {
       session,
     })
 
+    await logAction({
+      user: session,
+      action: 'DELETE_RESOURCE',
+      description: `Deleted resource ${resourceId}.`,
+      module: 'Resources',
+      status: 'SUCCESS',
+      request,
+      targetId: resourceId,
+      targetRole: 'resource',
+    })
+
     return withNoStore(NextResponse.json({ ok: true }))
   } catch (error) {
+    await logAction({
+      user: await requireApiSession(request, ['faculty']).catch(() => null),
+      action: 'DELETE_RESOURCE',
+      description: 'Failed resource delete attempt.',
+      module: 'Resources',
+      status: 'FAILED',
+      request,
+      targetId: (await params)?.resourceId || null,
+      targetRole: 'resource',
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error, 'Could not delete the resource.')
   }
 }

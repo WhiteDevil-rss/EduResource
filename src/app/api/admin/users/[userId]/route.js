@@ -5,22 +5,44 @@ import {
   ApiError, 
   jsonError 
 } from '@/lib/api-security'
-import { deleteUserAndData, resetManagedCredentials, setManagedUserStatus } from '@/lib/server-data'
+import { isProtectedAdminEmail } from '@/lib/admin-protection'
+import { logAction } from '@/lib/audit-log'
+import { deleteUserAndData, getUserRecordById, resetManagedCredentials, setManagedUserStatus } from '@/lib/server-data'
 
 export async function DELETE(request, { params }) {
   try {
     const { userId } = params
     
     // Ensure the caller is an admin
-    await requireApiSession(request, ['admin'])
+    const session = await requireApiSession(request, ['admin'])
     assertSameOrigin(request)
 
     if (!userId) {
       throw new ApiError(400, 'Missing userId in request path.')
     }
 
+    const targetUser = await getUserRecordById(userId)
+    if (!targetUser) {
+      throw new ApiError(404, 'User account not found.')
+    }
+
+    if (isProtectedAdminEmail(targetUser.email)) {
+      throw new ApiError(403, 'This protected admin account cannot be deleted.')
+    }
+
     // Perform hard deletion (Firestore + Auth)
     await deleteUserAndData(userId)
+
+    await logAction({
+      user: session,
+      action: 'DELETE_USER',
+      description: `Deleted user ${targetUser.email || targetUser.id}.`,
+      module: 'User Management',
+      status: 'SUCCESS',
+      request,
+      targetId: targetUser.id,
+      targetRole: targetUser.role,
+    })
 
     return NextResponse.json({ 
       success: true, 
@@ -28,6 +50,18 @@ export async function DELETE(request, { params }) {
     })
 
   } catch (error) {
+    const actor = await requireApiSession(request, ['admin']).catch(() => null)
+    await logAction({
+      user: actor,
+      action: 'DELETE_USER',
+      description: `Failed to delete user ${params?.userId || ''}.`,
+      module: 'User Management',
+      status: 'FAILED',
+      request,
+      targetId: params?.userId || null,
+      targetRole: 'user',
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error)
   }
 }
@@ -42,10 +76,23 @@ export async function PATCH(request, { params }) {
       throw new ApiError(400, 'Missing userId in request path.')
     }
 
+    const targetUser = await getUserRecordById(userId)
+    if (!targetUser) {
+      throw new ApiError(404, 'User account not found.')
+    }
+
     const body = await request.json().catch(() => ({}))
     const action = body?.action
+    const protectedTarget = isProtectedAdminEmail(targetUser.email)
+    const selfTarget =
+      (session.uid && targetUser.id && session.uid === targetUser.id) ||
+      (session.email && targetUser.email && String(session.email).toLowerCase() === String(targetUser.email).toLowerCase())
 
     if (action === 'set-status') {
+      if (protectedTarget) {
+        throw new ApiError(403, 'This protected admin account cannot be disabled or enabled via admin actions.')
+      }
+
       const status = body?.status === 'active' ? 'active' : 'disabled'
       const user = await setManagedUserStatus({
         userId,
@@ -54,10 +101,25 @@ export async function PATCH(request, { params }) {
         actorRole: session.role,
       })
 
+      await logAction({
+        user: session,
+        action: status === 'active' ? 'ENABLE_USER' : 'DISABLE_USER',
+        description: `${status === 'active' ? 'Enabled' : 'Disabled'} user ${targetUser.email || targetUser.id}.`,
+        module: 'User Management',
+        status: 'SUCCESS',
+        request,
+        targetId: targetUser.id,
+        targetRole: targetUser.role,
+      })
+
       return NextResponse.json({ success: true, user })
     }
 
     if (action === 'resetCredentials') {
+      if (protectedTarget && !selfTarget) {
+        throw new ApiError(403, 'Only the protected admin can reset credentials for this account.')
+      }
+
       const result = await resetManagedCredentials({
         userId,
         actorUid: session.uid,
@@ -65,11 +127,33 @@ export async function PATCH(request, { params }) {
         newPassword: body?.password || null,
       })
 
+      await logAction({
+        user: session,
+        action: 'RESET_PASSWORD',
+        description: `Reset credentials for ${targetUser.email || targetUser.id}.`,
+        module: 'User Management',
+        status: 'SUCCESS',
+        request,
+        targetId: targetUser.id,
+        targetRole: targetUser.role,
+      })
+
       return NextResponse.json({ success: true, ...result })
     }
 
     throw new ApiError(400, 'Unsupported admin user action.')
   } catch (error) {
+    await logAction({
+      user: await requireApiSession(request, ['admin']).catch(() => null),
+      action: 'UPDATE_USER',
+      description: `Failed admin user update for ${params?.userId || ''}.`,
+      module: 'User Management',
+      status: 'FAILED',
+      request,
+      targetId: params?.userId || null,
+      targetRole: 'user',
+      metadata: { reason: String(error?.message || 'Unknown error') },
+    }).catch(() => {})
     return jsonError(error)
   }
 }

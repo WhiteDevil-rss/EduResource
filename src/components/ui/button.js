@@ -5,6 +5,7 @@ const buttonVariants = {
   secondary: 'button-secondary',
   ghost: 'button-ghost',
   outline: 'button-outline',
+  destructive: 'button-destructive',
 }
 
 export function Button({ className = '', variant = 'default', asChild = false, children, ...props }) {

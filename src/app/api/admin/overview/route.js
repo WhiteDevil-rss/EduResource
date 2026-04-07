@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { jsonError, requireApiSession, withNoStore } from '@/lib/api-security'
+import { isProtectedAdminEmail } from '@/lib/admin-protection'
 // Legacy admin check removed
 import {
   listAuditRecords,
@@ -9,12 +10,14 @@ import {
 
 export async function GET(request) {
   try {
-    await requireApiSession(request, ['admin'])
+    const session = await requireApiSession(request, ['admin'])
+
+    const includeAuditActivity = isProtectedAdminEmail(session.email)
 
     const [users, resources, activity] = await Promise.all([
       listUserRecords(),
       listResourceRecords(),
-      listAuditRecords(12),
+      includeAuditActivity ? listAuditRecords(12) : Promise.resolve([]),
     ])
 
     return withNoStore(

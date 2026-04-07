@@ -125,7 +125,8 @@ h6 {
 .button-primary,
 .button-secondary,
 .button-ghost,
-.button-outline {
+.button-outline,
+.button-destructive {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -168,10 +169,17 @@ h6 {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.button-destructive {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  box-shadow: 0 16px 30px rgba(185, 28, 28, 0.28);
+}
+
 .button-primary:hover,
 .button-secondary:hover,
 .button-outline:hover,
-.button-ghost:hover {
+.button-ghost:hover,
+.button-destructive:hover {
   transform: translateY(-1px);
 }
 
@@ -4694,6 +4702,49 @@ h6 {
 
   .user-actions-menu__item {
     justify-content: flex-start;
+  }
+
+  .ui-table-wrap {
+    width: 100%;
+    overflow: auto;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(6, 10, 20, 0.45);
+  }
+
+  .ui-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 56rem;
+  }
+
+  .ui-table__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(10, 16, 30, 0.95);
+  }
+
+  .ui-table__head,
+  .ui-table__cell {
+    text-align: left;
+    padding: 0.7rem 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    vertical-align: top;
+    font-size: 0.85rem;
+  }
+
+  .ui-table__head {
+    color: rgba(220, 227, 255, 0.9);
+    font-weight: 700;
+  }
+
+  .ui-table__cell {
+    color: rgba(240, 240, 253, 0.84);
+  }
+
+  .ui-table__row:last-child .ui-table__cell {
+    border-bottom: 0;
   }
 
   .student-status {
