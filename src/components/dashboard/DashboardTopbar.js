@@ -1,13 +1,16 @@
 'use client'
 
-import { Bell, Menu } from 'lucide-react'
+import { Bell, Menu, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 
 export function DashboardTopbar({
   role,
   title,
   subtitle,
+  searchValue,
+  onSearchChange,
   onOpenMenu,
   onOpenNotifications,
   unreadCount,
@@ -32,6 +35,16 @@ export function DashboardTopbar({
       </div>
 
       <div className="student-topbar__right">
+        <label className="student-search" aria-label="Search">
+          <Search size={16} />
+          <Input
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search"
+            className="student-search__input"
+          />
+        </label>
+
         <Button
           type="button"
           variant="outline"

@@ -4,30 +4,22 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
-  EllipsisVertical,
-  Ban,
   FileText,
   HelpCircle,
   Inbox,
   KeyRound,
   LayoutPanelTop,
   Library,
-  Mail,
-  RefreshCcw,
-  RotateCcw,
   Shield,
   Sparkles,
-  Trash2,
-  UserPlus,
-  UserRound,
   Users,
-  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AdminDashboardSkeleton } from '@/components/LoadingStates'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
+import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -41,13 +33,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 
@@ -96,10 +81,6 @@ export default function AdminDashboard() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
-  const [resourceSearchInput, setResourceSearchInput] = useState('')
-  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
-  const [requestSearchInput, setRequestSearchInput] = useState('')
-  const [requestSearchTerm, setRequestSearchTerm] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('all')
   const [resourceClassFilter, setResourceClassFilter] = useState('All Classes')
   const [resourceSubjectFilter, setResourceSubjectFilter] = useState('All Subjects')
@@ -110,16 +91,6 @@ export default function AdminDashboard() {
     const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
     return () => window.clearTimeout(timeout)
   }, [searchInput])
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setResourceSearchTerm(resourceSearchInput), 220)
-    return () => window.clearTimeout(timeout)
-  }, [resourceSearchInput])
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setRequestSearchTerm(requestSearchInput), 220)
-    return () => window.clearTimeout(timeout)
-  }, [requestSearchInput])
 
   const loadOverview = async ({ background = false } = {}) => {
     if (background) {
@@ -254,7 +225,7 @@ export default function AdminDashboard() {
   })
 
   const filteredResources = resources.filter((entry) => {
-    const term = resourceSearchTerm.trim().toLowerCase()
+    const term = searchTerm.trim().toLowerCase()
     const matchesSearch =
       !term ||
       [entry.title, entry.class, entry.subject, entry.summary, entry.status]
@@ -271,7 +242,7 @@ export default function AdminDashboard() {
   })
 
   const filteredRequests = requests.filter((entry) => {
-    const term = requestSearchTerm.trim().toLowerCase()
+    const term = searchTerm.trim().toLowerCase()
     const matchesSearch =
       !term ||
       [entry.studentName, entry.studentEmail, entry.courseName, entry.titleName, entry.preferredFormat, entry.status]
@@ -407,26 +378,6 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleSetUserStatus = async (targetUser, nextStatus) => {
-    try {
-      const response = await fetch(`/api/admin/users/${targetUser.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'set-status', status: nextStatus }),
-      })
-
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update the user status.')
-      }
-
-      setUsers((current) => current.map((item) => (item.id === targetUser.id ? payload.user : item)))
-      toast.success(`User set to ${nextStatus}.`)
-    } catch (error) {
-      toast.error(error.message || 'Could not update the user status.')
-    }
-  }
-
   const handleRequestStatusChange = async (requestEntry, status) => {
     try {
       const response = await fetch(`/api/admin/resource-requests/${requestEntry.id}`, {
@@ -523,21 +474,23 @@ export default function AdminDashboard() {
           role="admin"
           title="Admin Dashboard"
           subtitle="Manage users, publications, and requests"
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
           onOpenMenu={() => setMobileNavOpen(true)}
           onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
           unreadCount={unreadNotificationCount}
           userLabel={getDisplayName(user?.email, 'Admin')}
         />
 
-        <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
+        <main className="student-panel__content">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel w-full max-w-md max-h-[50vh] flex flex-col" role="dialog" aria-label="Notifications center">
-                <CardHeader className="shrink-0 p-5">
+              <Card className="student-notification-panel" role="dialog" aria-label="Notifications center">
+                <CardHeader>
                   <CardTitle>Notifications</CardTitle>
                   <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
                 </CardHeader>
-                <CardContent className="student-notification-list flex-1 overflow-y-auto p-5 pt-0 custom-scrollbar">
+                <CardContent className="student-notification-list">
                   {notificationsError ? (
                     <div className="student-inline-message student-inline-message--error">
                       <HelpCircle size={16} />
@@ -589,15 +542,13 @@ export default function AdminDashboard() {
             </div>
           ) : null}
 
-          <section id="admin-overview" className="student-section flex flex-col gap-4" aria-label="Admin overview">
-            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
-              <div>
-                <h2 className="text-xl font-semibold">Overview</h2>
-                <p className="text-muted-foreground text-sm">Unified governance across users, content, and requests.</p>
-              </div>
-              <p className="text-sm font-medium animate-pulse text-muted-foreground">{refreshing ? 'Refreshing live data...' : 'Data synced from protected APIs.'}</p>
+          <section id="admin-overview" className="student-section" aria-label="Admin overview">
+            <div className="student-section__heading">
+              <h2>Overview</h2>
+              <p>Unified governance across users, content, and requests.</p>
+              <p className="student-muted-text">{refreshing ? 'Refreshing live data...' : 'Data synced from protected APIs.'}</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="student-metrics">
               <Card>
                 <CardHeader>
                   <CardDescription>Total Accounts</CardDescription>
@@ -626,333 +577,203 @@ export default function AdminDashboard() {
           </section>
 
           {pendingCredentials ? (
-            <section className="student-section flex flex-col gap-4" aria-label="One-time credentials">
+            <section className="student-section" aria-label="One-time credentials">
               <Card>
                 <CardHeader>
                   <CardTitle>One-Time Credentials</CardTitle>
                   <CardDescription>Copy and share securely. This view appears once per admin session.</CardDescription>
                 </CardHeader>
-                <CardContent className="student-download-list flex flex-col gap-4">
-                  <div className="flex justify-between items-center py-2 border-b border-border"><strong><UserRound size={14} className="mr-2 inline" />Role</strong><p>{pendingCredentials.role}</p></div>
-                  <div className="flex justify-between items-center py-2 border-b border-border"><strong><Mail size={14} className="mr-2 inline" />Email</strong><p>{pendingCredentials.email}</p></div>
-                  {pendingCredentials.loginId ? <div className="flex justify-between items-center py-2 border-b border-border"><strong><FileText size={14} className="mr-2 inline" />Login ID</strong><p className="font-mono">{pendingCredentials.loginId}</p></div> : null}
-                  {pendingCredentials.temporaryPassword ? <div className="flex justify-between items-center py-2 border-b border-border"><strong><KeyRound size={14} className="mr-2 inline"/>Temporary Password</strong><p className="font-mono">{pendingCredentials.temporaryPassword}</p></div> : null}
+                <CardContent className="student-download-list">
+                  <div className="student-download-item"><strong>Role</strong><p>{pendingCredentials.role}</p></div>
+                  <div className="student-download-item"><strong>Email</strong><p>{pendingCredentials.email}</p></div>
+                  {pendingCredentials.loginId ? <div className="student-download-item"><strong>Login ID</strong><p>{pendingCredentials.loginId}</p></div> : null}
+                  {pendingCredentials.temporaryPassword ? <div className="student-download-item"><strong>Temporary Password</strong><p>{pendingCredentials.temporaryPassword}</p></div> : null}
                 </CardContent>
               </Card>
             </section>
           ) : null}
 
-          <section id="admin-users" className="student-section flex flex-col gap-4" aria-label="User management">
+          <section id="admin-users" className="student-section" aria-label="User management">
             <div className="student-section__heading">
-              <h2 className="text-xl font-semibold">User Management</h2>
-              <p className="text-muted-foreground text-sm">Create, review, and remove accounts with role-aware controls.</p>
+              <h2>User Management</h2>
+              <p>Create, review, and remove accounts with role-aware controls.</p>
             </div>
-            <Card className="p-4 sm:p-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
-                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
-                  <Users size={16} /><span>Filters</span>
-                </div>
-                <div className="md:col-span-2 xl:col-span-2">
-                  <Input
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Search users by name or email..."
-                    aria-label="Search users"
-                    className="w-full"
-                  />
-                </div>
-                <div className="md:col-span-1 xl:col-span-1">
-                  <select className="ui-input w-full md:w-auto" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label"><Users size={14} /><span>Filters</span></div>
+                <label className="student-filter-control">
+                  <span>Role</span>
+                  <select className="ui-input" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
                     <option value="all">All Roles</option>
                     <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
                     <option value="admin">Admin</option>
                   </select>
-                </div>
-                <div className="md:col-span-3 xl:col-span-3 flex flex-wrap items-center gap-2">
-                  <Button type="button" variant="outline" className="flex-1 md:flex-none" onClick={exportUsers}><Download size={14} className="mr-2"/>Export</Button>
-                  <Button type="button" className="flex-1 md:flex-none" onClick={() => setCreateOpen(true)}><UserPlus size={14} className="mr-2"/>Create</Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 md:flex-none"
-                    onClick={() => setSearchTerm(searchInput)}
-                  >
-                    Apply Filters
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="flex-1 md:flex-none"
-                    onClick={() => {
-                      setSearchInput('')
-                      setSearchTerm('')
-                      setUserRoleFilter('all')
-                    }}
-                  >
-                    <RotateCcw size={14} className="mr-2" />
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
+                </label>
+                <Button type="button" variant="outline" onClick={exportUsers}><Download size={14} />Export CSV</Button>
+                <Button type="button" onClick={() => setCreateOpen(true)}><Sparkles size={14} />Create Account</Button>
+              </CardContent>
             </Card>
-            
             {filteredUsers.length === 0 ? (
-              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground">
-                <Inbox size={40} className="mb-4 opacity-50" />
-                <h3 className="text-lg font-medium text-foreground">No users found</h3>
-                <p>Adjust search or role filters.</p>
-              </Card>
+              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="student-resource-grid">
                 {filteredUsers.map((entry) => (
-                  <Card key={entry.id} className="p-5 flex flex-col gap-4">
-                    <div className="flex justify-between items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-base truncate" title={entry.displayName || getDisplayName(entry.email, 'User')}>
-                            {entry.displayName || getDisplayName(entry.email, 'User')}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate" title={entry.email}>{entry.email}</p>
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
+                        <Badge>{entry.role}</Badge>
+                        <Badge variant="outline">{entry.status}</Badge>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="ghost" size="icon" className="shrink-0 -mr-2" aria-label={`Open actions for ${entry.displayName || entry.email}`}><EllipsisVertical size={16} /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
-                            <RefreshCcw size={14} className="mr-2" />
-                            Reset Password
-                          </DropdownMenuItem>
-                          {entry.role !== 'admin' && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onSelect={() => handleSetUserStatus(entry, entry.status === 'disabled' ? 'active' : 'disabled')}>
-                                {entry.status === 'disabled' ? <Sparkles size={14} className="mr-2" /> : <Ban size={14} className="mr-2" />}
-                                {entry.status === 'disabled' ? 'Enable User' : 'Disable User'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive font-medium focus:text-destructive" onSelect={() => {
-                                setDeleteModalTarget(entry)
-                                setConfirmText('')
-                              }}>
-                                <Trash2 size={14} className="mr-2" />
-                                Delete User
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="flex items-center gap-2 mt-auto pt-2 border-t">
-                      <Badge variant="secondary" className="capitalize">{entry.role}</Badge>
-                      <Badge variant={entry.status === 'disabled' ? 'destructive' : 'outline'} className="capitalize">{entry.status}</Badge>
-                    </div>
+                      <Badge variant="outline">{authProviderLabel(entry)}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.email}</p>
+                      <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
+                    </CardContent>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem' }}>
+                      <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                        <KeyRound size={14} />
+                        Reset Password
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setDeleteModalTarget(entry)
+                          setConfirmText('')
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="admin-resources" className="student-section flex flex-col gap-4" aria-label="Resource audit">
+          <section id="admin-resources" className="student-section" aria-label="Resource audit">
             <div className="student-section__heading">
-              <h2 className="text-xl font-semibold">Resources & Publications</h2>
-              <p className="text-muted-foreground text-sm">Audit platform publications with class and subject filters.</p>
+              <h2>Resources & Publications</h2>
+              <p>Audit platform publications with class and subject filters.</p>
             </div>
-            <Card className="p-4 sm:p-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
-                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
-                  <FileText size={16} /><span>Filters</span>
-                </div>
-                <div className="md:col-span-2 xl:col-span-2">
-                  <Input
-                    value={resourceSearchInput}
-                    onChange={(event) => setResourceSearchInput(event.target.value)}
-                    placeholder="Search resources by title or details..."
-                    aria-label="Search resources"
-                    className="w-full"
-                  />
-                </div>
-                <div className="md:col-span-2 xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <select className="ui-input flex-1" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label"><FileText size={14} /><span>Filters</span></div>
+                <label className="student-filter-control">
+                  <span>Class</span>
+                  <select className="ui-input" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
                     {resourceClassOptions.map((entryClass) => (
                       <option key={entryClass} value={entryClass}>{entryClass}</option>
                     ))}
                   </select>
-                  <select className="ui-input flex-1" value={resourceSubjectFilter} onChange={(event) => setResourceSubjectFilter(event.target.value)}>
+                </label>
+                <label className="student-filter-control">
+                  <span>Subject</span>
+                  <select className="ui-input" value={resourceSubjectFilter} onChange={(event) => setResourceSubjectFilter(event.target.value)}>
                     {resourceSubjectOptions.map((subject) => (
                       <option key={subject} value={subject}>{subject}</option>
                     ))}
                   </select>
-                </div>
-                <div className="md:col-span-2 xl:col-span-2 flex flex-wrap items-center gap-3">
-                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
-                    {filteredResources.length} items
-                  </Badge>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setResourceSearchTerm(resourceSearchInput)}
-                  >
-                    Apply Filters
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setResourceSearchInput('')
-                      setResourceSearchTerm('')
-                      setResourceClassFilter('All Classes')
-                      setResourceSubjectFilter('All Subjects')
-                    }}
-                  >
-                    <RotateCcw size={14} className="mr-2" />
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
+                </label>
+                <Badge variant="outline" className="student-filter-count">{filteredResources.length} result(s)</Badge>
+              </CardContent>
             </Card>
-            
             {filteredResources.length === 0 ? (
-              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground">
-                <Inbox size={40} className="mb-4 opacity-50" />
-                <h3 className="text-lg font-medium text-foreground">No resources found</h3>
-                <p>Adjust search, class, or subject filters.</p>
-              </Card>
+              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No resources found</h3><p>Adjust search, class, or subject filters.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="student-resource-grid">
                 {filteredResources.map((entry) => (
-                  <Card key={entry.id} className="p-5 flex flex-col gap-3">
-                    <div className="flex justify-between items-start gap-2">
-                       <h3 className="font-semibold text-base line-clamp-2" title={entry.title}>{entry.title}</h3>
-                       <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'} className="shrink-0 capitalize">{entry.status || 'unknown'}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{entry.summary || 'No summary provided.'}</p>
-                    <div className="flex items-center flex-wrap gap-2 mt-auto pt-4 border-t">
-                      <Badge variant="secondary">{entry.subject || 'General'}</Badge>
-                      <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
-                      <span className="text-xs text-muted-foreground ml-auto">{formatDisplayDate(entry.createdAt)}</span>
-                    </div>
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.subject || 'General'}</Badge>
+                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                      </div>
+                      <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
+                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="admin-requests" className="student-section flex flex-col gap-4" aria-label="Resource requests">
+          <section id="admin-requests" className="student-section" aria-label="Resource requests">
             <div className="student-section__heading">
-              <h2 className="text-xl font-semibold">Resource Requests</h2>
-              <p className="text-muted-foreground text-sm">Track student requests and update statuses with one click.</p>
+              <h2>Resource Requests</h2>
+              <p>Track student requests and update statuses with one click.</p>
             </div>
-            <Card className="p-4 sm:p-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
-                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
-                  <Library size={16} /><span>Filters</span>
-                </div>
-                <div className="md:col-span-3 xl:col-span-3">
-                  <Input
-                    value={requestSearchInput}
-                    onChange={(event) => setRequestSearchInput(event.target.value)}
-                    placeholder="Search requests by student, title, or course..."
-                    aria-label="Search requests"
-                    className="w-full"
-                  />
-                </div>
-                <div className="md:col-span-1 xl:col-span-1">
-                  <select className="ui-input w-full md:w-auto" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
-                    <option value="all">All Statuses</option>
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label"><Library size={14} /><span>Filters</span></div>
+                <label className="student-filter-control">
+                  <span>Status</span>
+                  <select className="ui-input" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
+                    <option value="all">All</option>
                     <option value="pending">Pending</option>
                     <option value="underreview">Under Review</option>
                     <option value="done">Done</option>
                   </select>
-                </div>
-                <div className="md:col-span-2 xl:col-span-2 flex flex-wrap items-center gap-3">
-                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
-                    {filteredRequests.length} requests
-                  </Badge>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setRequestSearchTerm(requestSearchInput)}
-                  >
-                    Apply Filters
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setRequestSearchInput('')
-                      setRequestSearchTerm('')
-                      setRequestStatusFilter('all')
-                    }}
-                  >
-                    <RotateCcw size={14} className="mr-2" />
-                    Reset Filters
-                  </Button>
-                </div>
-              </div>
+                </label>
+                <Badge variant="outline" className="student-filter-count">{filteredRequests.length} result(s)</Badge>
+              </CardContent>
             </Card>
-            
             {filteredRequests.length === 0 ? (
-              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground">
-                <Inbox size={40} className="mb-4 opacity-50" />
-                <h3 className="text-lg font-medium text-foreground">No requests found</h3>
-                <p>Try a different search term or status filter.</p>
-              </Card>
+              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No requests found</h3><p>Try a different search term or status filter.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="student-resource-grid">
                 {filteredRequests.map((entry) => (
-                  <Card key={entry.id} className="p-5 flex flex-col gap-4">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-base line-clamp-1 mb-1" title={entry.titleName || 'Untitled request'}>{entry.titleName || 'Untitled request'}</h3>
-                        <p className="text-sm text-foreground my-1">{entry.studentName || entry.studentEmail}</p>
-                        <div className="flex items-center gap-2 flex-wrap mt-2">
-                          <Badge variant="secondary" className="font-normal">{entry.courseName || 'No course'}</Badge>
-                          <Badge variant="outline" className="font-normal">{entry.preferredFormat || 'Any format'}</Badge>
-                        </div>
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.courseName || 'No course'}</Badge>
+                        <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <Badge variant={entry.status === 'done' ? 'default' : entry.status === 'underreview' ? 'secondary' : 'outline'} className="mb-2">
-                          {requestStatusLabel(entry.status)}
-                        </Badge>
-                        <p className="text-xs text-muted-foreground whitespace-nowrap">{formatDisplayDate(entry.createdAt)}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex bg-muted/50 p-2 rounded-md gap-2 flex-wrap items-center mt-auto">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mx-2">Set Status:</span>
-                      <Button size="sm" variant={entry.status === 'pending' ? 'secondary' : 'ghost'} onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}><RefreshCcw size={14} className="mr-1"/>Pending</Button>
-                      <Button size="sm" variant={entry.status === 'underreview' ? 'secondary' : 'ghost'} onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}><Shield size={14} className="mr-1"/>Review</Button>
-                      <Button size="sm" variant={entry.status === 'done' ? 'secondary' : 'ghost'} onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}><CheckCircle2 size={14} className="mr-1"/>Done</Button>
-                    </div>
+                      <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.titleName || 'Untitled request'}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.studentName || entry.studentEmail}</p>
+                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
+                    </CardContent>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="admin-activity" className="student-section flex flex-col gap-4" aria-label="Activity log">
+          <section id="admin-activity" className="student-section" aria-label="Activity log">
             <div className="student-section__heading">
-              <h2 className="text-xl font-semibold">Activity</h2>
-              <p className="text-muted-foreground text-sm">Recent access-control and moderation events.</p>
+              <h2>Activity</h2>
+              <p>Recent access-control and moderation events.</p>
             </div>
-            <Card className="max-h-[60vh] flex flex-col">
-              <CardContent className="student-download-list flex-1 overflow-y-auto p-5 custom-scrollbar">
+            <Card>
+              <CardContent className="student-download-list">
                 {activity.length > 0 ? (
                   activity.map((entry) => (
-                    <div key={entry.id} className="student-download-item flex flex-col sm:flex-row sm:justify-between sm:items-center items-start py-3 border-b border-border last:border-0 gap-3">
+                    <div key={entry.id} className="student-download-item">
                       <div>
-                        <strong className="block text-sm font-medium">{entry.message || entry.action}</strong>
-                        <p className="text-xs text-muted-foreground mt-1">{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
+                        <strong>{entry.message || entry.action}</strong>
+                        <p>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
                       </div>
-                      <Badge variant="outline" className="capitalize shrink-0">{entry.action}</Badge>
+                      <Badge variant="outline">{entry.action}</Badge>
                     </div>
                   ))
                 ) : (
-                  <div className="py-10 flex flex-col items-center text-center text-muted-foreground">
-                    <p>Audit events will appear after protected actions are performed.</p>
-                  </div>
+                  <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
                 )}
               </CardContent>
             </Card>
@@ -1021,7 +842,6 @@ export default function AdminDashboard() {
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
-            <X size={14} />
             Cancel
           </Button>
           <Button type="button" onClick={handleCreateUser} disabled={submittingCreate}>
@@ -1067,7 +887,6 @@ export default function AdminDashboard() {
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" disabled={resetModal?.submitting} onClick={() => setResetModal(null)}>
-            <X size={14} />
             Cancel
           </Button>
           <Button
@@ -1081,7 +900,6 @@ export default function AdminDashboard() {
               handleResetCredentials(resetModal.user, resetModal.password.trim() || null)
             }}
           >
-            <RefreshCcw size={14} />
             {resetModal?.submitting ? 'Processing...' : 'Reset Password'}
           </Button>
         </DialogFooter>
@@ -1109,11 +927,9 @@ export default function AdminDashboard() {
             </div>
             <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
               <Button type="button" variant="ghost" onClick={() => setDeleteModalTarget(null)} disabled={isDeleting}>
-                <X size={14} />
                 Keep Account
               </Button>
               <Button type="button" onClick={confirmHardDelete} disabled={isDeleting || confirmText !== 'DELETE'}>
-                <Trash2 size={14} />
                 {isDeleting ? 'Removing...' : 'Permanently Delete'}
               </Button>
             </div>
