@@ -53,7 +53,7 @@ Optional server values (required for some admin features):
 - `FIREBASE_PRIVATE_KEY`
 - `SUPER_ADMIN_EMAIL`
 
-Frontend code that needs the same check should read `VITE_SUPER_ADMIN_EMAIL`.
+Frontend code that needs the same check should read `NEXT_PUBLIC_SUPER_ADMIN_EMAIL`.
 
 ### 3. Start the app
 

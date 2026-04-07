@@ -33,7 +33,7 @@ SESSION_SECRET=your-long-random-secret-string
 
 # Super Admin Access
 SUPER_ADMIN_EMAIL=your-super-admin-email
-VITE_SUPER_ADMIN_EMAIL=your-super-admin-email
+NEXT_PUBLIC_SUPER_ADMIN_EMAIL=your-super-admin-email
 
 # Firebase Admin (for server-side operations)
 FIREBASE_CLIENT_EMAIL=your-service-account-email

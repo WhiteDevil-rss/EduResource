@@ -4,8 +4,8 @@ function normalizeEmail(value) {
 
 function readConfiguredSuperAdminEmail() {
   const frontendEmail =
-    typeof import.meta !== 'undefined' && import.meta.env
-      ? import.meta.env.VITE_SUPER_ADMIN_EMAIL
+    typeof process !== 'undefined'
+      ? process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL || process.env.VITE_SUPER_ADMIN_EMAIL
       : ''
   const backendEmail = typeof process !== 'undefined' ? process.env.SUPER_ADMIN_EMAIL : ''
   return normalizeEmail(frontendEmail || backendEmail)
