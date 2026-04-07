@@ -617,7 +617,7 @@ export default function AdminDashboard() {
             {filteredUsers.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredUsers.map((entry) => (
                   <Card key={entry.id} className="student-resource-card">
                     <CardHeader className="student-resource-card__header">
@@ -685,7 +685,7 @@ export default function AdminDashboard() {
             {filteredResources.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No resources found</h3><p>Adjust search, class, or subject filters.</p></CardContent></Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredResources.map((entry) => (
                   <Card key={entry.id} className="student-resource-card">
                     <CardHeader className="student-resource-card__header">
@@ -729,7 +729,7 @@ export default function AdminDashboard() {
             {filteredRequests.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No requests found</h3><p>Try a different search term or status filter.</p></CardContent></Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredRequests.map((entry) => (
                   <Card key={entry.id} className="student-resource-card">
                     <CardHeader className="student-resource-card__header">
@@ -760,8 +760,8 @@ export default function AdminDashboard() {
               <h2>Activity</h2>
               <p>Recent access-control and moderation events.</p>
             </div>
-            <Card>
-              <CardContent className="student-download-list">
+            <Card className="max-h-[60vh] flex flex-col">
+              <CardContent className="student-download-list flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 {activity.length > 0 ? (
                   activity.map((entry) => (
                     <div key={entry.id} className="student-download-item">
