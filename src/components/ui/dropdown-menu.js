@@ -113,6 +113,7 @@ export function DropdownMenuContent({ className = '', align = 'end', sideOffset 
       }
 
       const contentWidth = contentEl.offsetWidth
+      const contentHeight = contentEl.offsetHeight
       const viewportPadding = 8
 
       let nextLeft = triggerRect.left
@@ -123,10 +124,14 @@ export function DropdownMenuContent({ className = '', align = 'end', sideOffset 
       const maxLeft = window.innerWidth - contentWidth - viewportPadding
       nextLeft = Math.max(viewportPadding, Math.min(nextLeft, maxLeft))
 
-      setPosition({
-        top: triggerRect.bottom + sideOffset,
-        left: nextLeft,
-      })
+      const preferredTop = triggerRect.bottom + sideOffset
+      const fitsBelow = preferredTop + contentHeight <= window.innerHeight - viewportPadding
+      const aboveTop = triggerRect.top - sideOffset - contentHeight
+      const nextTop = fitsBelow
+        ? preferredTop
+        : Math.max(viewportPadding, aboveTop)
+
+      setPosition({ top: nextTop, left: nextLeft })
     }
 
     const frame = window.requestAnimationFrame(updatePosition)

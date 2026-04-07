@@ -953,8 +953,11 @@ export default function AdminDashboard() {
                             Actions
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" sideOffset={6} className="z-50">
-                          <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                        <DropdownMenuContent align="end" sideOffset={4} className="z-50 user-actions-menu">
+                          <DropdownMenuItem
+                            className="user-actions-menu__item"
+                            onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}
+                          >
                             <KeyRound size={14} />
                             Reset Password
                           </DropdownMenuItem>
@@ -963,6 +966,7 @@ export default function AdminDashboard() {
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
+                                className="user-actions-menu__item"
                                 onSelect={() => {
                                   const nextStatus = entry.status === 'disabled' ? 'active' : 'disabled'
                                   if (nextStatus === 'disabled') {
@@ -976,6 +980,7 @@ export default function AdminDashboard() {
                                 {entry.status === 'disabled' ? 'Enable User' : 'Disable User'}
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                className="user-actions-menu__item"
                                 onSelect={() => {
                                   setDeleteModalTarget(entry)
                                   setConfirmText('')
