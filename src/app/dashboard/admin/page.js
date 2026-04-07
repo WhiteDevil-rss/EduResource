@@ -10,8 +10,12 @@ import {
   KeyRound,
   LayoutPanelTop,
   Library,
+  MoreVertical,
   Shield,
   Sparkles,
+  Trash2,
+  UserCheck,
+  UserX,
   Users,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -33,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
@@ -76,8 +81,10 @@ export default function AdminDashboard() {
   const [resetModal, setResetModal] = useState(null)
   const [pendingCredentials, setPendingCredentials] = useState(null)
   const [deleteModalTarget, setDeleteModalTarget] = useState(null)
+  const [statusModalTarget, setStatusModalTarget] = useState(null)
   const [confirmText, setConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [activeSection, setActiveSection] = useState('overview')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
@@ -343,6 +350,47 @@ export default function AdminDashboard() {
       toast.error(error.message || 'Could not delete the user account.')
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const isCurrentAdminUser = (entry) => {
+    if (!entry) {
+      return false
+    }
+
+    const sameUid = Boolean(user?.uid) && entry.id === user.uid
+    const sameEmail = Boolean(user?.email) && entry.email?.toLowerCase() === user.email.toLowerCase()
+    return sameUid || sameEmail
+  }
+
+  const handleUserStatusChange = async (targetUser, nextStatus) => {
+    if (!targetUser) {
+      return
+    }
+
+    setIsUpdatingStatus(true)
+    try {
+      const response = await fetch(`/api/admin/users/${targetUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'set-status',
+          status: nextStatus,
+        }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not update account status.')
+      }
+
+      setUsers((current) => current.map((entry) => (entry.id === targetUser.id ? payload.user : entry)))
+      setStatusModalTarget(null)
+      toast.success(`User ${nextStatus === 'active' ? 'enabled' : 'disabled'} successfully.`)
+    } catch (error) {
+      toast.error(error.message || 'Could not update account status.')
+    } finally {
+      setIsUpdatingStatus(false)
     }
   }
 
@@ -651,7 +699,7 @@ export default function AdminDashboard() {
                       <div className="student-resource-card__meta">
                         <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
                         <Badge>{entry.role}</Badge>
-                        <Badge variant="outline">{entry.status}</Badge>
+                        <Badge variant={entry.status === 'disabled' ? 'outline' : 'secondary'}>{entry.status === 'disabled' ? 'Disabled' : 'Enabled'}</Badge>
                       </div>
                       <Badge variant="outline">{authProviderLabel(entry)}</Badge>
                     </CardHeader>
@@ -661,20 +709,48 @@ export default function AdminDashboard() {
                       <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
                     </CardContent>
                     <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
-                        <KeyRound size={14} />
-                        Reset Password
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setDeleteModalTarget(entry)
-                          setConfirmText('')
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" variant="outline" aria-label={`Open actions for ${entry.displayName || entry.email}`}>
+                            <MoreVertical size={14} />
+                            Actions
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                            <KeyRound size={14} />
+                            Reset Password
+                          </DropdownMenuItem>
+
+                          {!isCurrentAdminUser(entry) ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  const nextStatus = entry.status === 'disabled' ? 'active' : 'disabled'
+                                  if (nextStatus === 'disabled') {
+                                    setStatusModalTarget({ user: entry, nextStatus })
+                                    return
+                                  }
+                                  handleUserStatusChange(entry, nextStatus)
+                                }}
+                              >
+                                {entry.status === 'disabled' ? <UserCheck size={14} /> : <UserX size={14} />}
+                                {entry.status === 'disabled' ? 'Enable User' : 'Disable User'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={() => {
+                                  setDeleteModalTarget(entry)
+                                  setConfirmText('')
+                                }}
+                              >
+                                <Trash2 size={14} />
+                                Delete User
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </CardContent>
                   </Card>
                 ))}
@@ -1012,6 +1088,31 @@ export default function AdminDashboard() {
               </Button>
               <Button type="button" onClick={confirmHardDelete} disabled={isDeleting || confirmText !== 'DELETE'}>
                 {isDeleting ? 'Removing...' : 'Permanently Delete'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </AlertDialog>
+
+      <AlertDialog open={Boolean(statusModalTarget)} onOpenChange={(open) => !open && setStatusModalTarget(null)}>
+        {statusModalTarget ? (
+          <div className="ui-dialog__content">
+            <div className="ui-dialog__header">
+              <h3 className="ui-dialog__title">Disable this user?</h3>
+              <p className="ui-dialog__description">
+                "{statusModalTarget.user.displayName || statusModalTarget.user.email}" will lose dashboard access until re-enabled.
+              </p>
+            </div>
+            <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
+              <Button type="button" variant="ghost" disabled={isUpdatingStatus} onClick={() => setStatusModalTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={isUpdatingStatus}
+                onClick={() => handleUserStatusChange(statusModalTarget.user, statusModalTarget.nextStatus)}
+              >
+                {isUpdatingStatus ? 'Updating...' : 'Disable User'}
               </Button>
             </div>
           </div>
