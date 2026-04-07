@@ -1,13 +1,14 @@
 'use client'
 
+import Image from 'next/image'
 import {
   AlertCircle,
   Bell,
   CheckCircle2,
+  Circle,
   Edit3,
   FileText,
   Filter,
-  Circle,
   LogOut,
   HelpCircle,
   Plus,
@@ -28,6 +29,9 @@ import {
   getSafeAvatarUrl,
   getSubjectTone,
 } from '@/lib/demo-content'
+import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
+import { AlertDialog } from '@/components/ui/alert-dialog'
+import { Progress } from '@/components/ui/progress'
 
 const EMPTY_DRAFT = {
   id: null,
@@ -72,7 +76,10 @@ export default function FacultyDashboard() {
   const [editorOpen, setEditorOpen] = useState(false)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [uploadJobs, setUploadJobs] = useState([])
+  const [isSaving, setIsSaving] = useState(false)
   const notificationsPanelRef = useRef(null)
+  const uploadLockRef = useRef(false)
   const deferredSearch = useDeferredValue(searchTerm)
 
   // Password change states
@@ -229,15 +236,101 @@ export default function FacultyDashboard() {
   const handleSave = async (event) => {
     event.preventDefault()
 
+    if (isSaving || uploadLockRef.current) {
+      return
+    }
+
+    setIsSaving(true)
+
     const formData = new FormData()
     formData.append('title', draft.title)
     formData.append('class', draft.class)
     formData.append('subject', draft.subject)
     formData.append('summary', draft.summary)
     formData.append('status', draft.status)
-    
+
     if (draft.file) {
       formData.append('file', draft.file)
+    }
+
+    if (!draft.id && draft.file) {
+      const uploadId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`
+      uploadLockRef.current = true
+      setUploadJobs([
+        {
+          id: uploadId,
+          fileName: draft.file.name,
+          progress: 0,
+          status: 'uploading',
+        },
+      ])
+      closeEditor()
+
+      // eslint-disable-next-line no-undef
+      const xhr = new XMLHttpRequest()
+      xhr.open('POST', '/api/faculty/resources')
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          return
+        }
+
+        const percentComplete = Math.round((event.loaded / event.total) * 100)
+        setUploadJobs((current) =>
+          current.map((job) =>
+            job.id === uploadId
+              ? { ...job, progress: percentComplete, status: 'uploading' }
+              : job
+          )
+        )
+      }
+
+      xhr.onload = async () => {
+        const payload = JSON.parse(xhr.responseText || '{}')
+        if (xhr.status >= 200 && xhr.status < 300) {
+          setUploadJobs((current) =>
+            current.map((job) =>
+              job.id === uploadId
+                ? { ...job, progress: 100, status: 'completed', message: 'Resource published.' }
+                : job
+            )
+          )
+          toast.success('Resource published.')
+          await loadResources({ background: true })
+        } else {
+          setUploadJobs((current) =>
+            current.map((job) =>
+              job.id === uploadId
+                ? {
+                    ...job,
+                    status: 'failed',
+                    error: payload?.error || 'Could not save the resource.',
+                  }
+                : job
+            )
+          )
+          toast.error(payload?.error || 'Could not save the resource.')
+        }
+
+        uploadLockRef.current = false
+        setIsSaving(false)
+      }
+
+      xhr.onerror = () => {
+        setUploadJobs((current) =>
+          current.map((job) =>
+            job.id === uploadId
+              ? { ...job, status: 'failed', error: 'Network error during upload.' }
+              : job
+          )
+        )
+        toast.error('Network error during upload.')
+        uploadLockRef.current = false
+        setIsSaving(false)
+      }
+
+      xhr.send(formData)
+      return
     }
 
     setRefreshing(true)
@@ -251,8 +344,6 @@ export default function FacultyDashboard() {
         {
           method: draft.id ? 'PATCH' : 'POST',
           body: draft.id ? JSON.stringify(Object.fromEntries(formData)) : formData,
-          // For PATCH, we might still want JSON if we're not updating the file, 
-          // but for POST we definitely want FormData.
           headers: draft.id ? { 'Content-Type': 'application/json' } : undefined,
         }
       )
@@ -269,6 +360,7 @@ export default function FacultyDashboard() {
       toast.error(error.message || 'Could not save the resource.')
     } finally {
       setRefreshing(false)
+      setIsSaving(false)
     }
   }
 
@@ -413,29 +505,20 @@ export default function FacultyDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="loading-state">
-        <div className="loading-spinner" />
-      </div>
-    )
+    return <FacultyDashboardSkeleton />
   }
 
   return (
     <div className="dashboard-page">
-      {deleteTarget ? (
-        <div className="modal-backdrop" role="presentation" onClick={() => setDeleteTarget(null)}>
-          <div
-            className="modal-card modal-card--compact"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="faculty-delete-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 id="faculty-delete-title">Delete publication?</h3>
-            <p>
-              Remove "{deleteTarget.title}" from the publication list. This cannot be undone.
-            </p>
-
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        {deleteTarget ? (
+          <div className="ui-dialog__content">
+            <div className="ui-dialog__header">
+              <h3 className="ui-dialog__title">Delete publication?</h3>
+              <p className="ui-dialog__description">
+                Remove "{deleteTarget.title}" from the publication list. This cannot be undone.
+              </p>
+            </div>
             <div className="modal-form__actions" style={{ marginTop: '1.5rem' }}>
               <button type="button" className="button-secondary" onClick={() => setDeleteTarget(null)}>
                 Cancel
@@ -445,16 +528,16 @@ export default function FacultyDashboard() {
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </AlertDialog>
 
       <div className="dashboard-layout">
-        <aside className="dashboard-sidebar">
+        <aside className="dashboard-sidebar glass">
           <div className="dashboard-sidebar__brand">
-            <h1 style={{ background: 'linear-gradient(135deg, var(--primary), var(--primary-dim))', WebkitBackgroundClip: 'text', color: 'transparent' }}>
-              EduResource Hub
+            <h1 className="premium-gradient-text" style={{ fontSize: '2.4rem' }}>
+              SPS EDUCATIONAM
             </h1>
-            <p className="dashboard-sidebar__eyebrow">Faculty Dashboard</p>
+            <p className="dashboard-sidebar__eyebrow">Faculty Workspace</p>
           </div>
 
           <nav className="dashboard-nav">
@@ -484,7 +567,12 @@ export default function FacultyDashboard() {
 
             <div className="dashboard-profile">
               <div className="dashboard-profile__avatar">
-                <img src={getSafeAvatarUrl(user?.avatar, FACULTY_PROFILE.avatar)} alt="Faculty profile" />
+                <Image
+                  src={getSafeAvatarUrl(user?.avatar, FACULTY_PROFILE.avatar)}
+                  alt="Faculty profile"
+                  width={44}
+                  height={44}
+                />
               </div>
               <div>
                 <strong>{user?.name || getDisplayName(user?.email, FACULTY_PROFILE.name)}</strong>
@@ -497,7 +585,7 @@ export default function FacultyDashboard() {
         </aside>
 
         <div className="dashboard-content">
-          <header className="dashboard-topbar">
+          <header className="dashboard-topbar glass">
             <div className="dashboard-topbar__search">
               <Search size={18} />
               <input
@@ -533,7 +621,7 @@ export default function FacultyDashboard() {
               </button>
 
               {notificationsOpen ? (
-                <div className="notification-popover" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
+                <div className="notification-popover glass" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
                   <div className="notification-popover__header">
                     <div>
                       <strong>Notifications</strong>
@@ -558,7 +646,7 @@ export default function FacultyDashboard() {
                     ) : null}
 
                     {notificationsLoading ? (
-                      <div className="empty-state">Loading notifications...</div>
+                      <div className="empty-state">Fetching your latest publishing updates and faculty notifications...</div>
                     ) : notifications.length > 0 ? (
                       notifications.slice(0, 5).map((notification) => (
                         <article
@@ -633,16 +721,45 @@ export default function FacultyDashboard() {
           ) : null}
 
           <section className="dashboard-section" id="faculty-publications">
+            {uploadJobs.length > 0 ? (
+              <div className="upload-job-list" style={{ marginBottom: '1.5rem' }}>
+                {uploadJobs.map((job) => (
+                  <article key={job.id} className="upload-job-card glass">
+                    <div className="upload-job-card__header">
+                      <div>
+                        <strong>{job.fileName}</strong>
+                        <p>
+                          {job.status === 'completed'
+                            ? 'Upload completed successfully.'
+                            : job.status === 'failed'
+                              ? job.error || 'Upload failed.'
+                              : 'Uploading in the background.'}
+                        </p>
+                      </div>
+                      <span className={`status-state status-state--${job.status === 'completed' ? 'active' : job.status === 'failed' ? 'banned' : 'draft'}`}>
+                        <span className="status-state__dot" />
+                        {job.status}
+                      </span>
+                    </div>
+                    <Progress value={job.progress} />
+                    <div className="upload-job-card__footer">
+                      <span>{job.progress}%</span>
+                      <span>{job.status === 'failed' ? 'Action required' : 'Background upload locked'}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
             <div className="metric-grid" style={{ marginBottom: '1.5rem' }}>
-              <article className="metric-card">
+              <article className="metric-card glass">
                 <span className="metric-card__label">Publications</span>
                 <strong className="metric-card__value">{resources.length}</strong>
               </article>
-              <article className="metric-card">
+              <article className="metric-card glass">
                 <span className="metric-card__label">Total Downloads</span>
                 <strong className="metric-card__value">{formatCompactNumber(totalDownloads)}</strong>
               </article>
-              <article className="status-panel">
+              <article className="status-panel glass">
                 <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Publishing Policy</span>
                 <strong className="metric-card__value" style={{ fontSize: '2rem' }}>Faculty Only</strong>
               </article>
@@ -663,7 +780,7 @@ export default function FacultyDashboard() {
               </div>
             </div>
 
-            <div className="table-shell">
+            <div className="table-shell glass">
               <div className="table-shell__header">
                 <div>
                   <h3>Your Publications</h3>
@@ -753,12 +870,12 @@ export default function FacultyDashboard() {
 
           <section className="dashboard-section" id="faculty-portal">
             <div className="support-grid">
-              <article className="support-card">
+              <article className="support-card glass">
                 <span className="metric-card__label">Faculty Profile</span>
                 <div className="downloads-list">
                   <div className="profile-list__item">
                     <span>Email</span>
-                    <strong>{user?.email || 'faculty@eduresourcehub.edu'}</strong>
+                    <strong>{user?.email || 'faculty@spseducationam.edu'}</strong>
                   </div>
                   <div className="profile-list__item">
                     <span>Login ID</span>
@@ -771,7 +888,7 @@ export default function FacultyDashboard() {
                 </div>
               </article>
 
-              <article className="support-card" id="faculty-settings">
+              <article className="support-card glass" id="faculty-settings">
                 <span className="metric-card__label">Security Controls</span>
                 <form className="modal-form" style={{ marginTop: '1rem' }} onSubmit={handlePasswordChange}>
                   <div className="auth-field">
@@ -831,7 +948,7 @@ export default function FacultyDashboard() {
 
       {editorOpen ? (
         <div className="modal-backdrop">
-          <div className="modal-card">
+          <div className="modal-card glass">
             <h3>{draft.id ? 'Edit Publication' : 'Upload Resource'}</h3>
             <p>Publish through the faculty API with strict ownership checks and server-side auditing.</p>
 
@@ -931,11 +1048,18 @@ export default function FacultyDashboard() {
               </div>
 
               <div className="modal-form__actions">
-                <button type="button" className="button-secondary" onClick={closeEditor}>
+                <button type="button" className="button-secondary" onClick={closeEditor} disabled={isSaving}>
                   Cancel
                 </button>
-                <button type="submit" className="button-primary">
-                  {draft.id ? 'Save Changes' : 'Publish Resource'}
+                <button type="submit" className="button-primary" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <div className="loading-spinner loading-spinner--small" style={{ marginRight: '0.5rem' }} />
+                      Publishing...
+                    </>
+                  ) : (
+                    draft.id ? 'Save Changes' : 'Publish Resource'
+                  )}
                 </button>
               </div>
             </form>

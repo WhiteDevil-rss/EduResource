@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "edu-resource-hub",
+  "name": "sps-educationam",
   "pages_build_output_dir": ".open-next/assets",
   "compatibility_date": "2024-11-18",
   "compatibility_flags": [

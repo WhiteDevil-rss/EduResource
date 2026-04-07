@@ -1,6 +1,6 @@
-# EduResource Hub
+# SPS EDUCATIONAM
 
-EduResource Hub is a role-based academic resource platform built with Next.js and Firebase. Students can browse curated learning materials, faculty can manage resource uploads, and admins can oversee users and access rules.
+SPS EDUCATIONAM is a role-based academic resource platform built with Next.js and Firebase. Students can browse curated learning materials, faculty can manage resource uploads, and admins can oversee users and access rules.
 
 ## Features
 
@@ -18,7 +18,6 @@ EduResource Hub is a role-based academic resource platform built with Next.js an
 - React 19 (Server Components)
 - Firebase Authentication (via REST API for edge compatibility)
 - Cloud Firestore
-- Cloudinary (Asset Management)
 - Cloudflare Workers with OpenNext
 
 ## Local Development
@@ -49,8 +48,6 @@ Required values include:
 
 Optional server values (required for some admin features):
 
-- `CLOUDINARY_API_KEY`
-- `CLOUDINARY_API_SECRET`
 - `FIREBASE_PROJECT_ID`
 - `FIREBASE_CLIENT_EMAIL`
 - `FIREBASE_PRIVATE_KEY`
@@ -105,4 +102,4 @@ Ensure these are added in your Cloudflare Pages dashboard:
 
 ## Repository
 
-GitHub: [WhiteDevil-rss/EduResource](https://github.com/WhiteDevil-rss/EduResource)
+GitHub: [WhiteDevil-rss/SPS EDUCATIONAM](https://github.com/WhiteDevil-rss/EduResource)

@@ -10,7 +10,7 @@ export default function Navbar() {
   return (
     <nav className="nav">
       <Link href="/" className="logo">
-        EduResource <span style={{ color: 'var(--accent-primary)' }}>Hub</span>
+        SPS EDUCATIONAM
       </Link>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>

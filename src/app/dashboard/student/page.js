@@ -22,34 +22,9 @@ import {
   getDisplayName,
   getSubjectTone,
 } from '@/lib/demo-content'
+import { StudentDashboardSkeleton } from '@/components/LoadingStates'
 
-const DOWNLOADS_STORAGE_KEY = 'eduresourcehub.downloads.v1'
-const RESOURCE_PREVIEW_FALLBACK_IMAGE =
-  "data:image/svg+xml;charset=UTF-8," +
-  encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Preview unavailable">
-      <defs>
-        <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#10131d"/>
-          <stop offset="100%" stop-color="#1b2030"/>
-        </linearGradient>
-        <linearGradient id="accent" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stop-color="#b6a0ff"/>
-          <stop offset="100%" stop-color="#00affe"/>
-        </linearGradient>
-      </defs>
-      <rect width="960" height="540" rx="36" fill="url(#bg)"/>
-      <circle cx="768" cy="126" r="104" fill="rgba(182,160,255,0.16)"/>
-      <circle cx="184" cy="396" r="124" fill="rgba(0,175,254,0.10)"/>
-      <rect x="168" y="132" width="624" height="276" rx="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)"/>
-      <rect x="228" y="188" width="206" height="164" rx="20" fill="rgba(255,255,255,0.08)"/>
-      <path d="M264 300l52-62 38 43 28-32 60 51z" fill="url(#accent)" opacity="0.9"/>
-      <circle cx="288" cy="236" r="22" fill="#f0f0fd" opacity="0.9"/>
-      <text x="500" y="232" fill="#f0f0fd" font-family="Arial, sans-serif" font-size="34" font-weight="700">Preview unavailable</text>
-      <text x="500" y="274" fill="rgba(240,240,253,0.68)" font-family="Arial, sans-serif" font-size="20">Cloudinary preview failed to load.</text>
-      <text x="500" y="308" fill="rgba(240,240,253,0.68)" font-family="Arial, sans-serif" font-size="20">The fallback image is shown instead.</text>
-    </svg>
-  `)
+const DOWNLOADS_STORAGE_KEY = 'sps.educationam.downloads.v1'
 
 function inferResourceFormat(fileUrl) {
   const value = String(fileUrl || '').toLowerCase()
@@ -75,7 +50,6 @@ function normalizeStudentResource(entry) {
     class: entry?.class || 'CORE 101',
     summary: entry?.summary || 'No description available yet.',
     fileUrl: entry?.fileUrl || '',
-    previewUrl: entry?.previewUrl || '',
     facultyName: entry?.facultyName || entry?.facultyEmail || 'Faculty member',
     facultyEmail: entry?.facultyEmail || '',
     createdAt: entry?.createdAt || null,
@@ -114,6 +88,7 @@ export default function StudentDashboard() {
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsError, setNotificationsError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedClass, setSelectedClass] = useState('All Classes')
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const deferredSearch = useDeferredValue(searchTerm)
   const notificationsPanelRef = useRef(null)
@@ -240,6 +215,7 @@ export default function StudentDashboard() {
   }, [notificationsOpen])
 
   const catalog = resources
+  const classOptions = ['All Classes', ...new Set(catalog.map((entry) => entry.class))]
   const subjectOptions = ['All Subjects', ...new Set(catalog.map((entry) => entry.subject))]
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
@@ -255,11 +231,11 @@ export default function StudentDashboard() {
     const matchesSubject =
       !selectedSubject || selectedSubject === 'All Subjects' || entry.subject === selectedSubject
 
-    return matchesSearch && matchesSubject
-  })
+    const matchesClass =
+      !selectedClass || selectedClass === 'All Classes' || entry.class === selectedClass
 
-  const leadResources = filteredResources.slice(0, 3)
-  const additionalResources = filteredResources.slice(3)
+    return matchesSearch && matchesSubject && matchesClass
+  })
 
   const persistDownloads = (entries) => {
     setDownloads(entries)
@@ -272,20 +248,6 @@ export default function StudentDashboard() {
 
   const openNotifications = () => {
     setNotificationsOpen((current) => !current)
-  }
-
-  const previewSrcForResource = (entry) => entry.previewUrl || entry.fileUrl || ''
-
-  const handlePreviewImageError = (event) => {
-    const image = event.currentTarget
-
-    if (image.dataset.fallbackApplied === 'true') {
-      return
-    }
-
-    image.dataset.fallbackApplied = 'true'
-    image.src = RESOURCE_PREVIEW_FALLBACK_IMAGE
-    image.removeAttribute('srcset')
   }
 
   const openRequestModal = () => {
@@ -396,11 +358,7 @@ export default function StudentDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="loading-state">
-        <div className="loading-spinner" />
-      </div>
-    )
+    return <StudentDashboardSkeleton />
   }
 
   return (
@@ -408,70 +366,75 @@ export default function StudentDashboard() {
       {requestModalOpen ? (
         <div className="modal-backdrop" role="presentation" onClick={closeRequestModal}>
           <div
-            className="modal-card modal-card--compact"
+            className="modal-card modal-card--compact glass"
             role="dialog"
             aria-modal="true"
             aria-labelledby="resource-request-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <h3 id="resource-request-title">Request Resource</h3>
-            <p>Send a request to the admin team with your course details and preferred format.</p>
+            <div className="modal-icon">
+              <Library size={24} color="var(--primary)" />
+            </div>
+            <h3 id="resource-request-title">Academic Support Request</h3>
+            <p>Our academic teams will review your request and attempt to provision the resources within 48-72 business hours.</p>
 
             <form className="modal-form" onSubmit={handleRequestSubmit}>
               <div className="auth-field">
-                <label htmlFor="request-email">Your Email</label>
-                <input id="request-email" className="auth-textarea" type="email" value={user?.email || ''} readOnly />
+                <label>Authorized Account</label>
+                <div className="auth-textarea" style={{ opacity: 0.6, background: 'rgba(255,255,255,0.03)' }}>
+                   {user?.email || 'Authenticated student'}
+                </div>
               </div>
 
               <div className="modal-form__grid">
                 <div className="auth-field">
-                  <label htmlFor="request-course">Course Name</label>
+                  <label htmlFor="request-course">Reference Code / Course</label>
                   <input
                     id="request-course"
                     className="auth-textarea"
                     type="text"
                     value={resourceRequest.courseName}
                     onChange={(event) => setResourceRequest((current) => ({ ...current, courseName: event.target.value }))}
-                    placeholder="e.g. Database Management"
+                    placeholder="e.g. CS-402"
                     required
                   />
                 </div>
                 <div className="auth-field">
-                  <label htmlFor="request-title">Title Name</label>
+                  <label htmlFor="request-title">Topic / Title</label>
                   <input
                     id="request-title"
                     className="auth-textarea"
                     type="text"
                     value={resourceRequest.titleName}
                     onChange={(event) => setResourceRequest((current) => ({ ...current, titleName: event.target.value }))}
-                    placeholder="e.g. Chapter 4 Notes"
+                    placeholder="e.g. Memory Management"
                     required
                   />
                 </div>
               </div>
 
               <div className="auth-field">
-                <label htmlFor="request-format">Preferred Format</label>
+                <label htmlFor="request-format">Target Format</label>
                 <input
                   id="request-format"
                   className="auth-textarea"
                   type="text"
                   value={resourceRequest.preferredFormat}
                   onChange={(event) => setResourceRequest((current) => ({ ...current, preferredFormat: event.target.value }))}
-                  placeholder="PDF, DOCX, PPTX, Video"
+                  placeholder="PDF, Video, PPTX"
                   required
                 />
               </div>
 
               <div className="auth-field">
-                <label htmlFor="request-details">Additional Details</label>
+                <label htmlFor="request-details">Specific Requirements</label>
                 <textarea
                   id="request-details"
                   className="auth-textarea"
-                  rows={4}
+                  rows={3}
                   value={resourceRequest.details}
                   onChange={(event) => setResourceRequest((current) => ({ ...current, details: event.target.value }))}
-                  placeholder="Optional notes for the admin team"
+                  placeholder="Mention specific chapters or page ranges"
                 />
               </div>
 
@@ -480,7 +443,7 @@ export default function StudentDashboard() {
                   Cancel
                 </button>
                 <button type="submit" className="button-primary" disabled={requestSubmitting}>
-                  {requestSubmitting ? 'Sending...' : 'Send Request'}
+                  {requestSubmitting ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </form>
@@ -489,16 +452,21 @@ export default function StudentDashboard() {
       ) : null}
 
       <div className="dashboard-layout">
-        <aside className="dashboard-sidebar">
+        <aside className="dashboard-sidebar glass">
           <div className="dashboard-sidebar__brand">
-            <h1>Student Space</h1>
-            <p className="dashboard-sidebar__eyebrow">Google OAuth Access</p>
+            <div className="dashboard-sidebar__logo">
+              <BookOpen size={24} color="var(--primary)" />
+            </div>
+            <div>
+              <h1 className="premium-gradient-text" style={{ fontSize: '2.4rem' }}>SPS EDUCATIONAM</h1>
+              <p className="dashboard-sidebar__eyebrow">Academic Library</p>
+            </div>
           </div>
 
           <nav className="dashboard-nav">
             <a href="#student-library" className="dashboard-nav__link dashboard-nav__link--active">
               <Library size={18} />
-              Library
+              Library Catalog
             </a>
             <a href="#student-downloads" className="dashboard-nav__link">
               <Download size={18} />
@@ -506,37 +474,27 @@ export default function StudentDashboard() {
             </a>
             <a href="#student-profile" className="dashboard-nav__link">
               <User size={18} />
-              Profile
+              Student Profile
             </a>
           </nav>
 
           <div className="dashboard-sidebar__footer">
-            <a href="#student-help" className="dashboard-nav__link">
-              <HelpCircle size={18} />
-              Help
-            </a>
+            <div className="status-indicator">
+              <div className="status-indicator__dot status-indicator__dot--active" />
+              <span>System Online</span>
+            </div>
             <button type="button" className="dashboard-nav__link" onClick={logout}>
               <LogOut size={18} />
-              Logout
+              Sign Out
             </button>
           </div>
         </aside>
 
         <div className="dashboard-content">
-          <header className="dashboard-topbar">
+          <header className="dashboard-topbar glass">
             <div className="dashboard-topbar__brand">
               <BookOpen size={18} color="var(--primary)" />
-              <strong>EduResource Hub</strong>
-            </div>
-
-            <div className="dashboard-topbar__search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Search academic resources..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-              />
+              <strong className="premium-gradient-text" style={{ fontSize: '1.2rem' }}>SPS EDUCATIONAM</strong>
             </div>
 
             <div className="dashboard-topbar__actions">
@@ -554,21 +512,18 @@ export default function StudentDashboard() {
               <button type="button" className="dashboard-topbar__icon" aria-label="Settings">
                 <Settings size={18} />
               </button>
-              <div className="dashboard-topbar__user">
+              <div className="dashboard-topbar__user" onClick={() => setSelectedSubject('All Subjects')} style={{ cursor: 'pointer' }}>
                 <div className="dashboard-profile__avatar dashboard-profile__avatar--initials">
                   {getDisplayName(user?.email, 'S').charAt(0)}
                 </div>
               </div>
               {notificationsOpen ? (
-                <div className="notification-popover" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
+                <div className="notification-popover glass" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
                   <div className="notification-popover__header">
                     <div>
-                      <strong>Notifications</strong>
-                      <span>{unreadNotificationCount} unread</span>
+                      <strong>Notifications Center</strong>
+                      <span>{unreadNotificationCount} unread update(s)</span>
                     </div>
-                    <button type="button" className="dashboard-topbar__icon" aria-label="Close notifications" onClick={() => setNotificationsOpen(false)}>
-                      <Circle size={16} />
-                    </button>
                   </div>
 
                   <div className="notification-shell notification-shell--popover">
@@ -580,7 +535,7 @@ export default function StudentDashboard() {
                     ) : null}
 
                     {notificationsLoading ? (
-                      <div className="empty-state">Loading notifications...</div>
+                      <div className="empty-state">Syncing updates...</div>
                     ) : notifications.length > 0 ? (
                       notifications.slice(0, 5).map((notification) => (
                         <article
@@ -594,14 +549,14 @@ export default function StudentDashboard() {
                             <strong>{notification.resourceTitle || 'New resource uploaded'}</strong>
                             <p>{notification.message || 'A faculty member uploaded a new learning resource.'}</p>
                             <span>
-                              {notification.facultyName || notification.facultyEmail || 'Faculty member'} · {formatRelativeUpdate(notification.createdAt)}
+                              {notification.facultyName || notification.facultyEmail || 'Faculty'} · {formatRelativeUpdate(notification.createdAt)}
                             </span>
                           </div>
-                          {!notification.readAt ? <span className="notification-card__dot" /> : null}
+                   {!notification.readAt ? <span className="notification-card__dot" /> : null}
                         </article>
                       ))
                     ) : (
-                      <div className="empty-state">You do not have any notifications yet.</div>
+                      <div className="empty-state">Your inbox is currently clear.</div>
                     )}
                   </div>
 
@@ -613,7 +568,10 @@ export default function StudentDashboard() {
                       disabled={notificationsSaving || unreadNotificationCount === 0}
                     >
                       <CheckCircle2 size={16} />
-                      {notificationsSaving ? 'Updating...' : 'Read all at once'}
+                      {notificationsSaving ? 'Updating...' : 'Clear All Notifications'}
+                    </button>
+                    <button type="button" className="button-secondary" onClick={() => setNotificationsOpen(false)}>
+                      Close
                     </button>
                   </div>
                 </div>
@@ -645,115 +603,105 @@ export default function StudentDashboard() {
             </div>
 
             <div className="filter-row" style={{ marginBottom: '1.5rem' }}>
-              <div className="filter-row__actions">
-                {subjectOptions.map((subject) => (
-                  <button
-                    key={subject}
-                    type="button"
-                    className={subject === selectedSubject ? 'button-primary' : 'button-secondary'}
-                    onClick={() => setSelectedSubject(subject)}
-                  >
-                    {subject}
-                  </button>
-                ))}
+              <div className="filter-row__actions catalog-controls">
+                <label className="catalog-control">
+                  <span>Class</span>
+                  <select value={selectedClass} onChange={(event) => setSelectedClass(event.target.value)}>
+                    {classOptions.map((courseClass) => (
+                      <option key={courseClass} value={courseClass}>
+                        {courseClass}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="catalog-control">
+                  <span>Subject</span>
+                  <select value={selectedSubject} onChange={(event) => setSelectedSubject(event.target.value)}>
+                    {subjectOptions.map((subject) => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="catalog-control catalog-control--search">
+                  <span>Search title</span>
+                  <div className="dashboard-topbar__search catalog-search-field">
+                    <Search size={16} />
+                    <input
+                      type="text"
+                      placeholder="Search by resource title"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                    />
+                  </div>
+                </label>
               </div>
               <span className="metric-card__label">
                 {filteredResources.length} item(s)
               </span>
             </div>
-
             {filteredResources.length > 0 ? (
               <div className="resource-grid">
-                {leadResources.map((entry) => {
+                {filteredResources.map((entry) => {
                   const tone = getSubjectTone(entry.subject)
                   return (
-                    <article key={entry.id} className="resource-card">
+                    <article key={entry.id} className="resource-card glass">
                       <div className="resource-card__meta">
-                        <span style={{ color: tone === 'primary' ? 'var(--primary)' : 'var(--secondary)' }}>
+                        <span className="pill-label pill-label--sm" style={{ 
+                          background: tone === 'primary' ? 'rgba(182,160,255,0.1)' : 'rgba(0,175,254,0.1)',
+                          color: tone === 'primary' ? 'var(--primary)' : 'var(--secondary)'
+                        }}>
                           {entry.subject}
                         </span>
-                        <span>/</span>
-                        <span style={{ color: 'var(--secondary)' }}>
-                          {(entry.fileFormat || entry.format || 'FILE').toUpperCase()} / {
+                        <span className="pill-label pill-label--sm">{entry.class}</span>
+                        <span className="resource-card__type">
+                          {(entry.fileFormat || entry.format || 'FILE').toUpperCase()} · {
                             entry.fileSize 
                               ? (entry.fileSize / 1024 / 1024).toFixed(1) + ' MB'
                               : (entry.size || 'Unknown')
                           }
                         </span>
                       </div>
-                      {previewSrcForResource(entry) ? (
-                        <div className="resource-card__preview">
-                          <img
-                            src={previewSrcForResource(entry)}
-                            alt={entry.title}
-                            loading="lazy"
-                            onError={handlePreviewImageError}
-                          />
-                        </div>
-                      ) : null}
                       <div className="resource-card__body">
                         <h3>{entry.title}</h3>
                         <p>{entry.summary}</p>
                         <div className="resource-card__uploader">
-                          <User size={14} />
-                          <span>Uploaded by {entry.facultyName || entry.facultyEmail || 'Faculty member'}</span>
+                          <div className="dashboard-profile__avatar dashboard-profile__avatar--initials" style={{ width: 22, height: 22, fontSize: 10 }}>
+                            {(entry.facultyName || 'F').charAt(0)}
+                          </div>
+                          <span>{entry.facultyName || entry.facultyEmail || 'Faculty'}</span>
                         </div>
                       </div>
                       <div className="resource-card__footer">
                         <span className="metric-card__label">{formatRelativeUpdate(entry.updatedAt || entry.createdAt)}</span>
                         <button type="button" className="resource-card__action" onClick={() => handleResourceAction(entry)}>
-                          {entry.isPlayable ? <Play size={18} /> : <Download size={18} />}
+                          {entry.isPlayable ? <Play size={18} fill="currentColor" /> : <Download size={18} />}
                         </button>
                       </div>
                     </article>
                   )
                 })}
-
-                {additionalResources.map((entry) => (
-                  <article key={entry.id} className="resource-card">
-                    <div className="resource-card__meta">
-                      <span>{entry.subject}</span>
-                      <span>/</span>
-                      <span>
-                        {(entry.fileFormat || entry.format || 'FILE').toUpperCase()} / {
-                          entry.fileSize 
-                            ? (entry.fileSize / 1024 / 1024).toFixed(1) + ' MB'
-                            : (entry.size || 'Unknown')
-                        }
-                      </span>
-                    </div>
-                    {previewSrcForResource(entry) ? (
-                      <div className="resource-card__preview">
-                        <img
-                          src={previewSrcForResource(entry)}
-                          alt={entry.title}
-                          loading="lazy"
-                          onError={handlePreviewImageError}
-                        />
-                      </div>
-                    ) : null}
-                    <div className="resource-card__body">
-                      <h3>{entry.title}</h3>
-                      <p>{entry.summary}</p>
-                      <div className="resource-card__uploader">
-                        <User size={14} />
-                        <span>Uploaded by {entry.facultyName || entry.facultyEmail || 'Faculty member'}</span>
-                      </div>
-                    </div>
-                    <div className="resource-card__footer">
-                      <span className="metric-card__label">{formatRelativeUpdate(entry.updatedAt || entry.createdAt)}</span>
-                      <button type="button" className="resource-card__action" onClick={() => handleResourceAction(entry)}>
-                        {entry.isPlayable ? <Play size={18} /> : <Download size={18} />}
-                      </button>
-                    </div>
-                  </article>
-                ))}
               </div>
             ) : (
               <div className="support-grid">
-                <article className="support-card">
-                  <span className="metric-card__label">No Resources Available</span>
-                  <p>The student catalog is currently empty for the selected filters.</p>
+                <article className="support-card glass">
+                  <span className="metric-card__label">No results found</span>
+                  <p>Try another search term or reset class and subject filters to view all resources.</p>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    style={{ width: 'fit-content', marginTop: '0.9rem' }}
+                    onClick={() => {
+                      setSearchTerm('')
+                      setSelectedSubject('All Subjects')
+                      setSelectedClass('All Classes')
+                    }}
+                  >
+                    Reset filters
+                  </button>
                 </article>
               </div>
             )}
@@ -768,7 +716,7 @@ export default function StudentDashboard() {
             </div>
 
             <div className="downloads-grid">
-              <article className="downloads-card">
+              <article className="downloads-card glass">
                 <span className="metric-card__label">Downloaded Resources</span>
                 <div className="downloads-list">
                   {downloads.length > 0 ? (
@@ -789,12 +737,12 @@ export default function StudentDashboard() {
                 </div>
               </article>
 
-              <article className="support-card" id="student-profile">
+              <article className="support-card glass" id="student-profile">
                 <span className="metric-card__label">Profile Snapshot</span>
                 <div className="profile-list">
                   <div className="profile-list__item">
                     <span>Email</span>
-                    <strong>{user?.email || 'student@eduresourcehub.edu'}</strong>
+                    <strong>{user?.email || 'student@spseducationam.edu'}</strong>
                   </div>
                   <div className="profile-list__item">
                     <span>Role</span>
@@ -818,7 +766,7 @@ export default function StudentDashboard() {
             </div>
 
             <div className="support-grid">
-              <article className="support-card">
+              <article className="support-card glass">
                 <span className="metric-card__label">Resource Request</span>
                 <p>Send a request with the course code, title, and preferred format so faculty can review it quickly.</p>
                 <button
@@ -831,7 +779,7 @@ export default function StudentDashboard() {
                 </button>
               </article>
 
-              <article className="support-card">
+              <article className="support-card glass">
                 <span className="metric-card__label">Request Status</span>
                 <p>Submitted requests are sent to the admin queue so the team can mark them pending, under review, or done.</p>
               </article>

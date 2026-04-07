@@ -1,11 +1,11 @@
 {
-  "name": "edu-resource-hub",
+  "name": "edu-resource",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "packageManager": "npm@10.9.2",
   "scripts": {
-    "dev": "next dev --webpack .",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@google-cloud/firestore": "^7.11.0",
-    "cloudinary": "^2.5.1",
+    "boneyard-js": "^1.6.7",
     "firebase": "^11.5.0",
     "framer-motion": "^11.18.2",
     "jose": "^6.2.2",

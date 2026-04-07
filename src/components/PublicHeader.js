@@ -5,7 +5,7 @@ import { Menu, Moon, Globe, X } from 'lucide-react'
 import { useState } from 'react'
 
 export default function PublicHeader({
-  brand = 'EduResource Hub',
+  brand = 'SPS EDUCATIONAM',
   links = [],
   actions = [],
   showUtilityIcons = false,

@@ -27,7 +27,7 @@ exports.validateResource = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("unauthenticated", "User must be logged in.");
   }
 
-  const { title, class: className, subject, fileUrl } = data;
+  const { title, class: className, fileUrl } = data;
 
   // Perform server-side validation here
   if (!fileUrl.endsWith(".pdf")) {

@@ -7,7 +7,7 @@ const FIRESTORE_SETUP_PATTERNS = [
   'database (default) does not exist',
 ]
 
-const CLIENT_FIRESTORE_UNAVAILABLE_KEY = 'eduresourcehub.firestore-unavailable.v1'
+const CLIENT_FIRESTORE_UNAVAILABLE_KEY = 'sps.educationam.firestore-unavailable.v1'
 
 export function isRoleValue(role) {
   return role === 'student' || role === 'faculty' || role === 'admin'

@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import {
   AlertCircle,
   Bell,
@@ -29,6 +30,8 @@ import {
   getInitials,
   getSafeAvatarUrl,
 } from '@/lib/demo-content'
+import { AdminDashboardSkeleton } from '@/components/LoadingStates'
+import { AlertDialog } from '@/components/ui/alert-dialog'
 
 const EMPTY_CREATE_FORM = {
   role: 'faculty',
@@ -90,8 +93,11 @@ export default function AdminDashboard() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM)
   const [submittingCreate, setSubmittingCreate] = useState(false)
-  const [resetModal, setResetModal] = useState(null) // { user: object, password: String, submitting: boolean }
+  const [resetModal, setResetModal] = useState(null)
   const [pendingCredentials, setPendingCredentials] = useState(null)
+  const [deleteModalTarget, setDeleteModalTarget] = useState(null)
+  const [confirmText, setConfirmText] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
   const notificationsPanelRef = useRef(null)
   const deferredUserSearch = useDeferredValue(userSearchTerm)
   const deferredResourceSearch = useDeferredValue(resourceSearchTerm)
@@ -305,7 +311,7 @@ export default function AdminDashboard() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'eduresource-access-control.csv'
+    link.download = 'sps-educationam-access-control.csv'
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -342,29 +348,34 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleStatusChange = async (entry) => {
-    const nextStatus = entry.status === 'active' ? 'disabled' : 'active'
+  const handleDeleteUser = async (entry) => {
+    setDeleteModalTarget(entry)
+    setConfirmText('')
+  }
 
+  const confirmHardDelete = async () => {
+    if (!deleteModalTarget || confirmText !== 'DELETE') {
+      return
+    }
+
+    setIsDeleting(true)
     try {
-      const response = await fetch(`/api/admin/users/${entry.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus }),
+      const response = await fetch(`/api/admin/users/${deleteModalTarget.id}`, {
+        method: 'DELETE',
       })
 
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update the user status.')
+        throw new Error(payload?.error || 'Could not permanently delete the account.')
       }
 
-      setUsers((current) =>
-        current.map((item) =>
-          item.id === entry.id ? payload.user : item
-        )
-      )
-      toast.success(`${entry.displayName || entry.email} is now ${nextStatus}.`)
+      setUsers((current) => current.filter((item) => item.id !== deleteModalTarget.id))
+      toast.success('Account permanently removed.')
+      setDeleteModalTarget(null)
     } catch (error) {
-      toast.error(error.message || 'Could not update the user status.')
+      toast.error(error.message || 'Could not delete the user account.')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -389,7 +400,7 @@ export default function AdminDashboard() {
         role: targetUser.role,
         email: targetUser.email,
       })
-      
+
       setResetModal(null)
       toast.success(forcedPassword ? 'Password updated successfully.' : 'Temporary credentials generated.')
       await loadOverview({ background: true })
@@ -476,20 +487,18 @@ export default function AdminDashboard() {
   }
 
   if (loading) {
-    return (
-      <div className="loading-state">
-        <div className="loading-spinner" />
-      </div>
-    )
+    return <AdminDashboardSkeleton />
   }
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-layout">
-        <aside className="dashboard-sidebar">
+        <aside className="dashboard-sidebar glass">
           <div className="dashboard-sidebar__brand">
-            <h1>EduResource</h1>
-            <p className="dashboard-sidebar__eyebrow">Admin Hub</p>
+            <h1 className="premium-gradient-text" style={{ fontSize: '2.4rem' }}>
+              SPS EDUCATIONAM
+            </h1>
+            <p className="dashboard-sidebar__eyebrow">Admin Center</p>
           </div>
 
           <nav className="dashboard-nav">
@@ -529,7 +538,12 @@ export default function AdminDashboard() {
 
             <div className="dashboard-profile">
               <div className="dashboard-profile__avatar">
-                <img src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)} alt="Admin profile" />
+                <Image
+                  src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)}
+                  alt="Admin profile"
+                  width={44}
+                  height={44}
+                />
               </div>
               <div>
                 <strong>{user?.name || getDisplayName(user?.email, ADMIN_PROFILE.name)}</strong>
@@ -542,7 +556,7 @@ export default function AdminDashboard() {
         </aside>
 
         <div className="dashboard-content">
-          <header className="dashboard-topbar" style={{ justifyContent: 'flex-end' }}>
+          <header className="dashboard-topbar glass" style={{ justifyContent: 'flex-end' }}>
             <div className="dashboard-topbar__actions" style={{ marginLeft: 'auto' }}>
               <button
                 type="button"
@@ -576,12 +590,17 @@ export default function AdminDashboard() {
                   <span>{ADMIN_PROFILE.subtitle}</span>
                 </div>
                 <div className="dashboard-profile__avatar">
-                  <img src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)} alt="Admin profile" />
+                  <Image
+                    src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)}
+                    alt="Admin profile"
+                    width={44}
+                    height={44}
+                  />
                 </div>
               </div>
 
               {notificationsOpen ? (
-                <div className="notification-popover" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
+                <div className="notification-popover glass" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
                   <div className="notification-popover__header">
                     <div>
                       <strong>Notifications</strong>
@@ -606,7 +625,7 @@ export default function AdminDashboard() {
                     ) : null}
 
                     {notificationsLoading ? (
-                      <div className="empty-state">Loading notifications...</div>
+                      <div className="empty-state">Fetching your latest platform notifications and account alerts...</div>
                     ) : notifications.length > 0 ? (
                       notifications.slice(0, 5).map((notification) => (
                         <article
@@ -658,7 +677,7 @@ export default function AdminDashboard() {
                 <h2>Role-Based Access Control</h2>
                 <p>
                   Provision Google-only student access, issue faculty and admin
-                  credentials, and monitor account activity from one protected hub.
+                  credentials, and monitor account activity from one protected environment.
                 </p>
               </div>
             </div>
@@ -671,7 +690,7 @@ export default function AdminDashboard() {
             ) : null}
 
             <div className="metric-grid">
-              <article className="metric-card">
+              <article className="metric-card glass">
                 <div className="metric-card__top">
                   <div className="metric-card__icon" style={{ background: 'rgba(182, 160, 255, 0.16)', color: 'var(--primary)' }}>
                     <Users size={22} />
@@ -682,7 +701,7 @@ export default function AdminDashboard() {
                 <strong className="metric-card__value">{users.length}</strong>
               </article>
 
-              <article className="metric-card">
+              <article className="metric-card glass">
                 <div className="metric-card__top">
                   <div className="metric-card__icon" style={{ background: 'rgba(0, 175, 254, 0.14)', color: 'var(--secondary)' }}>
                     <Shield size={22} />
@@ -693,7 +712,7 @@ export default function AdminDashboard() {
                 <strong className="metric-card__value">{activeStudents}</strong>
               </article>
 
-              <article className="status-panel">
+              <article className="status-panel glass">
                 <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Total Resources Uploaded</span>
                 <strong className="metric-card__value" style={{ fontSize: '2rem' }}>{resources.length}</strong>
                 <div className="status-panel__state">
@@ -757,9 +776,8 @@ export default function AdminDashboard() {
                   />
                 </div>
                 {[
-                  ['all', 'All'],
+                  ['all', 'All Accounts'],
                   ['active', 'Active'],
-                  ['disabled', 'Disabled'],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -781,7 +799,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="table-shell">
+            <div className="table-shell glass">
               <table className="data-table data-table--responsive">
                 <thead>
                   <tr>
@@ -828,10 +846,10 @@ export default function AdminDashboard() {
                           <div className="table-action-group">
                             <button
                               type="button"
-                              className={entry.status === 'active' ? 'text-action text-action--danger' : 'text-action text-action--primary'}
-                              onClick={() => handleStatusChange(entry)}
+                              className="text-action text-action--danger"
+                              onClick={() => handleDeleteUser(entry)}
                             >
-                              {entry.status === 'active' ? 'Disable' : 'Enable'}
+                              Delete
                             </button>
                             <button
                               type="button"
@@ -1212,8 +1230,8 @@ export default function AdminDashboard() {
               Leave the field blank for an auto-generated secure password.
             </p>
 
-            <form 
-              className="modal-form" 
+            <form
+              className="modal-form"
               onSubmit={(e) => {
                 e.preventDefault()
                 setResetModal(prev => ({ ...prev, submitting: true }))
@@ -1257,6 +1275,44 @@ export default function AdminDashboard() {
           </div>
         </div>
       ) : null}
+      <AlertDialog open={Boolean(deleteModalTarget)} onOpenChange={(open) => !open && setDeleteModalTarget(null)}>
+        {deleteModalTarget ? (
+          <div className="ui-dialog__content">
+            <div className="ui-dialog__header">
+              <h3 className="ui-dialog__title">Permanently delete account?</h3>
+              <p className="ui-dialog__description">
+                Remove "{deleteModalTarget.displayName || deleteModalTarget.email}" from the system.
+                This will <strong>immediately</strong> revoke authentication and delete all associated data.
+              </p>
+            </div>
+
+            <div className="auth-field" style={{ marginTop: '1.5rem' }}>
+              <label>Type <strong>DELETE</strong> to confirm</label>
+              <input
+                type="text"
+                className="auth-textarea"
+                placeholder="DELETE"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+              />
+            </div>
+
+            <div className="modal-form__actions" style={{ marginTop: '1.5rem' }}>
+              <button type="button" className="button-secondary" onClick={() => setDeleteModalTarget(null)} disabled={isDeleting}>
+                Keep Account
+              </button>
+              <button 
+                type="button" 
+                className="button-primary button-primary--danger" 
+                onClick={confirmHardDelete}
+                disabled={isDeleting || confirmText !== 'DELETE'}
+              >
+                {isDeleting ? 'Removing...' : 'Permanently Delete'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </AlertDialog>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import ToastProvider from '@/components/ToastProvider'
 import Script from 'next/script'
 
 export const metadata = {
-  title: 'EduResource Hub | The Digital Curator',
+  title: 'SPS EDUCATIONAM | Academic Resource Platform',
   description:
     'A role-based academic resource platform for admins, faculty, and students.',
 }

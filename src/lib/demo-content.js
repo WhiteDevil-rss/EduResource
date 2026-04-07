@@ -12,7 +12,7 @@ export const ADMIN_DEMO_USERS = [
   {
     id: 'marcus-chen',
     name: 'Marcus Chen',
-    email: 'm.chen@edu.hub',
+    email: 'm.chen@edu.com',
     role: 'student',
     status: 'banned',
     avatarType: 'image',
@@ -33,7 +33,7 @@ export const ADMIN_DEMO_USERS = [
   {
     id: 'david-lowery',
     name: 'David Lowery',
-    email: 'd.lowery@edu.hub',
+    email: 'd.lowery@edu.com',
     role: 'student',
     status: 'active',
     avatarType: 'initials',
@@ -251,7 +251,6 @@ export function getSubjectTone(subject) {
 
 /**
  * Ensures a URL used in an img tag is safe and correctly formatted.
- * Specifically handles Cloudinary PDFs by appending .jpg extension for thumbnails.
  */
 export function getSafeAvatarUrl(url, fallback = null) {
   if (!url || typeof url !== 'string') {
@@ -261,11 +260,6 @@ export function getSafeAvatarUrl(url, fallback = null) {
   const trimmed = url.trim()
   if (!trimmed) {
     return fallback
-  }
-
-  // Handle Cloudinary PDF URLs: transform to image thumbnail if it's a PDF
-  if (trimmed.includes('res.cloudinary.com') && trimmed.toLowerCase().endsWith('.pdf')) {
-    return `${trimmed}.jpg` // Cloudinary's trick to render the first page of a PDF as an image
   }
 
   return trimmed

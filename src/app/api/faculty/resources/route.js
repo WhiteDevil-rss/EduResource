@@ -4,18 +4,15 @@ import {
   jsonError,
   requireApiSession,
   withNoStore,
+  ApiError,
 } from '@/lib/api-security'
-import { countAuditRecords, createResourceRecord, listResourceRecords } from '@/lib/server-data'
+import { 
+  countAuditRecords, 
+  createResourceRecord, 
+  listResourceRecords,
+  getRecentAuditCount
+} from '@/lib/server-data'
 import { uploadToDrive } from '@/lib/google-drive'
-
-function withTimeout(promise, timeoutMs, fallbackValue = null) {
-  return Promise.race([
-    promise,
-    new Promise((resolve) => {
-      setTimeout(() => resolve(fallbackValue), timeoutMs)
-    }),
-  ])
-}
 
 export async function GET(request) {
   try {
@@ -73,6 +70,12 @@ export async function POST(request) {
     assertSameOrigin(request)
     const session = await requireApiSession(request, ['faculty'])
     
+    // Rate limit: 5 uploads per 10 minutes
+    const recentUploadCount = await getRecentAuditCount(session.uid, 'resource.created', 600000)
+    if (recentUploadCount >= 5) {
+      throw new ApiError(429, 'Rate limit exceeded: You can only upload 5 resources every 10 minutes.')
+    }
+    
     const contentType = request.headers.get('content-type') || ''
     let payload = {}
 
@@ -94,25 +97,6 @@ export async function POST(request) {
         process.env.GOOGLE_DRIVE_FOLDER_ID
       )
 
-      // 2. Upload Preview to Cloudinary (optional/best-effort)
-      let previewData = null
-      try {
-        previewData = await withTimeout(
-          (async () => {
-            const { uploadPreview } = await import('@/lib/cloudinary')
-            return uploadPreview(buffer, file.name, file.type)
-          })(),
-          3500,
-          null
-        )
-
-        if (!previewData) {
-          console.warn('Preview upload timed out or unavailable, continuing without preview.')
-        }
-      } catch (error) {
-        console.warn('Preview upload failed, continuing without preview:', error?.message || error)
-      }
-
       const fileUrl =
         driveData.webViewLink ||
         (driveData.fileId
@@ -131,8 +115,6 @@ export async function POST(request) {
         fileType: file.type,
         fileSize: file.size,
         fileFormat: file.name.split('.').pop(),
-        previewUrl: previewData?.url || '',
-        previewPublicId: previewData?.publicId || '',
         status: formData.get('status') || 'live'
       }
     } else {

@@ -28,12 +28,6 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 NEXT_PUBLIC_FIREBASE_APP_ID=your-firebase-app-id
 
-# Cloudinary Configuration
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
-NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your-upload-preset
-CLOUDINARY_API_KEY=your-cloudinary-api-key
-CLOUDINARY_API_SECRET=your-cloudinary-api-secret
-
 # Session Security
 SESSION_SECRET=your-long-random-secret-string
 
@@ -94,7 +88,6 @@ In the Cloudflare Pages project settings:
 
 ### Runtime Issues
 - Check Firebase configuration
-- Verify Cloudinary settings
 - Ensure Firestore security rules are deployed
 - Check session secret is properly set
 
@@ -112,7 +105,7 @@ In the Cloudflare Pages project settings:
 ## Performance Optimization
 - Static assets served via Cloudflare CDN
 - API routes optimized for edge computing
-- Image optimization through Next.js and Cloudinary
+- Image optimization through Next.js
 - Caching configured for optimal performance
 
 ## Monitoring

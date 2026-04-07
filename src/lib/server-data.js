@@ -103,8 +103,6 @@ function sanitizeResourceData(docId, data = {}) {
     summary: data.summary || data.description || '',
     driveFileId: data.driveFileId || '',
     driveFileLink: data.driveFileLink || '',
-    previewUrl: data.previewUrl || '',
-    previewPublicId: data.previewPublicId || '',
     category: data.category || '',
     createdAt: data.createdAt || null,
     updatedAt: data.updatedAt || null,
@@ -141,6 +139,48 @@ function sanitizeSessionData(docId, data = {}) {
     lastSeenAt: data.lastSeenAt || null,
     expiresAt: data.expiresAt || null,
   }
+}
+
+export async function getRecentAuditCount(actorUid, action, windowMs = 600000) {
+  const records = await getCollectionRecords(AUDIT_COLLECTION).catch(() => [])
+  const now = Date.now()
+  const cutoff = now - windowMs
+
+  return records
+    .map((document) => sanitizeAuditData(document.id, getDocumentData(document)))
+    .filter((record) => {
+      const createdAt = getTimestampValue(record.createdAt)
+      return (
+        record.actorUid === actorUid &&
+        record.action === action &&
+        createdAt &&
+        createdAt >= cutoff
+      )
+    }).length
+}
+
+export async function deleteUserAndData(userId) {
+  if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+    throw new Error('Invalid userId provided for deletion.')
+  }
+
+  // 1. Delete from Firestore
+  await firestore.deleteDoc(`${USERS_COLLECTION}/${userId}`).catch(() => null)
+  
+  // 2. Delete from Auth (requires privileged access)
+  await auth.deleteUser(userId).catch((err) => {
+    console.warn(`Auth deletion failed for ${userId}:`, err?.message || err)
+  })
+
+  // 3. Mark as deleted in audit log
+  await createAuditRecord({
+    action: 'user.deleted',
+    targetId: userId,
+    targetRole: 'user',
+    message: `User ${userId} was permanently removed.`,
+  })
+
+  return true
 }
 
 function sanitizeNotificationData(docId, data = {}) {
@@ -1069,8 +1109,6 @@ export async function createResourceRecord({ session, payload }) {
     status,
     driveFileId: String(payload?.driveFileId || '').trim(),
     driveFileLink: String(payload?.driveFileLink || '').trim(),
-    previewUrl: String(payload?.previewUrl || '').trim(),
-    previewPublicId: String(payload?.previewPublicId || '').trim(),
     category: String(payload?.category || '').trim(),
     uploadedBy: session.uid,
     facultyId: session.uid,
@@ -1116,8 +1154,6 @@ export async function createResourceRecord({ session, payload }) {
     status,
     driveFileId: String(payload?.driveFileId || '').trim(),
     driveFileLink: String(payload?.driveFileLink || '').trim(),
-    previewUrl: String(payload?.previewUrl || '').trim(),
-    previewPublicId: String(payload?.previewPublicId || '').trim(),
     category: String(payload?.category || '').trim(),
     uploadedBy: session.uid,
     facultyId: session.uid,
@@ -1167,8 +1203,6 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
     if (payload?.fileFormat !== undefined) updated.fileFormat = String(payload.fileFormat).trim()
     if (payload?.driveFileId !== undefined) updated.driveFileId = String(payload.driveFileId).trim()
     if (payload?.driveFileLink !== undefined) updated.driveFileLink = String(payload.driveFileLink).trim()
-    if (payload?.previewUrl !== undefined) updated.previewUrl = String(payload.previewUrl).trim()
-    if (payload?.previewPublicId !== undefined) updated.previewPublicId = String(payload.previewPublicId).trim()
     if (payload?.category !== undefined) updated.category = String(payload.category).trim()
   
     await firestore.setDoc(`${RESOURCES_COLLECTION}/${resourceId}`, updated, true)
@@ -1233,4 +1267,41 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
     targetRole: 'resource',
     message: `Deleted resource "${current.title || resourceId}".`,
   })
+}
+
+export async function deleteManagedUser({ userId, actorUid, actorRole }) {
+  const record = await getRawUserRecordById(userId)
+  if (!record) {
+    throw new Error('User account not found.')
+  }
+
+  // Prevent admins from deleting their own account
+  if (record.data.role === 'admin' && record.id === actorUid) {
+    throw new Error('You cannot delete your own admin account.')
+  }
+
+  // 1. Delete from Firebase Auth if UID exists
+  if (record.data.uid) {
+    try {
+      await auth.deleteUser(record.data.uid)
+    } catch (error) {
+      console.warn('Firebase Auth deletion warning:', error?.message || error)
+      // We continue even if auth deletion fails (e.g. if user was only in Firestore)
+    }
+  }
+
+  // 2. Delete from Firestore
+  await firestore.deleteDoc(`${USERS_COLLECTION}/${record.id}`)
+
+  // 3. Create Audit Record
+  await createAuditRecord({
+    actorUid,
+    actorRole,
+    action: 'user.deleted',
+    targetId: record.id,
+    targetRole: record.data.role,
+    message: `Permanently deleted account ${record.data.email || record.id}.`,
+  })
+
+  return { success: true }
 }

@@ -43,6 +43,7 @@ next-env.d.ts
 .wrangler/
 .github/
 .scripts/
+.env.example
 
 # Keep documentation logs versioned
 !Documents/*.log
