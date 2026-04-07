@@ -9,7 +9,6 @@ import {
   HelpCircle,
   Inbox,
   Library,
-  RotateCcw,
   Send,
   Mail,
   ShieldCheck,
@@ -451,15 +450,15 @@ export default function StudentDashboard() {
           userLabel={getDisplayName(user?.email, 'Student')}
         />
 
-        <main className="student-panel__content">
+        <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel" role="dialog" aria-label="Notifications center">
-              <CardHeader>
+              <Card className="student-notification-panel w-full max-w-md max-h-[60vh] flex flex-col" role="dialog" aria-label="Notifications center">
+              <CardHeader className="shrink-0 p-5">
                 <CardTitle>Notifications</CardTitle>
                 <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
               </CardHeader>
-              <CardContent className="student-notification-list">
+              <CardContent className="student-notification-list flex-1 overflow-y-auto p-5 pt-0 custom-scrollbar">
                 {notificationsError ? (
                   <div className="student-inline-message student-inline-message--error">
                     <HelpCircle size={16} />
@@ -490,18 +489,18 @@ export default function StudentDashboard() {
                       </button>
                     ))
                   : null}
-                <div className="student-notification-actions">
+                <div className="student-notification-actions mt-4 flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={readAllNotifications}
                     disabled={notificationsSaving || unreadNotificationCount === 0}
                   >
-                    <CheckCircle2 size={14} />
+                    <CheckCircle2 size={14} className="mr-2" />
                     {notificationsSaving ? 'Updating...' : 'Mark all as read'}
                   </Button>
-                    <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
-                      <X size={14} />
+                  <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
+                    <X size={14} className="mr-2" />
                     Close
                   </Button>
                 </div>
@@ -517,12 +516,14 @@ export default function StudentDashboard() {
             </div>
           ) : null}
 
-          <section id="student-overview" className="student-section" aria-label="Dashboard overview">
-            <div className="student-section__heading">
-              <h2>Overview</h2>
-              <p>Your central space to discover and download academic resources.</p>
+          <section id="student-overview" className="student-section flex flex-col gap-4" aria-label="Dashboard overview">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Overview</h2>
+                <p className="text-muted-foreground text-sm">Your central space to discover and download academic resources.</p>
+              </div>
             </div>
-            <div className="student-metrics">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader>
                   <CardDescription>Total Resources</CardDescription>
@@ -550,31 +551,31 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section id="student-resources" className="student-section" aria-label="Resource library">
-            <div className="student-section__heading">
-              <h2>Resource Library</h2>
-              <p>Filter by class and subject to quickly find what you need.</p>
+          <section id="student-resources" className="student-section flex flex-col gap-4" aria-label="Resource library">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Resource Library</h2>
+                <p className="text-muted-foreground text-sm">Filter by class and subject to quickly find what you need.</p>
+              </div>
             </div>
 
-            <Card className="student-filter-card">
-              <CardContent className="student-filter-card__content">
-                <div className="student-filter-label">
-                  <Filter size={14} />
-                  <span>Filters</span>
+            <Card className="p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden xl:flex">
+                  <Filter size={16} /><span>Filters</span>
                 </div>
-                <label className="student-filter-control student-filter-control--search">
-                  <span>Search</span>
+                <div className="flex-1">
                   <Input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Search by title, class, subject, or faculty"
+                    placeholder="Search by title, class, subject..."
                     aria-label="Search publications"
+                    className="w-full"
                   />
-                </label>
-                <label className="student-filter-control">
-                  <span>Class</span>
+                </div>
+                <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
                   <select
-                    className="ui-input"
+                    className="ui-input flex-1"
                     value={selectedClass}
                     onChange={(event) => setSelectedClass(event.target.value)}
                     aria-label="Filter resources by class"
@@ -585,11 +586,8 @@ export default function StudentDashboard() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="student-filter-control">
-                  <span>Subject</span>
                   <select
-                    className="ui-input"
+                    className="ui-input flex-1"
                     value={selectedSubject}
                     onChange={(event) => setSelectedSubject(event.target.value)}
                     aria-label="Filter resources by subject"
@@ -600,44 +598,14 @@ export default function StudentDashboard() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <Badge variant="outline" className="student-filter-count">
-                  {filteredResources.length} result(s)
-                </Badge>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setSearchInput('')
-                    setSearchTerm('')
-                    setSelectedClass('All Classes')
-                    setSelectedSubject('All Subjects')
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </CardContent>
-            </Card>
-
-            {catalog.length === 0 ? (
-              <Card className="student-empty-state" role="status" aria-live="polite">
-                <CardContent>
-                  <Inbox size={32} />
-                  <h3>No resources available yet</h3>
-                  <p>Resources published by faculty will appear here when available.</p>
-                </CardContent>
-              </Card>
-            ) : null}
-
-            {catalog.length > 0 && filteredResources.length === 0 ? (
-              <Card className="student-empty-state" role="status" aria-live="polite">
-                <CardContent>
-                  <Library size={32} />
-                  <h3>No results found</h3>
-                  <p>Try a different search term or reset your selected filters.</p>
+                </div>
+                <div className="shrink-0 flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto">
+                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
+                    {filteredResources.length} items
+                  </Badge>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => {
                       setSearchInput('')
                       setSearchTerm('')
@@ -645,14 +613,42 @@ export default function StudentDashboard() {
                       setSelectedSubject('All Subjects')
                     }}
                   >
-                    Reset filters
+                    Clear filters
                   </Button>
-                </CardContent>
+                </div>
+              </div>
+            </Card>
+
+            {catalog.length === 0 ? (
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground" role="status" aria-live="polite">
+                <Inbox size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No resources available yet</h3>
+                <p>Resources published by faculty will appear here when available.</p>
+              </Card>
+            ) : null}
+
+            {catalog.length > 0 && filteredResources.length === 0 ? (
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground" role="status" aria-live="polite">
+                <Library size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No results found</h3>
+                <p className="mb-4">Try a different search term or reset your selected filters.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setSearchInput('')
+                    setSearchTerm('')
+                    setSelectedClass('All Classes')
+                    setSelectedSubject('All Subjects')
+                  }}
+                >
+                  Reset filters
+                </Button>
               </Card>
             ) : null}
 
             {filteredResources.length > 0 ? (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredResources.map((entry) => (
                   <StudentResourceCard key={entry.id} entry={entry} onDownload={handleResourceAction} />
                 ))}
@@ -660,57 +656,61 @@ export default function StudentDashboard() {
             ) : null}
           </section>
 
-          <section id="student-downloads" className="student-section" aria-label="Recent downloads">
-            <div className="student-section__heading">
-              <h2>My Downloads</h2>
-              <p>Recently opened files from this device.</p>
+          <section id="student-downloads" className="student-section flex flex-col gap-4" aria-label="Recent downloads">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">My Downloads</h2>
+                <p className="text-muted-foreground text-sm">Recently opened files from this device.</p>
+              </div>
             </div>
 
-            <Card>
-              <CardContent className="student-download-list">
+            <Card className="max-h-[50vh] flex flex-col">
+              <CardContent className="student-download-list flex-1 overflow-y-auto p-5 custom-scrollbar">
                 {downloads.length > 0 ? (
                   downloads.map((entry) => (
-                    <div key={entry.id} className="student-download-item">
-                      <div>
-                        <strong>{entry.title}</strong>
-                        <p>{entry.subject}</p>
+                    <div key={entry.id} className="student-download-item flex justify-between items-center py-3 border-b border-border last:border-0 gap-4">
+                      <div className="flex-1 min-w-0">
+                        <strong className="block text-sm font-medium line-clamp-1" title={entry.title}>{entry.title || 'Untitled resource'}</strong>
+                        <p className="text-xs text-muted-foreground mt-1">{entry.subject || 'General'}</p>
                       </div>
-                      <a href={`/api/student/resources/${entry.id}/download`} target="_blank" rel="noreferrer">
-                        <Button type="button" variant="secondary">
-                          <Download size={14} />
+                      <a href={`/api/student/resources/${entry.id}/download`} target="_blank" rel="noreferrer" className="shrink-0">
+                        <Button type="button" variant="secondary" size="sm">
+                          <Download size={14} className="mr-2" />
                           Open
                         </Button>
                       </a>
                     </div>
                   ))
                 ) : (
-                  <p className="student-muted-text">Your downloads will appear after you open a resource.</p>
+                  <div className="py-10 flex flex-col items-center text-center text-muted-foreground">
+                    <p>Your downloads will appear after you open a resource.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </section>
 
-          <section id="student-profile" className="student-section" aria-label="Profile details">
+          <section id="student-profile" className="student-section flex flex-col gap-4" aria-label="Profile details">
             <div className="student-section__heading">
-              <h2>Profile</h2>
-              <p>Account and authentication details.</p>
+              <h2 className="text-xl font-semibold">Profile</h2>
+              <p className="text-muted-foreground text-sm">Account and authentication details.</p>
             </div>
 
-            <div className="student-profile-cards">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card>
                 <CardHeader>
                   <CardDescription>Email</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Mail size={14} />
-                    {user?.email || 'student@spseducationam.edu'}
+                  <CardTitle className="inline-flex items-center gap-2 text-lg">
+                    <Mail size={16} className="text-muted-foreground shrink-0" />
+                    <span className="truncate">{user?.email || 'student@spseducationam.edu'}</span>
                   </CardTitle>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader>
                   <CardDescription>Role</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <UserRound size={14} />
+                  <CardTitle className="inline-flex items-center gap-2">
+                    <UserRound size={16} />
                     Student
                   </CardTitle>
                 </CardHeader>
@@ -718,8 +718,8 @@ export default function StudentDashboard() {
               <Card>
                 <CardHeader>
                   <CardDescription>Authentication</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <ShieldCheck size={14} />
+                  <CardTitle className="inline-flex items-center gap-2">
+                    <ShieldCheck size={16} />
                     Google OAuth
                   </CardTitle>
                 </CardHeader>
@@ -727,20 +727,20 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section id="student-support" className="student-section" aria-label="Help and support">
+          <section id="student-support" className="student-section flex flex-col gap-4" aria-label="Help and support">
             <div className="student-section__heading">
-              <h2>Help and Requests</h2>
-              <p>Need specific materials? Submit a request for faculty review.</p>
+              <h2 className="text-xl font-semibold">Help and Requests</h2>
+              <p className="text-muted-foreground text-sm">Need specific materials? Submit a request for faculty review.</p>
             </div>
 
             <Card>
-              <CardContent className="student-support-card">
+              <CardContent className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <h3>Request a resource</h3>
-                  <p>Include course code, topic, preferred format, and details for faster turnaround.</p>
+                  <h3 className="font-semibold text-lg">Request a resource</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Include course code, topic, preferred format, and details for faster turnaround.</p>
                 </div>
-                <Button type="button" onClick={openRequestModal}>
-                  <BookOpen size={14} />
+                <Button type="button" onClick={openRequestModal} className="shrink-0 w-full sm:w-auto">
+                  <BookOpen size={16} className="mr-2" />
                   Request resource
                 </Button>
               </CardContent>

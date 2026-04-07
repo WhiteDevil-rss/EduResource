@@ -2,7 +2,6 @@ import sumitSirImage from '../../team/SumitSir.jpeg'
 import prakashSirImage from '../../team/PrakashSir.jpeg'
 import shivamTiwariImage from '../../team/ShivamTiwari.png'
 import rajputShivamSinghImage from '../../team/RajputShivamSingh.jpg'
-import { ins } from 'framer-motion/client'
 
 export const TEAM_FALLBACK_IMAGE = rajputShivamSinghImage
 

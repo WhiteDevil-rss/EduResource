@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { useMemo, useState, useEffect } from 'react'
-import { Github, Globe, Instagram, Linkedin, Mail } from 'lucide-react'
+import { Github, Globe, Instagram, Linkedin, Mail, MessageCircle, Youtube } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
 import { TEAM_FALLBACK_IMAGE } from '@/lib/team'
@@ -12,6 +12,8 @@ const SOCIALS = [
   { key: 'github', label: 'GitHub', icon: Github },
   { key: 'website', label: 'Website', icon: Globe },
   { key: 'instagram', label: 'Instagram', icon: Instagram },
+  { key: 'youtube', label: 'YouTube', icon: Youtube },
+  { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { key: 'email', label: 'Email', icon: Mail, isMail: true },
 ]
 

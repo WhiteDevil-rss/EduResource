@@ -28,7 +28,6 @@ import toast from 'react-hot-toast'
 import { AdminDashboardSkeleton } from '@/components/LoadingStates'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
-import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -516,15 +515,15 @@ export default function AdminDashboard() {
           userLabel={getDisplayName(user?.email, 'Admin')}
         />
 
-        <main className="student-panel__content">
+        <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel" role="dialog" aria-label="Notifications center">
-                <CardHeader>
+              <Card className="student-notification-panel w-full max-w-md max-h-[60vh] flex flex-col" role="dialog" aria-label="Notifications center">
+                <CardHeader className="shrink-0 p-5">
                   <CardTitle>Notifications</CardTitle>
                   <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
                 </CardHeader>
-                <CardContent className="student-notification-list">
+                <CardContent className="student-notification-list flex-1 overflow-y-auto p-5 pt-0 custom-scrollbar">
                   {notificationsError ? (
                     <div className="student-inline-message student-inline-message--error">
                       <HelpCircle size={16} />
@@ -576,13 +575,15 @@ export default function AdminDashboard() {
             </div>
           ) : null}
 
-          <section id="admin-overview" className="student-section" aria-label="Admin overview">
-            <div className="student-section__heading">
-              <h2>Overview</h2>
-              <p>Unified governance across users, content, and requests.</p>
-              <p className="student-muted-text">{refreshing ? 'Refreshing live data...' : 'Data synced from protected APIs.'}</p>
+          <section id="admin-overview" className="student-section flex flex-col gap-4" aria-label="Admin overview">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Overview</h2>
+                <p className="text-muted-foreground text-sm">Unified governance across users, content, and requests.</p>
+              </div>
+              <p className="text-sm font-medium animate-pulse text-muted-foreground">{refreshing ? 'Refreshing live data...' : 'Data synced from protected APIs.'}</p>
             </div>
-            <div className="student-metrics">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader>
                   <CardDescription>Total Accounts</CardDescription>
@@ -611,234 +612,289 @@ export default function AdminDashboard() {
           </section>
 
           {pendingCredentials ? (
-            <section className="student-section" aria-label="One-time credentials">
+            <section className="student-section flex flex-col gap-4" aria-label="One-time credentials">
               <Card>
                 <CardHeader>
                   <CardTitle>One-Time Credentials</CardTitle>
                   <CardDescription>Copy and share securely. This view appears once per admin session.</CardDescription>
                 </CardHeader>
-                <CardContent className="student-download-list">
-                  <div className="student-download-item"><strong><UserRound size={14} />Role</strong><p>{pendingCredentials.role}</p></div>
-                  <div className="student-download-item"><strong><Mail size={14} />Email</strong><p>{pendingCredentials.email}</p></div>
-                  {pendingCredentials.loginId ? <div className="student-download-item"><strong><FileText size={14} />Login ID</strong><p>{pendingCredentials.loginId}</p></div> : null}
-                  {pendingCredentials.temporaryPassword ? <div className="student-download-item"><strong><KeyRound size={14} />Temporary Password</strong><p>{pendingCredentials.temporaryPassword}</p></div> : null}
+                <CardContent className="student-download-list flex flex-col gap-4">
+                  <div className="flex justify-between items-center py-2 border-b border-border"><strong><UserRound size={14} className="mr-2 inline" />Role</strong><p>{pendingCredentials.role}</p></div>
+                  <div className="flex justify-between items-center py-2 border-b border-border"><strong><Mail size={14} className="mr-2 inline" />Email</strong><p>{pendingCredentials.email}</p></div>
+                  {pendingCredentials.loginId ? <div className="flex justify-between items-center py-2 border-b border-border"><strong><FileText size={14} className="mr-2 inline" />Login ID</strong><p className="font-mono">{pendingCredentials.loginId}</p></div> : null}
+                  {pendingCredentials.temporaryPassword ? <div className="flex justify-between items-center py-2 border-b border-border"><strong><KeyRound size={14} className="mr-2 inline"/>Temporary Password</strong><p className="font-mono">{pendingCredentials.temporaryPassword}</p></div> : null}
                 </CardContent>
               </Card>
             </section>
           ) : null}
 
-          <section id="admin-users" className="student-section" aria-label="User management">
+          <section id="admin-users" className="student-section flex flex-col gap-4" aria-label="User management">
             <div className="student-section__heading">
-              <h2>User Management</h2>
-              <p>Create, review, and remove accounts with role-aware controls.</p>
+              <h2 className="text-xl font-semibold">User Management</h2>
+              <p className="text-muted-foreground text-sm">Create, review, and remove accounts with role-aware controls.</p>
             </div>
-            <Card className="student-filter-card">
-              <CardContent className="student-filter-card__content">
-                <div className="student-filter-label"><Users size={14} /><span>Filters</span></div>
-                <label className="student-filter-control student-filter-control--search">
-                  <span>Search</span>
+            <Card className="p-4 sm:p-5">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
+                  <Users size={16} /><span>Filters</span>
+                </div>
+                <div className="flex-1">
                   <Input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Search users by name or email"
+                    placeholder="Search users by name or email..."
                     aria-label="Search users"
+                    className="w-full"
                   />
-                </label>
-                <label className="student-filter-control">
-                  <span>Role</span>
-                  <select className="ui-input" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
+                </div>
+                <div className="w-full md:w-auto">
+                  <select className="ui-input w-full md:w-auto" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
                     <option value="all">All Roles</option>
                     <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
                     <option value="admin">Admin</option>
                   </select>
-                </label>
-                <Button type="button" variant="outline" onClick={exportUsers}><Download size={14} />Export CSV</Button>
-                <Button type="button" onClick={() => setCreateOpen(true)}><UserPlus size={14} />Create Account</Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setSearchInput('')
-                    setSearchTerm('')
-                    setUserRoleFilter('all')
-                  }}
-                >
-                  <RotateCcw size={14} />
-                  Clear filters
-                </Button>
-              </CardContent>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                  <Button type="button" variant="outline" className="flex-1 md:flex-none" onClick={exportUsers}><Download size={14} className="mr-2"/>Export</Button>
+                  <Button type="button" className="flex-1 md:flex-none" onClick={() => setCreateOpen(true)}><UserPlus size={14} className="mr-2"/>Create</Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Clear filters"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearchTerm('')
+                      setUserRoleFilter('all')
+                    }}
+                  >
+                    <RotateCcw size={16} />
+                  </Button>
+                </div>
+              </div>
             </Card>
+            
             {filteredUsers.length === 0 ? (
-              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground">
+                <Inbox size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No users found</h3>
+                <p>Adjust search or role filters.</p>
+              </Card>
             ) : (
-              <div className="student-resource-grid student-section-scroll">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredUsers.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
-                        <Badge>{entry.role}</Badge>
-                        <Badge variant="outline">{entry.status}</Badge>
+                  <Card key={entry.id} className="p-5 flex flex-col gap-4">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-base truncate" title={entry.displayName || getDisplayName(entry.email, 'User')}>
+                            {entry.displayName || getDisplayName(entry.email, 'User')}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground truncate" title={entry.email}>{entry.email}</p>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="outline"><EllipsisVertical size={14} />Actions</Button>
+                          <Button type="button" variant="ghost" size="icon" className="shrink-0 -mr-2"><EllipsisVertical size={16} /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="dashboard-dropdown-menu">
+                        <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
-                            <RefreshCcw size={14} />
-                            Reset
+                            <RefreshCcw size={14} className="mr-2" />
+                            Reset Password
                           </DropdownMenuItem>
-                          {entry.role === 'admin' ? null : (
+                          {entry.role !== 'admin' && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onSelect={() => handleSetUserStatus(entry, entry.status === 'disabled' ? 'active' : 'disabled')}>
-                                {entry.status === 'disabled' ? <Sparkles size={14} /> : <Ban size={14} />}
-                                {entry.status === 'disabled' ? 'Enable' : 'Disable'}
+                                {entry.status === 'disabled' ? <Sparkles size={14} className="mr-2" /> : <Ban size={14} className="mr-2" />}
+                                {entry.status === 'disabled' ? 'Enable User' : 'Disable User'}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => {
+                              <DropdownMenuItem className="text-destructive font-medium focus:text-destructive" onSelect={() => {
                                 setDeleteModalTarget(entry)
                                 setConfirmText('')
                               }}>
-                                <Trash2 size={14} />
-                                Delete
+                                <Trash2 size={14} className="mr-2" />
+                                Delete User
                               </DropdownMenuItem>
                             </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.email}</p>
-                      <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
-                    </CardContent>
+                    </div>
+                    <div className="flex items-center gap-2 mt-auto pt-2 border-t">
+                      <Badge variant="secondary" className="capitalize">{entry.role}</Badge>
+                      <Badge variant={entry.status === 'disabled' ? 'destructive' : 'outline'} className="capitalize">{entry.status}</Badge>
+                    </div>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="admin-resources" className="student-section" aria-label="Resource audit">
+          <section id="admin-resources" className="student-section flex flex-col gap-4" aria-label="Resource audit">
             <div className="student-section__heading">
-              <h2>Resources & Publications</h2>
-              <p>Audit platform publications with class and subject filters.</p>
+              <h2 className="text-xl font-semibold">Resources & Publications</h2>
+              <p className="text-muted-foreground text-sm">Audit platform publications with class and subject filters.</p>
             </div>
-            <Card className="student-filter-card">
-              <CardContent className="student-filter-card__content">
-                <div className="student-filter-label"><FileText size={14} /><span>Filters</span></div>
-                <label className="student-filter-control">
-                  <span>Class</span>
-                  <select className="ui-input" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
+            <Card className="p-4 sm:p-5">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
+                  <FileText size={16} /><span>Filters</span>
+                </div>
+                <div className="flex-1 flex gap-4 w-full md:w-auto">
+                  <select className="ui-input flex-1" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
                     {resourceClassOptions.map((entryClass) => (
                       <option key={entryClass} value={entryClass}>{entryClass}</option>
                     ))}
                   </select>
-                </label>
-                <label className="student-filter-control">
-                  <span>Subject</span>
-                  <select className="ui-input" value={resourceSubjectFilter} onChange={(event) => setResourceSubjectFilter(event.target.value)}>
+                  <select className="ui-input flex-1" value={resourceSubjectFilter} onChange={(event) => setResourceSubjectFilter(event.target.value)}>
                     {resourceSubjectOptions.map((subject) => (
                       <option key={subject} value={subject}>{subject}</option>
                     ))}
                   </select>
-                </label>
-                <Badge variant="outline" className="student-filter-count">{filteredResources.length} result(s)</Badge>
-              </CardContent>
+                </div>
+                <div className="shrink-0 flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
+                    {filteredResources.length} items
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Clear filters"
+                    onClick={() => {
+                      setResourceClassFilter('All Classes')
+                      setResourceSubjectFilter('All Subjects')
+                    }}
+                  >
+                    <RotateCcw size={16} />
+                  </Button>
+                </div>
+              </div>
             </Card>
+            
             {filteredResources.length === 0 ? (
-              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No resources found</h3><p>Adjust search, class, or subject filters.</p></CardContent></Card>
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground">
+                <Inbox size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No resources found</h3>
+                <p>Adjust search, class, or subject filters.</p>
+              </Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredResources.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.subject || 'General'}</Badge>
-                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
-                      </div>
-                      <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
-                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
-                    </CardContent>
+                  <Card key={entry.id} className="p-5 flex flex-col gap-3">
+                    <div className="flex justify-between items-start gap-2">
+                       <h3 className="font-semibold text-base line-clamp-2" title={entry.title}>{entry.title}</h3>
+                       <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'} className="shrink-0 capitalize">{entry.status || 'unknown'}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{entry.summary || 'No summary provided.'}</p>
+                    <div className="flex items-center flex-wrap gap-2 mt-auto pt-4 border-t">
+                      <Badge variant="secondary">{entry.subject || 'General'}</Badge>
+                      <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                      <span className="text-xs text-muted-foreground ml-auto">{formatDisplayDate(entry.createdAt)}</span>
+                    </div>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="admin-requests" className="student-section" aria-label="Resource requests">
+          <section id="admin-requests" className="student-section flex flex-col gap-4" aria-label="Resource requests">
             <div className="student-section__heading">
-              <h2>Resource Requests</h2>
-              <p>Track student requests and update statuses with one click.</p>
+              <h2 className="text-xl font-semibold">Resource Requests</h2>
+              <p className="text-muted-foreground text-sm">Track student requests and update statuses with one click.</p>
             </div>
-            <Card className="student-filter-card">
-              <CardContent className="student-filter-card__content">
-                <div className="student-filter-label"><Library size={14} /><span>Filters</span></div>
-                <label className="student-filter-control">
-                  <span>Status</span>
-                  <select className="ui-input" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
-                    <option value="all">All</option>
+            <Card className="p-4 sm:p-5">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
+                  <Library size={16} /><span>Filters</span>
+                </div>
+                <div className="flex-1 w-full md:w-auto">
+                  <select className="ui-input w-full md:w-auto" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
+                    <option value="all">All Statuses</option>
                     <option value="pending">Pending</option>
                     <option value="underreview">Under Review</option>
                     <option value="done">Done</option>
                   </select>
-                </label>
-                <Badge variant="outline" className="student-filter-count">{filteredRequests.length} result(s)</Badge>
-              </CardContent>
+                </div>
+                <div className="shrink-0 flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
+                    {filteredRequests.length} requests
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Clear filters"
+                    onClick={() => setRequestStatusFilter('all')}
+                  >
+                    <RotateCcw size={16} />
+                  </Button>
+                </div>
+              </div>
             </Card>
+            
             {filteredRequests.length === 0 ? (
-              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No requests found</h3><p>Try a different search term or status filter.</p></CardContent></Card>
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground">
+                <Inbox size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No requests found</h3>
+                <p>Try a different search term or status filter.</p>
+              </Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredRequests.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.courseName || 'No course'}</Badge>
-                        <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
+                  <Card key={entry.id} className="p-5 flex flex-col gap-4">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base line-clamp-1 mb-1" title={entry.titleName || 'Untitled request'}>{entry.titleName || 'Untitled request'}</h3>
+                        <p className="text-sm text-foreground my-1">{entry.studentName || entry.studentEmail}</p>
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <Badge variant="secondary" className="font-normal">{entry.courseName || 'No course'}</Badge>
+                          <Badge variant="outline" className="font-normal">{entry.preferredFormat || 'Any format'}</Badge>
+                        </div>
                       </div>
-                      <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.titleName || 'Untitled request'}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.studentName || entry.studentEmail}</p>
-                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
-                    </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}><RefreshCcw size={14} />Pending</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}><Shield size={14} />Review</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}><CheckCircle2 size={14} />Done</Button>
-                    </CardContent>
+                      <div className="shrink-0 text-right">
+                        <Badge variant={entry.status === 'done' ? 'default' : entry.status === 'underreview' ? 'secondary' : 'outline'} className="mb-2">
+                          {requestStatusLabel(entry.status)}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground whitespace-nowrap">{formatDisplayDate(entry.createdAt)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex bg-muted/50 p-2 rounded-md gap-2 flex-wrap items-center mt-auto">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mx-2">Set Status:</span>
+                      <Button size="sm" variant={entry.status === 'pending' ? 'secondary' : 'ghost'} onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}><RefreshCcw size={14} className="mr-1"/>Pending</Button>
+                      <Button size="sm" variant={entry.status === 'underreview' ? 'secondary' : 'ghost'} onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}><Shield size={14} className="mr-1"/>Review</Button>
+                      <Button size="sm" variant={entry.status === 'done' ? 'secondary' : 'ghost'} onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}><CheckCircle2 size={14} className="mr-1"/>Done</Button>
+                    </div>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="admin-activity" className="student-section" aria-label="Activity log">
+          <section id="admin-activity" className="student-section flex flex-col gap-4" aria-label="Activity log">
             <div className="student-section__heading">
-              <h2>Activity</h2>
-              <p>Recent access-control and moderation events.</p>
+              <h2 className="text-xl font-semibold">Activity</h2>
+              <p className="text-muted-foreground text-sm">Recent access-control and moderation events.</p>
             </div>
-            <Card>
-              <CardContent className="student-download-list">
+            <Card className="max-h-[60vh] flex flex-col">
+              <CardContent className="student-download-list flex-1 overflow-y-auto p-5 custom-scrollbar">
                 {activity.length > 0 ? (
                   activity.map((entry) => (
-                    <div key={entry.id} className="student-download-item">
+                    <div key={entry.id} className="student-download-item flex justify-between items-center py-3 border-b border-border last:border-0">
                       <div>
-                        <strong>{entry.message || entry.action}</strong>
-                        <p>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
+                        <strong className="block text-sm font-medium">{entry.message || entry.action}</strong>
+                        <p className="text-xs text-muted-foreground mt-1">{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
                       </div>
-                      <Badge variant="outline">{entry.action}</Badge>
+                      <Badge variant="outline" className="capitalize shrink-0">{entry.action}</Badge>
                     </div>
                   ))
                 ) : (
-                  <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
+                  <div className="py-10 flex flex-col items-center text-center text-muted-foreground">
+                    <p>Audit events will appear after protected actions are performed.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>

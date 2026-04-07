@@ -16,6 +16,7 @@ import {
   Trash2,
   Upload,
   X,
+  EllipsisVertical,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -26,7 +27,7 @@ import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogBody,
@@ -35,6 +36,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
@@ -519,15 +527,15 @@ export default function FacultyDashboard() {
           userLabel={getDisplayName(user?.email, 'Faculty')}
         />
 
-        <main className="student-panel__content">
+        <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel" role="dialog" aria-label="Notifications">
-                <CardHeader>
+              <Card className="student-notification-panel w-full max-w-md max-h-[60vh] flex flex-col" role="dialog" aria-label="Notifications">
+                <CardHeader className="shrink-0 p-5">
                   <CardTitle>Notifications</CardTitle>
                   <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
                 </CardHeader>
-                <CardContent className="student-notification-list">
+                <CardContent className="student-notification-list flex-1 overflow-y-auto p-5 pt-0 custom-scrollbar">
                   {notificationsError ? (
                     <div className="student-inline-message student-inline-message--error">
                       <HelpCircle size={16} />
@@ -555,14 +563,14 @@ export default function FacultyDashboard() {
                       ))
                     : null}
 
-                  <div className="student-notification-actions">
+                  <div className="student-notification-actions mt-4 flex gap-2">
                     <Button
                       type="button"
                       variant="outline"
                       onClick={readAllNotifications}
                       disabled={notificationsSaving || unreadNotificationCount === 0}
                     >
-                      <CheckCircle2 size={14} />
+                      <CheckCircle2 size={14} className="mr-2" />
                       Mark all as read
                     </Button>
                     <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
@@ -581,12 +589,14 @@ export default function FacultyDashboard() {
             </div>
           ) : null}
 
-          <section id="faculty-overview" className="student-section" aria-label="Faculty overview">
-            <div className="student-section__heading">
-              <h2>Overview</h2>
-              <p>Track your publications, downloads, and upload performance.</p>
+          <section id="faculty-overview" className="student-section flex flex-col gap-4" aria-label="Faculty overview">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Overview</h2>
+                <p className="text-muted-foreground text-sm">Track your publications, downloads, and upload performance.</p>
+              </div>
             </div>
-            <div className="student-metrics">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card>
                 <CardHeader>
                   <CardDescription>Publications</CardDescription>
@@ -614,31 +624,31 @@ export default function FacultyDashboard() {
             </div>
           </section>
 
-          <section id="faculty-publications" className="student-section" aria-label="Faculty publications">
-            <div className="student-section__heading">
-              <h2>Publications</h2>
-              <p>Use search, class, and subject filters to manage published materials.</p>
+          <section id="faculty-publications" className="student-section flex flex-col gap-4" aria-label="Faculty publications">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Publications</h2>
+                <p className="text-muted-foreground text-sm">Use search, class, and subject filters to manage published materials.</p>
+              </div>
             </div>
 
-            <Card className="student-filter-card">
-              <CardContent className="student-filter-card__content">
-                <div className="student-filter-label">
-                  <FileText size={14} />
-                  <span>Filters</span>
+            <Card className="p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden xl:flex">
+                  <FileText size={16} /><span>Filters</span>
                 </div>
-                <label className="student-filter-control student-filter-control--search">
-                  <span>Search</span>
+                <div className="flex-1">
                   <Input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Search by title, class, subject, or status"
+                    placeholder="Search by title, class, subject..."
                     aria-label="Search publications"
+                    className="w-full"
                   />
-                </label>
-                <label className="student-filter-control">
-                  <span>Class</span>
+                </div>
+                <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
                   <select
-                    className="ui-input"
+                    className="ui-input flex-1"
                     value={selectedClass}
                     onChange={(event) => setSelectedClass(event.target.value)}
                     aria-label="Filter publications by class"
@@ -649,11 +659,8 @@ export default function FacultyDashboard() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label className="student-filter-control">
-                  <span>Subject</span>
                   <select
-                    className="ui-input"
+                    className="ui-input flex-1"
                     value={selectedSubject}
                     onChange={(event) => setSelectedSubject(event.target.value)}
                     aria-label="Filter publications by subject"
@@ -664,122 +671,142 @@ export default function FacultyDashboard() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <Badge variant="outline" className="student-filter-count">
-                  {visibleResources.length} result(s)
-                </Badge>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setSearchInput('')
-                    setSearchTerm('')
-                    setSelectedClass('All Classes')
-                    setSelectedSubject('All Subjects')
-                  }}
-                >
-                  <RotateCcw size={14} />
-                  Clear filters
-                </Button>
-              </CardContent>
+                </div>
+                <div className="shrink-0 flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto">
+                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
+                    {visibleResources.length} items
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Clear filters"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearchTerm('')
+                      setSelectedClass('All Classes')
+                      setSelectedSubject('All Subjects')
+                    }}
+                  >
+                    <RotateCcw size={16} />
+                  </Button>
+                </div>
+              </div>
             </Card>
 
             {visibleResources.length === 0 ? (
-              <Card className="student-empty-state" role="status" aria-live="polite">
-                <CardContent>
-                  <Inbox size={32} />
-                  <h3>No results found</h3>
-                  <p>Try changing search text, class, or subject filters.</p>
-                </CardContent>
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground" role="status" aria-live="polite">
+                <Inbox size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No publications found</h3>
+                <p>Try changing search text, class, or subject filters.</p>
               </Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {visibleResources.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.subject || 'General'}</Badge>
-                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                  <Card key={entry.id} className="p-5 flex flex-col gap-4">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base line-clamp-1 mb-1" title={entry.title}>{entry.title || 'Untitled resource'}</h3>
+                        <p className="text-sm text-foreground my-1">{entry.summary || 'No summary provided.'}</p>
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <Badge variant="secondary" className="font-normal">{entry.subject || 'General'}</Badge>
+                          <Badge variant="outline" className="font-normal">{entry.class || 'Unassigned class'}</Badge>
+                        </div>
                       </div>
-                      <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
-                        {entry.status === 'draft' ? 'Draft' : 'Live'}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
-                    </CardContent>
-                    <CardFooter className="student-resource-card__footer">
-                      <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
-                      <div className="table-action-group">
+                      <div className="shrink-0 text-right flex flex-col items-end">
+                        <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'} className="mb-2">
+                          {entry.status === 'draft' ? 'Draft' : 'Live'}
+                        </Badge>
+                        <DropdownMenu>
+                           <DropdownMenuTrigger asChild>
+                             <Button type="button" variant="ghost" size="icon" className="-mr-2 -mb-2"><EllipsisVertical size={16} /></Button>
+                           </DropdownMenuTrigger>
+                           <DropdownMenuContent align="end">
+                             <DropdownMenuItem onSelect={() => toggleResourceStatus(entry)}>
+                               {entry.status === 'draft' ? <FileText size={14} className="mr-2" /> : <BookOpen size={14} className="mr-2" />}
+                               {entry.status === 'draft' ? 'Publish Resource' : 'Move to Draft'}
+                             </DropdownMenuItem>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuItem onSelect={() => openEditModal(entry)}>
+                               <Edit3 size={14} className="mr-2" />
+                               Edit Details
+                             </DropdownMenuItem>
+                             <DropdownMenuItem className="text-destructive font-medium focus:text-destructive" onSelect={() => setDeleteTarget(entry)}>
+                               <Trash2 size={14} className="mr-2" />
+                               Delete
+                             </DropdownMenuItem>
+                           </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    
+                    <div className="flex bg-muted/50 p-2 py-1.5 rounded-md gap-2 items-center mt-auto justify-between border border-border/50">
+                        <span className="text-xs text-muted-foreground mr-2">{formatDisplayDate(entry.createdAt)}</span>
                         <Button
-                          type="button"
+                          size="sm"
                           variant={entry.status === 'draft' ? 'default' : 'outline'}
                           onClick={() => toggleResourceStatus(entry)}
                         >
-                          {entry.status === 'draft' ? <BookOpen size={14} /> : <FileText size={14} />}
-                          {entry.status === 'draft' ? 'Publish' : 'Move to Draft'}
+                          {entry.status === 'draft' ? <BookOpen size={14} className="mr-1" /> : <FileText size={14} className="mr-1" />}
+                          {entry.status === 'draft' ? 'Publish' : 'Draft'}
                         </Button>
-                        <Button type="button" variant="outline" onClick={() => openEditModal(entry)} aria-label={`Edit ${entry.title}`}>
-                          <Edit3 size={14} />
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setDeleteTarget(entry)} aria-label={`Delete ${entry.title}`}>
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </CardFooter>
+                    </div>
                   </Card>
                 ))}
               </div>
             )}
           </section>
 
-          <section id="faculty-uploads" className="student-section" aria-label="Upload queue">
-            <div className="student-section__heading">
-              <h2>Uploads</h2>
-              <p>Track ongoing publication uploads with progress and status updates.</p>
+          <section id="faculty-uploads" className="student-section flex flex-col gap-4" aria-label="Upload queue">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Uploads</h2>
+                <p className="text-muted-foreground text-sm">Track ongoing publication uploads with progress and status updates.</p>
+              </div>
+              <Button type="button" onClick={openCreateModal}>
+                <Upload size={14} className="mr-2" />
+                Upload Resource
+              </Button>
             </div>
-            <Card>
-              <CardContent className="student-download-list">
-                <Button type="button" onClick={openCreateModal}>
-                  <Upload size={14} />
-                  Upload Resource
-                </Button>
+            <Card className="max-h-[50vh] flex flex-col">
+              <CardContent className="student-download-list flex-1 overflow-y-auto p-5 custom-scrollbar">
                 {uploadJobs.length > 0 ? (
                   uploadJobs.map((job) => (
-                    <div key={job.id} className="student-download-item">
-                      <div>
-                        <strong>{job.fileName}</strong>
-                        <p>
+                    <div key={job.id} className="student-download-item flex justify-between items-center py-3 border-b border-border last:border-0 gap-4">
+                      <div className="flex-1 min-w-0">
+                        <strong className="block text-sm font-medium line-clamp-1" title={job.fileName}>{job.fileName}</strong>
+                        <p className="text-xs text-muted-foreground mt-1">
                           {job.status === 'failed'
                             ? job.error || 'Upload failed.'
                             : `${job.status} (${job.progress}%)`}
                         </p>
                       </div>
-                      <div style={{ width: '12rem' }}>
+                      <div style={{ width: '12rem' }} className="shrink-0">
                         <Progress value={job.progress} aria-label={`${job.fileName} upload progress`} />
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="student-muted-text">No active upload jobs.</p>
+                   <div className="py-10 flex flex-col items-center text-center text-muted-foreground">
+                    <p>No active upload jobs.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </section>
 
-          <section id="faculty-profile" className="student-section" aria-label="Faculty profile">
+          <section id="faculty-profile" className="student-section flex flex-col gap-4" aria-label="Faculty profile">
             <div className="student-section__heading">
-              <h2>Profile</h2>
-              <p>Faculty identity and role information.</p>
+              <h2 className="text-xl font-semibold">Profile</h2>
+              <p className="text-muted-foreground text-sm">Faculty identity and role information.</p>
             </div>
-            <div className="student-profile-cards">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Card>
                 <CardHeader>
                   <CardDescription>Role</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CardTitle className="inline-flex items-center gap-2">
                     <RoleAvatar role="faculty" size="sm" label="Faculty role icon" />
-                    <ShieldCheck size={14} />
+                    <ShieldCheck size={16} />
                     Faculty
                   </CardTitle>
                 </CardHeader>
@@ -787,9 +814,9 @@ export default function FacultyDashboard() {
               <Card>
                 <CardHeader>
                   <CardDescription>Email</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Mail size={14} />
-                    {user?.email || 'faculty@spseducationam.edu'}
+                  <CardTitle className="inline-flex items-center gap-2 text-lg">
+                    <Mail size={16} className="text-muted-foreground shrink-0" />
+                    <span className="truncate">{user?.email || 'faculty@spseducationam.edu'}</span>
                   </CardTitle>
                 </CardHeader>
               </Card>
@@ -802,16 +829,16 @@ export default function FacultyDashboard() {
             </div>
           </section>
 
-          <section id="faculty-security" className="student-section" aria-label="Security settings">
+          <section id="faculty-security" className="student-section flex flex-col gap-4" aria-label="Security settings">
             <div className="student-section__heading">
-              <h2>Security</h2>
-              <p>Update your password to keep your account protected.</p>
+              <h2 className="text-xl font-semibold">Security</h2>
+              <p className="text-muted-foreground text-sm">Update your password to keep your account protected.</p>
             </div>
             <Card>
-              <CardContent>
-                <form className="student-request-form" onSubmit={handlePasswordChange}>
-                  <label>
-                    <span>Current password</span>
+              <CardContent className="p-6">
+                <form className="flex flex-col gap-4 max-w-md" onSubmit={handlePasswordChange}>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Current password</span>
                     <Input
                       type="password"
                       required
@@ -819,8 +846,8 @@ export default function FacultyDashboard() {
                       onChange={(event) => setCurrentPassword(event.target.value)}
                     />
                   </label>
-                  <label>
-                    <span>New password</span>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">New password</span>
                     <Input
                       type="password"
                       required
@@ -828,8 +855,8 @@ export default function FacultyDashboard() {
                       onChange={(event) => setNewPassword(event.target.value)}
                     />
                   </label>
-                  <label>
-                    <span>Confirm new password</span>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Confirm new password</span>
                     <Input
                       type="password"
                       required
@@ -837,10 +864,12 @@ export default function FacultyDashboard() {
                       onChange={(event) => setConfirmPassword(event.target.value)}
                     />
                   </label>
-                  <Button type="submit" disabled={passwordLoading}>
-                    <Shield size={14} />
-                    {passwordLoading ? 'Updating...' : 'Update Password'}
-                  </Button>
+                  <div className="pt-2">
+                    <Button type="submit" disabled={passwordLoading}>
+                      <Shield size={14} className="mr-2" />
+                      {passwordLoading ? 'Updating...' : 'Update Password'}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
