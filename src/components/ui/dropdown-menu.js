@@ -1,6 +1,7 @@
 'use client'
 
 import { cloneElement, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
 
 const DropdownMenuContext = createContext(null)
@@ -89,21 +90,75 @@ export function DropdownMenuTrigger({ asChild = false, className = '', children,
   )
 }
 
-export function DropdownMenuContent({ className = '', align = 'end', children, ...props }) {
+export function DropdownMenuContent({ className = '', align = 'end', sideOffset = 4, children, ...props }) {
   const context = useContext(DropdownMenuContext)
+  const [mounted, setMounted] = useState(false)
+  const [position, setPosition] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!context?.open || !context?.triggerRef.current) {
+      return
+    }
+
+    const updatePosition = () => {
+      const triggerRect = context.triggerRef.current?.getBoundingClientRect()
+      const contentEl = context.contentRef.current
+
+      if (!triggerRect || !contentEl) {
+        return
+      }
+
+      const contentWidth = contentEl.offsetWidth
+      const viewportPadding = 8
+
+      let nextLeft = triggerRect.left
+      if (align === 'end') {
+        nextLeft = triggerRect.right - contentWidth
+      }
+
+      const maxLeft = window.innerWidth - contentWidth - viewportPadding
+      nextLeft = Math.max(viewportPadding, Math.min(nextLeft, maxLeft))
+
+      setPosition({
+        top: triggerRect.bottom + sideOffset,
+        left: nextLeft,
+      })
+    }
+
+    const frame = window.requestAnimationFrame(updatePosition)
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [align, context?.open, context?.triggerRef, context?.contentRef, sideOffset])
+
   if (!context?.open) {
     return null
   }
 
-  return (
+  if (!mounted) {
+    return null
+  }
+
+  return createPortal(
     <div
       ref={context.contentRef}
       role="menu"
       className={cn('dropdown-menu__content', align === 'end' && 'dropdown-menu__content--end', className)}
+      style={{ top: `${position.top}px`, left: `${position.left}px` }}
       {...props}
     >
       {children}
-    </div>
+    </div>,
+    document.body
   )
 }
 

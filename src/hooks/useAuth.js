@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   GoogleAuthProvider,
@@ -9,8 +9,20 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useAutoLogout } from "@/hooks/useAutoLogout";
+import { areSessionSettingsEqual, normalizeSessionSettings, SESSION_SETTINGS_DEFAULTS } from "@/lib/session-settings";
 
 const AuthContext = createContext(null);
+const SESSION_START_KEY = "sps_auth_session_started_at";
 const studentGoogleProvider = new GoogleAuthProvider();
 studentGoogleProvider.setCustomParameters({ prompt: "select_account" });
 
@@ -30,7 +42,13 @@ async function fetchSessionSnapshot() {
   try {
     const response = await fetch("/api/session", { cache: "no-store" });
     if (!response.ok) {
-      return { user: null, role: null, status: null, authProvider: null };
+      return {
+        user: null,
+        role: null,
+        status: null,
+        authProvider: null,
+        sessionSettings: SESSION_SETTINGS_DEFAULTS,
+      };
     }
 
     const payload = await response.json().catch(() => ({}));
@@ -39,9 +57,30 @@ async function fetchSessionSnapshot() {
       role: payload?.role || null,
       status: payload?.status || null,
       authProvider: payload?.authProvider || null,
+      sessionSettings: normalizeSessionSettings(payload?.sessionSettings),
     };
   } catch {
-    return { user: null, role: null, status: null, authProvider: null };
+    return {
+      user: null,
+      role: null,
+      status: null,
+      authProvider: null,
+      sessionSettings: SESSION_SETTINGS_DEFAULTS,
+    };
+  }
+}
+
+async function fetchLiveSessionSettings() {
+  try {
+    const response = await fetch("/api/session-settings", { cache: "no-store" });
+    if (!response.ok) {
+      return SESSION_SETTINGS_DEFAULTS;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    return normalizeSessionSettings(payload?.settings);
+  } catch {
+    return SESSION_SETTINGS_DEFAULTS;
   }
 }
 
@@ -52,13 +91,61 @@ export function AuthProvider({ children }) {
   const [authProvider, setAuthProvider] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [sessionSettings, setSessionSettings] = useState(SESSION_SETTINGS_DEFAULTS);
+  const [sessionStartedAtMs, setSessionStartedAtMs] = useState(null);
+  const logoutInProgressRef = useRef(false);
   const router = useRouter();
+
+  const readSessionStart = () => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const rawValue = window.localStorage.getItem(SESSION_START_KEY);
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+
+    return parsed;
+  };
+
+  const writeSessionStart = (timestamp) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(SESSION_START_KEY, String(timestamp));
+    setSessionStartedAtMs(timestamp);
+  };
+
+  const clearSessionStart = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.removeItem(SESSION_START_KEY);
+    setSessionStartedAtMs(null);
+  };
 
   const applySession = (session) => {
     setUser(session?.user || null);
     setRole(session?.role || null);
     setStatus(session?.status || null);
     setAuthProvider(session?.authProvider || null);
+
+    const nextSettings = normalizeSessionSettings(session?.sessionSettings);
+    setSessionSettings((current) =>
+      areSessionSettingsEqual(current, nextSettings) ? current : nextSettings
+    );
+  };
+
+  const refreshSessionSettings = async () => {
+    const nextSettings = await fetchLiveSessionSettings();
+    setSessionSettings((current) =>
+      areSessionSettingsEqual(current, nextSettings) ? current : nextSettings
+    );
+    return nextSettings;
   };
 
   useEffect(() => {
@@ -71,6 +158,16 @@ export function AuthProvider({ children }) {
       }
 
       applySession(session);
+      if (session?.user && session?.role) {
+        const existingSessionStart = readSessionStart();
+        if (existingSessionStart) {
+          setSessionStartedAtMs(existingSessionStart);
+        } else {
+          writeSessionStart(Date.now());
+        }
+      } else {
+        clearSessionStart();
+      }
       setLoading(false);
     };
 
@@ -110,6 +207,7 @@ export function AuthProvider({ children }) {
       };
 
       applySession(nextSession);
+      writeSessionStart(Date.now());
       if (typeof window !== "undefined") {
         window.location.replace(`/dashboard/${nextRole}`);
         return;
@@ -192,6 +290,7 @@ export function AuthProvider({ children }) {
       };
 
       applySession(nextSession);
+      writeSessionStart(Date.now());
       if (typeof window !== "undefined") {
         window.location.replace(`/dashboard/${nextRole}`);
         return;
@@ -206,12 +305,106 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = async () => {
-    await fetch("/api/session-logout", { method: "POST" }).catch(() => {});
-    await signOut(auth).catch(() => {});
-    applySession({ user: null, role: null, status: null, authProvider: null });
-    router.replace("/login");
+  const clearBrowserAuthArtifacts = () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.sessionStorage.clear();
+    } catch (error) {
+      console.warn("Session storage cleanup failed during logout.", error);
+    }
+
+    try {
+      window.localStorage.removeItem(SESSION_START_KEY);
+      const keysToRemove = [];
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (!key) {
+          continue;
+        }
+
+        if (/firebase:|token|auth|session/i.test(key)) {
+          keysToRemove.push(key);
+        }
+      }
+
+      keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+    } catch (error) {
+      console.warn("Local storage cleanup failed during logout.", error);
+    }
+
+    try {
+      document.cookie.split(";").forEach((cookie) => {
+        const name = cookie.split("=")[0]?.trim();
+        if (!name) {
+          return;
+        }
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+      });
+    } catch (error) {
+      console.warn("Cookie cleanup failed during logout.", error);
+    }
   };
+
+  const logout = async ({ reason = "manual" } = {}) => {
+    if (logoutInProgressRef.current) {
+      return;
+    }
+
+    logoutInProgressRef.current = true;
+
+    try {
+      clearBrowserAuthArtifacts();
+      await fetch("/api/session-logout", { method: "POST" }).catch(() => {});
+      await signOut(auth).catch(() => {});
+    } finally {
+      applySession({ user: null, role: null, status: null, authProvider: null });
+      clearSessionStart();
+      setIsAuthenticating(false);
+      setLoading(false);
+
+      const target = reason === "manual" ? "/login" : "/login?reason=session-expired";
+      router.replace(target);
+      logoutInProgressRef.current = false;
+    }
+  };
+
+  const autoLogout = useAutoLogout({
+    enabled: Boolean(user && role && !loading && !isAuthenticating),
+    inactivityTimeoutMs: sessionSettings.inactivityTimeout,
+    warningOffsetMs: sessionSettings.inactivityTimeout - sessionSettings.warningTimeout,
+    maxSessionMs: sessionSettings.maxSessionTimeout,
+    sessionStartedAtMs,
+    onInactivityLogout: () => logout({ reason: "inactivity-timeout" }),
+    onSessionLogout: () => logout({ reason: "session-absolute-timeout" }),
+  });
+
+  useEffect(() => {
+    if (!user?.uid || !role) {
+      return undefined;
+    }
+
+    let mounted = true;
+    const refresh = async () => {
+      const nextSettings = await fetchLiveSessionSettings();
+      if (!mounted) {
+        return;
+      }
+
+      setSessionSettings((current) =>
+        areSessionSettingsEqual(current, nextSettings) ? current : nextSettings
+      );
+    };
+
+    const intervalId = window.setInterval(refresh, 60000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+    };
+  }, [role, user?.uid]);
 
   const value = {
     user,
@@ -224,9 +417,44 @@ export function AuthProvider({ children }) {
     loginWithGoogle,
     signInWithGoogleStudent,
     logout,
+    sessionSettings,
+    refreshSessionSettings,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      <Dialog
+        open={Boolean(user && role) && autoLogout.warningVisible}
+        onOpenChange={(open) => {
+          if (!open) {
+            autoLogout.stayLoggedIn();
+          }
+        }}
+        labelledBy="session-timeout-warning-title"
+      >
+        <DialogHeader>
+          <DialogTitle id="session-timeout-warning-title">Session Inactivity Warning</DialogTitle>
+          <DialogDescription>
+            You will be logged out due to inactivity in 1 minute.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <p style={{ color: "rgba(240, 240, 253, 0.75)", fontSize: "0.95rem" }}>
+            Time remaining: {autoLogout.secondsUntilInactivityLogout} seconds.
+          </p>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => autoLogout.logoutNow()}>
+            Logout Now
+          </Button>
+          <Button type="button" onClick={() => autoLogout.stayLoggedIn()}>
+            Stay Logged In
+          </Button>
+        </DialogFooter>
+      </Dialog>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

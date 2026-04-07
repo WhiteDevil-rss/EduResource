@@ -24,6 +24,8 @@ export const ADMIN_ROUTES = {
   // Statistics & Audit
   'GET /api/admin/overview': ['admin'],
   'GET /api/admin/audit-logs': ['admin'],
+  'GET /api/admin/session-settings': ['admin'],
+  'PUT /api/admin/session-settings': ['admin'],
 }
 
 export const FACULTY_ROUTES = {

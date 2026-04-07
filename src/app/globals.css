@@ -4640,9 +4640,7 @@ h6 {
   }
 
   .dropdown-menu__content {
-    position: absolute;
-    top: calc(100% + 0.45rem);
-    left: 0;
+    position: fixed;
     min-width: 13rem;
     display: grid;
     gap: 0.2rem;
@@ -4651,7 +4649,7 @@ h6 {
     border: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(10, 16, 30, 0.98);
     box-shadow: 0 14px 34px rgba(4, 10, 22, 0.42);
-    z-index: 30;
+    z-index: 50;
   }
 
   .dropdown-menu__content--end {

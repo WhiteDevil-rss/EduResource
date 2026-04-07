@@ -36,6 +36,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [unauthorized, setUnauthorized] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
   
@@ -66,6 +67,10 @@ export default function Login() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('reason') === 'unauthorized') {
       setUnauthorized(true)
+      setSessionExpired(false)
+    } else if (params.get('reason') === 'session-expired') {
+      setUnauthorized(false)
+      setSessionExpired(true)
     }
   }, [])
 
@@ -163,6 +168,13 @@ export default function Login() {
             <div className="auth-alert" style={{ marginBottom: '1rem' }}>
               <AlertCircle size={18} color="var(--tertiary)" />
               <span>Your account does not have permission to access that area.</span>
+            </div>
+          )}
+
+          {sessionExpired && (
+            <div className="auth-alert" style={{ marginBottom: '1rem' }}>
+              <AlertCircle size={18} color="var(--tertiary)" />
+              <span>Session expired. Please login again.</span>
             </div>
           )}
 

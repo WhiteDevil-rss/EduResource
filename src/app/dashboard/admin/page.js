@@ -41,6 +41,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
+import { minutesToMs, msToMinutes, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
 const EMPTY_CREATE_FORM = {
   role: 'faculty',
@@ -61,8 +62,50 @@ function authProviderLabel(entry) {
   return 'Admin-issued credentials'
 }
 
+function buildTimeoutForm(settings) {
+  return {
+    inactivityMinutes: String(msToMinutes(settings.inactivityTimeout)),
+    warningMinutes: String(msToMinutes(settings.warningTimeout)),
+    maxSessionMinutes: String(msToMinutes(settings.maxSessionTimeout)),
+  }
+}
+
+function parseTimeoutForm(formState) {
+  const inactivityMinutes = Number(formState.inactivityMinutes)
+  const warningMinutes = Number(formState.warningMinutes)
+  const maxSessionMinutes = Number(formState.maxSessionMinutes)
+
+  if (![inactivityMinutes, warningMinutes, maxSessionMinutes].every((value) => Number.isFinite(value))) {
+    return { error: 'Please enter numeric values for all timeout fields.' }
+  }
+
+  if (inactivityMinutes <= 1 || warningMinutes <= 1 || maxSessionMinutes <= 1) {
+    return { error: 'All timeout values must be greater than 1 minute.' }
+  }
+
+  if (warningMinutes >= inactivityMinutes) {
+    return { error: 'Warning timeout must be less than inactivity timeout.' }
+  }
+
+  if (maxSessionMinutes < inactivityMinutes) {
+    return { error: 'Max session duration must be greater than or equal to inactivity timeout.' }
+  }
+
+  if (inactivityMinutes > 1440 || warningMinutes > 1440 || maxSessionMinutes > 1440) {
+    return { error: 'Timeout values above 1440 minutes (24h) are not allowed.' }
+  }
+
+  return {
+    value: {
+      inactivityTimeout: minutesToMs(inactivityMinutes),
+      warningTimeout: minutesToMs(warningMinutes),
+      maxSessionTimeout: minutesToMs(maxSessionMinutes),
+    },
+  }
+}
+
 export default function AdminDashboard() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshSessionSettings } = useAuth()
   const [users, setUsers] = useState([])
   const [resources, setResources] = useState([])
   const [requests, setRequests] = useState([])
@@ -93,6 +136,11 @@ export default function AdminDashboard() {
   const [resourceClassFilter, setResourceClassFilter] = useState('All Classes')
   const [resourceSubjectFilter, setResourceSubjectFilter] = useState('All Subjects')
   const [requestStatusFilter, setRequestStatusFilter] = useState('all')
+  const [sessionTimeoutForm, setSessionTimeoutForm] = useState(buildTimeoutForm(SESSION_SETTINGS_DEFAULTS))
+  const [savedSessionTimeouts, setSavedSessionTimeouts] = useState(SESSION_SETTINGS_DEFAULTS)
+  const [sessionTimeoutsLoading, setSessionTimeoutsLoading] = useState(false)
+  const [sessionTimeoutsSaving, setSessionTimeoutsSaving] = useState(false)
+  const [sessionTimeoutError, setSessionTimeoutError] = useState('')
   const notificationsPanelRef = useRef(null)
 
   useEffect(() => {
@@ -174,6 +222,26 @@ export default function AdminDashboard() {
     }
   }
 
+  const loadSessionTimeoutSettings = async () => {
+    setSessionTimeoutsLoading(true)
+    try {
+      const response = await fetch('/api/admin/session-settings', { cache: 'no-store' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not load session timeout settings.')
+      }
+
+      const settings = payload?.settings || SESSION_SETTINGS_DEFAULTS
+      setSavedSessionTimeouts(settings)
+      setSessionTimeoutForm(buildTimeoutForm(settings))
+      setSessionTimeoutError('')
+    } catch (error) {
+      setSessionTimeoutError(error.message || 'Could not load session timeout settings.')
+    } finally {
+      setSessionTimeoutsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!user?.uid) {
       return
@@ -182,7 +250,61 @@ export default function AdminDashboard() {
     loadOverview()
     loadRequests()
     loadNotifications()
+    loadSessionTimeoutSettings()
   }, [user?.uid])
+
+  const parsedTimeoutForm = useMemo(() => parseTimeoutForm(sessionTimeoutForm), [sessionTimeoutForm])
+  const sessionTimeoutHasChanges = useMemo(() => {
+    if (!parsedTimeoutForm.value) {
+      return false
+    }
+
+    return (
+      parsedTimeoutForm.value.inactivityTimeout !== savedSessionTimeouts.inactivityTimeout ||
+      parsedTimeoutForm.value.warningTimeout !== savedSessionTimeouts.warningTimeout ||
+      parsedTimeoutForm.value.maxSessionTimeout !== savedSessionTimeouts.maxSessionTimeout
+    )
+  }, [parsedTimeoutForm.value, savedSessionTimeouts])
+
+  const showAggressiveTimeoutWarning = useMemo(() => {
+    if (!parsedTimeoutForm.value) {
+      return false
+    }
+    return parsedTimeoutForm.value.inactivityTimeout <= 2 * 60 * 1000
+  }, [parsedTimeoutForm.value])
+
+  const saveSessionTimeoutSettings = async () => {
+    if (!parsedTimeoutForm.value) {
+      setSessionTimeoutError(parsedTimeoutForm.error || 'Please fix validation errors before saving.')
+      return
+    }
+
+    setSessionTimeoutsSaving(true)
+    try {
+      const response = await fetch('/api/admin/session-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsedTimeoutForm.value),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not save session timeout settings.')
+      }
+
+      const settings = payload?.settings || parsedTimeoutForm.value
+      setSavedSessionTimeouts(settings)
+      setSessionTimeoutForm(buildTimeoutForm(settings))
+      setSessionTimeoutError('')
+      await refreshSessionSettings()
+      toast.success('Session timeout settings saved.')
+    } catch (error) {
+      setSessionTimeoutError(error.message || 'Could not save session timeout settings.')
+      toast.error(error.message || 'Could not save session timeout settings.')
+    } finally {
+      setSessionTimeoutsSaving(false)
+    }
+  }
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -506,6 +628,7 @@ export default function AdminDashboard() {
         subtitle="Access Control"
         navItems={[
           { id: 'overview', label: 'Dashboard', href: '#admin-overview', icon: LayoutPanelTop },
+          { id: 'security', label: 'Security', href: '#admin-security', icon: Shield },
           { id: 'users', label: 'Users', href: '#admin-users', icon: Users },
           { id: 'resources', label: 'Resources', href: '#admin-resources', icon: FileText },
           { id: 'requests', label: 'Requests', href: '#admin-requests', icon: Library },
@@ -625,6 +748,120 @@ export default function AdminDashboard() {
             </div>
           </section>
 
+          <section id="admin-security" className="student-section" aria-label="Session security settings">
+            <div className="student-section__heading">
+              <h2>Session Control</h2>
+              <p>Configure inactivity logout, warning timing, and max session duration globally.</p>
+            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>Changes sync globally and are applied to active users on the next settings refresh cycle.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  className="student-request-form"
+                  style={{
+                    gap: '1rem',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  }}
+                >
+                  <label>
+                    <span>Inactivity Timeout (minutes)</span>
+                    <Input
+                      type="number"
+                      min="2"
+                      step="1"
+                      value={sessionTimeoutForm.inactivityMinutes}
+                      onChange={(event) =>
+                        setSessionTimeoutForm((current) => ({
+                          ...current,
+                          inactivityMinutes: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    <span>Warning Time Before Logout (minutes)</span>
+                    <Input
+                      type="number"
+                      min="2"
+                      step="1"
+                      value={sessionTimeoutForm.warningMinutes}
+                      onChange={(event) =>
+                        setSessionTimeoutForm((current) => ({
+                          ...current,
+                          warningMinutes: event.target.value,
+                        }))
+                      }
+                    />
+                    <small className="student-muted-text" style={{ display: 'block', marginTop: '0.35rem' }}>
+                      Default 4 means warning appears at minute 4 of inactivity when timeout is 5.
+                    </small>
+                  </label>
+                  <label>
+                    <span>Max Session Duration (minutes)</span>
+                    <Input
+                      type="number"
+                      min="2"
+                      step="1"
+                      value={sessionTimeoutForm.maxSessionMinutes}
+                      onChange={(event) =>
+                        setSessionTimeoutForm((current) => ({
+                          ...current,
+                          maxSessionMinutes: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                {parsedTimeoutForm.error ? (
+                  <div className="student-inline-message student-inline-message--error" style={{ marginTop: '1rem' }}>
+                    <AlertCircle size={16} />
+                    <span>{parsedTimeoutForm.error}</span>
+                  </div>
+                ) : null}
+
+                {sessionTimeoutError ? (
+                  <div className="student-inline-message student-inline-message--error" style={{ marginTop: '1rem' }}>
+                    <AlertCircle size={16} />
+                    <span>{sessionTimeoutError}</span>
+                  </div>
+                ) : null}
+
+                {showAggressiveTimeoutWarning ? (
+                  <div className="student-inline-message" style={{ marginTop: '1rem' }}>
+                    <AlertCircle size={16} />
+                    <span>Very low inactivity timeout may log out users during normal reading workflows.</span>
+                  </div>
+                ) : null}
+
+                <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
+                  <Button
+                    type="button"
+                    onClick={saveSessionTimeoutSettings}
+                    disabled={!sessionTimeoutHasChanges || Boolean(parsedTimeoutForm.error) || sessionTimeoutsSaving || sessionTimeoutsLoading}
+                  >
+                    {sessionTimeoutsSaving ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={sessionTimeoutsSaving || sessionTimeoutsLoading}
+                    onClick={() => {
+                      setSessionTimeoutForm(buildTimeoutForm(SESSION_SETTINGS_DEFAULTS))
+                      setSessionTimeoutError('')
+                    }}
+                  >
+                    Reset to Default
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
           {pendingCredentials ? (
             <section className="student-section" aria-label="One-time credentials">
               <Card>
@@ -716,7 +953,7 @@ export default function AdminDashboard() {
                             Actions
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" sideOffset={6} className="z-50">
                           <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
                             <KeyRound size={14} />
                             Reset Password

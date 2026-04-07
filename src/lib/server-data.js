@@ -1,5 +1,6 @@
 import 'server-only'
 import { auth, firestore } from '@/lib/firebase-edge'
+import { normalizeSessionSettings, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
 const USERS_COLLECTION = 'users'
 const RESOURCES_COLLECTION = 'resources'
@@ -7,6 +8,8 @@ const RESOURCE_REQUESTS_COLLECTION = 'resource_requests'
 const AUDIT_COLLECTION = 'audit_logs'
 const SESSIONS_COLLECTION = 'active_sessions'
 const NOTIFICATIONS_COLLECTION = 'notifications'
+const APP_CONFIG_COLLECTION = 'app_config'
+const SESSION_SETTINGS_DOC_ID = 'session_timeout'
 
 function nowIso() {
   return new Date().toISOString()
@@ -138,6 +141,17 @@ function sanitizeSessionData(docId, data = {}) {
     createdAt: data.createdAt || null,
     lastSeenAt: data.lastSeenAt || null,
     expiresAt: data.expiresAt || null,
+  }
+}
+
+function sanitizeSessionSettingsData(data = {}) {
+  const normalized = normalizeSessionSettings(data)
+  return {
+    inactivityTimeout: normalized.inactivityTimeout,
+    warningTimeout: normalized.warningTimeout,
+    maxSessionTimeout: normalized.maxSessionTimeout,
+    updatedAt: data.updatedAt || null,
+    updatedBy: data.updatedBy || null,
   }
 }
 
@@ -709,6 +723,34 @@ export async function createAuditRecord({
   } catch (error) {
     console.warn('Audit log warning:', error?.message || error)
   }
+}
+
+export async function getSessionSettingsRecord() {
+  const existing = await firestore
+    .getDoc(`${APP_CONFIG_COLLECTION}/${SESSION_SETTINGS_DOC_ID}`)
+    .catch(() => null)
+
+  if (!existing) {
+    return {
+      ...SESSION_SETTINGS_DEFAULTS,
+      updatedAt: null,
+      updatedBy: null,
+    }
+  }
+
+  return sanitizeSessionSettingsData(existing)
+}
+
+export async function upsertSessionSettingsRecord({ settings, actorUid }) {
+  const normalized = normalizeSessionSettings(settings)
+  const payload = {
+    ...normalized,
+    updatedAt: nowIso(),
+    updatedBy: String(actorUid || '').trim() || null,
+  }
+
+  await firestore.setDoc(`${APP_CONFIG_COLLECTION}/${SESSION_SETTINGS_DOC_ID}`, payload, true)
+  return sanitizeSessionSettingsData(payload)
 }
 
 async function ensureUniqueLoginId(baseValue) {
