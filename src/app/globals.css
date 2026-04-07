@@ -4345,7 +4345,7 @@ h6 {
 
   .student-filter-card__content {
     display: grid;
-    grid-template-columns: auto repeat(2, minmax(0, 14rem)) auto;
+    grid-template-columns: auto minmax(0, 1.5fr) repeat(2, minmax(0, 1fr)) auto auto;
     gap: var(--dashboard-space-4);
     align-items: end;
   }
@@ -4375,14 +4375,15 @@ h6 {
   .student-resource-grid {
     display: grid;
     gap: var(--dashboard-space-4);
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    align-items: stretch;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
   }
 
   .student-resource-card {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    display: grid;
+    gap: var(--dashboard-space-4);
+    padding: var(--dashboard-space-4);
     overflow: hidden;
   }
 
@@ -4393,23 +4394,30 @@ h6 {
     min-width: 0;
   }
 
-  .student-resource-card .ui-card__content {
-    flex: 1 1 auto;
+  .student-resource-card__content {
     display: grid;
-    gap: var(--dashboard-space-2);
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--dashboard-space-4);
+    align-items: start;
   }
 
-  .student-resource-card .ui-card__footer {
-    margin-top: auto;
+  .student-resource-card__main {
+    display: grid;
+    gap: var(--dashboard-space-2);
+    min-width: 0;
+  }
+
+  .student-resource-card__actions {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--dashboard-space-3);
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: var(--dashboard-space-2);
     flex-wrap: wrap;
+    min-width: 0;
   }
 
   .student-resource-card__header,
-  .student-resource-card__footer {
+  .dashboard-list-row__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -4448,7 +4456,6 @@ h6 {
   .student-resource-card__progress {
     display: grid;
     gap: var(--dashboard-space-2);
-    margin-top: var(--dashboard-space-3);
   }
 
   .student-resource-card__progress span,
@@ -4467,6 +4474,66 @@ h6 {
     flex-wrap: wrap;
     margin-left: auto;
     min-width: 0;
+  }
+
+  .dashboard-list-scroll,
+  .dashboard-activity-grid {
+    display: grid;
+    gap: var(--dashboard-space-3);
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+
+  .dashboard-list-row {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .dashboard-list-row__content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--dashboard-space-4);
+    align-items: start;
+    padding: var(--dashboard-space-4);
+  }
+
+  .dashboard-list-row__main {
+    display: grid;
+    gap: var(--dashboard-space-2);
+    min-width: 0;
+  }
+
+  .dashboard-list-row__title {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-list-row__summary,
+  .dashboard-list-row__updated {
+    margin: 0;
+    color: rgba(240, 240, 253, 0.62);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-list-row__actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    gap: var(--dashboard-space-2);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .dashboard-activity-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  .dashboard-activity-card {
+    height: 100%;
   }
 
   .student-status {
@@ -4519,6 +4586,9 @@ h6 {
   .student-download-list {
     display: grid;
     gap: var(--dashboard-space-4);
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
   }
 
   .student-download-item {
@@ -4587,6 +4657,9 @@ h6 {
   .student-notification-list {
     display: grid;
     gap: var(--dashboard-space-3);
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
   }
 
   .student-notification-item {
@@ -4670,7 +4743,17 @@ h6 {
     }
 
     .student-filter-card__content {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .student-resource-card__content,
+    .dashboard-list-row__content {
+      grid-template-columns: 1fr;
+    }
+
+    .student-resource-card__actions,
+    .dashboard-list-row__actions {
+      justify-content: flex-start;
     }
 
     .student-filter-count {
@@ -4717,6 +4800,14 @@ h6 {
     .student-metrics,
     .student-filter-card__content {
       grid-template-columns: 1fr;
+    }
+
+    .student-resource-grid,
+    .dashboard-list-scroll,
+    .dashboard-activity-grid,
+    .student-download-list,
+    .student-notification-list {
+      max-height: 72vh;
     }
 
     .student-support-card,

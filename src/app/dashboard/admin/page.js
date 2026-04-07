@@ -617,37 +617,39 @@ export default function AdminDashboard() {
             {filteredUsers.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="dashboard-list-scroll">
                 {filteredUsers.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
-                        <Badge>{entry.role}</Badge>
-                        <Badge variant="outline">{entry.status}</Badge>
+                  <Card key={entry.id} className="dashboard-list-row">
+                    <CardContent className="dashboard-list-row__content">
+                      <div className="dashboard-list-row__main">
+                        <div className="dashboard-list-row__header">
+                          <div className="student-resource-card__meta">
+                            <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
+                            <Badge>{entry.role}</Badge>
+                            <Badge variant="outline">{entry.status}</Badge>
+                          </div>
+                          <Badge variant="outline">{authProviderLabel(entry)}</Badge>
+                        </div>
+                        <CardTitle className="dashboard-list-row__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
+                        <p className="dashboard-list-row__summary">{entry.email}</p>
+                        <p className="dashboard-list-row__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
                       </div>
-                      <Badge variant="outline">{authProviderLabel(entry)}</Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.email}</p>
-                      <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
-                    </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem' }}>
-                      <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
-                        <KeyRound size={14} />
-                        Reset Password
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setDeleteModalTarget(entry)
-                          setConfirmText('')
-                        }}
-                      >
-                        Delete
-                      </Button>
+                      <div className="dashboard-list-row__actions">
+                        <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                          <KeyRound size={14} />
+                          Reset Password
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setDeleteModalTarget(entry)
+                            setConfirmText('')
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -685,20 +687,25 @@ export default function AdminDashboard() {
             {filteredResources.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No resources found</h3><p>Adjust search, class, or subject filters.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="dashboard-list-scroll">
                 {filteredResources.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.subject || 'General'}</Badge>
-                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                  <Card key={entry.id} className="dashboard-list-row">
+                    <CardContent className="dashboard-list-row__content">
+                      <div className="dashboard-list-row__main">
+                        <div className="dashboard-list-row__header">
+                          <div className="student-resource-card__meta">
+                            <Badge>{entry.subject || 'General'}</Badge>
+                            <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                          </div>
+                          <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
+                        </div>
+                        <CardTitle className="dashboard-list-row__title">{entry.title}</CardTitle>
+                        <p className="dashboard-list-row__summary">{entry.summary || 'No summary provided.'}</p>
+                        <p className="dashboard-list-row__updated">{formatDisplayDate(entry.createdAt)}</p>
                       </div>
-                      <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
-                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
+                      <div className="dashboard-list-row__actions">
+                        <Badge variant="outline">Audit only</Badge>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -729,25 +736,27 @@ export default function AdminDashboard() {
             {filteredRequests.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No requests found</h3><p>Try a different search term or status filter.</p></CardContent></Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="dashboard-list-scroll">
                 {filteredRequests.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.courseName || 'No course'}</Badge>
-                        <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
+                  <Card key={entry.id} className="dashboard-list-row">
+                    <CardContent className="dashboard-list-row__content">
+                      <div className="dashboard-list-row__main">
+                        <div className="dashboard-list-row__header">
+                          <div className="student-resource-card__meta">
+                            <Badge>{entry.courseName || 'No course'}</Badge>
+                            <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
+                          </div>
+                          <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
+                        </div>
+                        <CardTitle className="dashboard-list-row__title">{entry.titleName || 'Untitled request'}</CardTitle>
+                        <p className="dashboard-list-row__summary">{entry.studentName || entry.studentEmail}</p>
+                        <p className="dashboard-list-row__updated">{formatDisplayDate(entry.createdAt)}</p>
                       </div>
-                      <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.titleName || 'Untitled request'}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.studentName || entry.studentEmail}</p>
-                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
-                    </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
+                      <div className="dashboard-list-row__actions">
+                        <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
+                        <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
+                        <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -760,23 +769,29 @@ export default function AdminDashboard() {
               <h2>Activity</h2>
               <p>Recent access-control and moderation events.</p>
             </div>
-            <Card className="max-h-[60vh] flex flex-col">
-              <CardContent className="student-download-list flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {activity.length > 0 ? (
-                  activity.map((entry) => (
-                    <div key={entry.id} className="student-download-item">
-                      <div>
-                        <strong>{entry.message || entry.action}</strong>
-                        <p>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
+            <div className="dashboard-activity-grid">
+              {activity.length > 0 ? (
+                activity.map((entry) => (
+                  <Card key={entry.id} className="dashboard-activity-card">
+                    <CardHeader>
+                      <div className="dashboard-list-row__header">
+                        <CardTitle className="dashboard-list-row__title">{entry.message || entry.action}</CardTitle>
+                        <Badge variant="outline">{entry.action}</Badge>
                       </div>
-                      <Badge variant="outline">{entry.action}</Badge>
-                    </div>
-                  ))
-                ) : (
-                  <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
-                )}
-              </CardContent>
-            </Card>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="dashboard-list-row__summary">{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="dashboard-activity-card">
+                  <CardContent>
+                    <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </section>
         </main>
       </div>

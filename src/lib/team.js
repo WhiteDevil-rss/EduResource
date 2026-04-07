@@ -20,11 +20,11 @@ export const TEAM_MEMBERS = [
     },
   },
   {
-    name: 'Prakash Sir',
-    role: 'Creative & Content Lead',
-    image: prakashSirImage,
+    name: 'Shivam Tiwari',
+    role: 'Founder, Promoter and Mentor',
+    image: shivamTiwariImage,
     bio:
-      'MBA in Marketing with corporate experience. Shapes the learning experience so every note feels practical, structured, and easy to apply.',
+      'Commerce and finance mentor with years of teaching experience. Focused on clarity, exam readiness, and long-term student confidence.',
     socials: {
       email: 'spseducationam.surat@gmail.com',
       youtube: 'https://youtube.com/@spseducationam',
@@ -33,11 +33,11 @@ export const TEAM_MEMBERS = [
     },
   },
   {
-    name: 'Shivam Tiwari',
-    role: 'Founder & Mentor',
-    image: shivamTiwariImage,
+    name: 'Prakash Shrivastava',
+    role: 'Founder and Creative & Content Lead',
+    image: prakashSirImage,
     bio:
-      'Commerce and finance mentor with years of teaching experience. Focused on clarity, exam readiness, and long-term student confidence.',
+      'MBA in Marketing with corporate experience. Shapes the learning experience so every note feels practical, structured, and easy to apply.',
     socials: {
       email: 'spseducationam.surat@gmail.com',
       youtube: 'https://youtube.com/@spseducationam',

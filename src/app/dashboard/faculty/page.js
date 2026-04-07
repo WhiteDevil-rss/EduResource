@@ -23,7 +23,7 @@ import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogBody,
@@ -673,22 +673,22 @@ export default function FacultyDashboard() {
               <div className="student-resource-grid">
                 {visibleResources.map((entry) => (
                   <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.subject || 'General'}</Badge>
-                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                    <CardContent className="student-resource-card__content">
+                      <div className="student-resource-card__main">
+                        <div className="student-resource-card__header">
+                          <div className="student-resource-card__meta">
+                            <Badge>{entry.subject || 'General'}</Badge>
+                            <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                          </div>
+                          <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
+                            {entry.status === 'draft' ? 'Draft' : 'Live'}
+                          </Badge>
+                        </div>
+                        <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
+                        <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
+                        <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
                       </div>
-                      <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
-                        {entry.status === 'draft' ? 'Draft' : 'Live'}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
-                    </CardContent>
-                    <CardFooter className="student-resource-card__footer">
-                      <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
-                      <div className="table-action-group">
+                      <div className="student-resource-card__actions">
                         <Button
                           type="button"
                           variant={entry.status === 'draft' ? 'default' : 'outline'}
@@ -703,7 +703,7 @@ export default function FacultyDashboard() {
                           <Trash2 size={14} />
                         </Button>
                       </div>
-                    </CardFooter>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
