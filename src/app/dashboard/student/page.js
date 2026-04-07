@@ -560,11 +560,11 @@ export default function StudentDashboard() {
             </div>
 
             <Card className="p-4 sm:p-5">
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
                 <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden xl:flex">
                   <Filter size={16} /><span>Filters</span>
                 </div>
-                <div className="flex-1">
+                <div className="md:col-span-2 xl:col-span-2">
                   <Input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
@@ -573,7 +573,7 @@ export default function StudentDashboard() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex-1 flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                <div className="md:col-span-2 xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <select
                     className="ui-input flex-1"
                     value={selectedClass}
@@ -599,7 +599,7 @@ export default function StudentDashboard() {
                     ))}
                   </select>
                 </div>
-                <div className="shrink-0 flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto">
+                <div className="md:col-span-2 xl:col-span-2 flex flex-wrap items-center gap-3">
                   <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
                     {filteredResources.length} items
                   </Badge>
@@ -655,7 +655,7 @@ export default function StudentDashboard() {
             ) : null}
 
             {filteredResources.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredResources.map((entry) => (
                   <StudentResourceCard key={entry.id} entry={entry} onDownload={handleResourceAction} />
                 ))}
@@ -675,7 +675,7 @@ export default function StudentDashboard() {
               <CardContent className="student-download-list flex-1 overflow-y-auto p-5 custom-scrollbar">
                 {downloads.length > 0 ? (
                   downloads.map((entry) => (
-                    <div key={entry.id} className="student-download-item flex justify-between items-center py-3 border-b border-border last:border-0 gap-4">
+                    <div key={entry.id} className="student-download-item flex flex-col sm:flex-row sm:justify-between sm:items-center items-start py-3 border-b border-border last:border-0 gap-4">
                       <div className="flex-1 min-w-0">
                         <strong className="block text-sm font-medium line-clamp-1" title={entry.title}>{entry.title || 'Untitled resource'}</strong>
                         <p className="text-xs text-muted-foreground mt-1">{entry.subject || 'General'}</p>

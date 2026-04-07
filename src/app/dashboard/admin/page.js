@@ -648,11 +648,11 @@ export default function AdminDashboard() {
               <p className="text-muted-foreground text-sm">Create, review, and remove accounts with role-aware controls.</p>
             </div>
             <Card className="p-4 sm:p-5">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
                 <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
                   <Users size={16} /><span>Filters</span>
                 </div>
-                <div className="flex-1">
+                <div className="md:col-span-2 xl:col-span-2">
                   <Input
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
@@ -661,7 +661,7 @@ export default function AdminDashboard() {
                     className="w-full"
                   />
                 </div>
-                <div className="w-full md:w-auto">
+                <div className="md:col-span-1 xl:col-span-1">
                   <select className="ui-input w-full md:w-auto" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
                     <option value="all">All Roles</option>
                     <option value="student">Student</option>
@@ -669,7 +669,7 @@ export default function AdminDashboard() {
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="md:col-span-3 xl:col-span-3 flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" className="flex-1 md:flex-none" onClick={exportUsers}><Download size={14} className="mr-2"/>Export</Button>
                   <Button type="button" className="flex-1 md:flex-none" onClick={() => setCreateOpen(true)}><UserPlus size={14} className="mr-2"/>Create</Button>
                   <Button
@@ -760,11 +760,11 @@ export default function AdminDashboard() {
               <p className="text-muted-foreground text-sm">Audit platform publications with class and subject filters.</p>
             </div>
             <Card className="p-4 sm:p-5">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
                 <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
                   <FileText size={16} /><span>Filters</span>
                 </div>
-                <div className="flex-1">
+                <div className="md:col-span-2 xl:col-span-2">
                   <Input
                     value={resourceSearchInput}
                     onChange={(event) => setResourceSearchInput(event.target.value)}
@@ -773,7 +773,7 @@ export default function AdminDashboard() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex-1 flex gap-4 w-full md:w-auto">
+                <div className="md:col-span-2 xl:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <select className="ui-input flex-1" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
                     {resourceClassOptions.map((entryClass) => (
                       <option key={entryClass} value={entryClass}>{entryClass}</option>
@@ -785,7 +785,7 @@ export default function AdminDashboard() {
                     ))}
                   </select>
                 </div>
-                <div className="shrink-0 flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+                <div className="md:col-span-2 xl:col-span-2 flex flex-wrap items-center gap-3">
                   <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
                     {filteredResources.length} items
                   </Badge>
@@ -845,11 +845,11 @@ export default function AdminDashboard() {
               <p className="text-muted-foreground text-sm">Track student requests and update statuses with one click.</p>
             </div>
             <Card className="p-4 sm:p-5">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-end">
                 <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
                   <Library size={16} /><span>Filters</span>
                 </div>
-                <div className="flex-1">
+                <div className="md:col-span-3 xl:col-span-3">
                   <Input
                     value={requestSearchInput}
                     onChange={(event) => setRequestSearchInput(event.target.value)}
@@ -858,7 +858,7 @@ export default function AdminDashboard() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex-1 w-full md:w-auto">
+                <div className="md:col-span-1 xl:col-span-1">
                   <select className="ui-input w-full md:w-auto" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
                     <option value="all">All Statuses</option>
                     <option value="pending">Pending</option>
@@ -866,7 +866,7 @@ export default function AdminDashboard() {
                     <option value="done">Done</option>
                   </select>
                 </div>
-                <div className="shrink-0 flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+                <div className="md:col-span-2 xl:col-span-2 flex flex-wrap items-center gap-3">
                   <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
                     {filteredRequests.length} requests
                   </Badge>
@@ -941,7 +941,7 @@ export default function AdminDashboard() {
               <CardContent className="student-download-list flex-1 overflow-y-auto p-5 custom-scrollbar">
                 {activity.length > 0 ? (
                   activity.map((entry) => (
-                    <div key={entry.id} className="student-download-item flex justify-between items-center py-3 border-b border-border last:border-0">
+                    <div key={entry.id} className="student-download-item flex flex-col sm:flex-row sm:justify-between sm:items-center items-start py-3 border-b border-border last:border-0 gap-3">
                       <div>
                         <strong className="block text-sm font-medium">{entry.message || entry.action}</strong>
                         <p className="text-xs text-muted-foreground mt-1">{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
