@@ -9,6 +9,12 @@ import {
   HelpCircle,
   Inbox,
   Library,
+  RotateCcw,
+  Send,
+  Mail,
+  ShieldCheck,
+  UserRound,
+  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -439,8 +445,6 @@ export default function StudentDashboard() {
           role="student"
           title="Student Dashboard"
           subtitle="Find, track, and access your learning resources"
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
           onOpenMenu={() => setMobileNavOpen(true)}
           onOpenNotifications={openNotifications}
           unreadCount={unreadNotificationCount}
@@ -496,7 +500,8 @@ export default function StudentDashboard() {
                     <CheckCircle2 size={14} />
                     {notificationsSaving ? 'Updating...' : 'Mark all as read'}
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
+                    <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
+                      <X size={14} />
                     Close
                   </Button>
                 </div>
@@ -557,6 +562,15 @@ export default function StudentDashboard() {
                   <Filter size={14} />
                   <span>Filters</span>
                 </div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search by title, class, subject, or faculty"
+                    aria-label="Search publications"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Class</span>
                   <select
@@ -590,6 +604,18 @@ export default function StudentDashboard() {
                 <Badge variant="outline" className="student-filter-count">
                   {filteredResources.length} result(s)
                 </Badge>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setSearchInput('')
+                    setSearchTerm('')
+                    setSelectedClass('All Classes')
+                    setSelectedSubject('All Subjects')
+                  }}
+                >
+                  Clear filters
+                </Button>
               </CardContent>
             </Card>
 
@@ -674,19 +700,28 @@ export default function StudentDashboard() {
               <Card>
                 <CardHeader>
                   <CardDescription>Email</CardDescription>
-                  <CardTitle>{user?.email || 'student@spseducationam.edu'}</CardTitle>
+                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Mail size={14} />
+                    {user?.email || 'student@spseducationam.edu'}
+                  </CardTitle>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader>
                   <CardDescription>Role</CardDescription>
-                  <CardTitle>Student</CardTitle>
+                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <UserRound size={14} />
+                    Student
+                  </CardTitle>
                 </CardHeader>
               </Card>
               <Card>
                 <CardHeader>
                   <CardDescription>Authentication</CardDescription>
-                  <CardTitle>Google OAuth</CardTitle>
+                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldCheck size={14} />
+                    Google OAuth
+                  </CardTitle>
                 </CardHeader>
               </Card>
             </div>
@@ -770,6 +805,7 @@ export default function StudentDashboard() {
             Cancel
           </Button>
           <Button type="button" onClick={handleRequestSubmit} disabled={requestSubmitting}>
+            <Send size={14} />
             {requestSubmitting ? 'Submitting...' : 'Submit request'}
           </Button>
         </DialogFooter>

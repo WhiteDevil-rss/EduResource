@@ -4,15 +4,24 @@ import {
   AlertCircle,
   CheckCircle2,
   Download,
+  EllipsisVertical,
+  Ban,
   FileText,
   HelpCircle,
   Inbox,
   KeyRound,
   LayoutPanelTop,
   Library,
+  Mail,
+  RefreshCcw,
+  RotateCcw,
   Shield,
   Sparkles,
+  Trash2,
+  UserPlus,
+  UserRound,
   Users,
+  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -33,6 +42,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/useAuth'
 import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 
@@ -378,6 +394,26 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleSetUserStatus = async (targetUser, nextStatus) => {
+    try {
+      const response = await fetch(`/api/admin/users/${targetUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set-status', status: nextStatus }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not update the user status.')
+      }
+
+      setUsers((current) => current.map((item) => (item.id === targetUser.id ? payload.user : item)))
+      toast.success(`User set to ${nextStatus}.`)
+    } catch (error) {
+      toast.error(error.message || 'Could not update the user status.')
+    }
+  }
+
   const handleRequestStatusChange = async (requestEntry, status) => {
     try {
       const response = await fetch(`/api/admin/resource-requests/${requestEntry.id}`, {
@@ -474,8 +510,6 @@ export default function AdminDashboard() {
           role="admin"
           title="Admin Dashboard"
           subtitle="Manage users, publications, and requests"
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
           onOpenMenu={() => setMobileNavOpen(true)}
           onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
           unreadCount={unreadNotificationCount}
@@ -584,10 +618,10 @@ export default function AdminDashboard() {
                   <CardDescription>Copy and share securely. This view appears once per admin session.</CardDescription>
                 </CardHeader>
                 <CardContent className="student-download-list">
-                  <div className="student-download-item"><strong>Role</strong><p>{pendingCredentials.role}</p></div>
-                  <div className="student-download-item"><strong>Email</strong><p>{pendingCredentials.email}</p></div>
-                  {pendingCredentials.loginId ? <div className="student-download-item"><strong>Login ID</strong><p>{pendingCredentials.loginId}</p></div> : null}
-                  {pendingCredentials.temporaryPassword ? <div className="student-download-item"><strong>Temporary Password</strong><p>{pendingCredentials.temporaryPassword}</p></div> : null}
+                  <div className="student-download-item"><strong><UserRound size={14} />Role</strong><p>{pendingCredentials.role}</p></div>
+                  <div className="student-download-item"><strong><Mail size={14} />Email</strong><p>{pendingCredentials.email}</p></div>
+                  {pendingCredentials.loginId ? <div className="student-download-item"><strong><FileText size={14} />Login ID</strong><p>{pendingCredentials.loginId}</p></div> : null}
+                  {pendingCredentials.temporaryPassword ? <div className="student-download-item"><strong><KeyRound size={14} />Temporary Password</strong><p>{pendingCredentials.temporaryPassword}</p></div> : null}
                 </CardContent>
               </Card>
             </section>
@@ -601,6 +635,15 @@ export default function AdminDashboard() {
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
                 <div className="student-filter-label"><Users size={14} /><span>Filters</span></div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search users by name or email"
+                    aria-label="Search users"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Role</span>
                   <select className="ui-input" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
@@ -611,13 +654,25 @@ export default function AdminDashboard() {
                   </select>
                 </label>
                 <Button type="button" variant="outline" onClick={exportUsers}><Download size={14} />Export CSV</Button>
-                <Button type="button" onClick={() => setCreateOpen(true)}><Sparkles size={14} />Create Account</Button>
+                <Button type="button" onClick={() => setCreateOpen(true)}><UserPlus size={14} />Create Account</Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setSearchInput('')
+                    setSearchTerm('')
+                    setUserRoleFilter('all')
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  Clear filters
+                </Button>
               </CardContent>
             </Card>
             {filteredUsers.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
             ) : (
-              <div className="student-resource-grid">
+              <div className="student-resource-grid student-section-scroll">
                 {filteredUsers.map((entry) => (
                   <Card key={entry.id} className="student-resource-card">
                     <CardHeader className="student-resource-card__header">
@@ -626,28 +681,38 @@ export default function AdminDashboard() {
                         <Badge>{entry.role}</Badge>
                         <Badge variant="outline">{entry.status}</Badge>
                       </div>
-                      <Badge variant="outline">{authProviderLabel(entry)}</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" variant="outline"><EllipsisVertical size={14} />Actions</Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="dashboard-dropdown-menu">
+                          <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                            <RefreshCcw size={14} />
+                            Reset
+                          </DropdownMenuItem>
+                          {entry.role === 'admin' ? null : (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onSelect={() => handleSetUserStatus(entry, entry.status === 'disabled' ? 'active' : 'disabled')}>
+                                {entry.status === 'disabled' ? <Sparkles size={14} /> : <Ban size={14} />}
+                                {entry.status === 'disabled' ? 'Enable' : 'Disable'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => {
+                                setDeleteModalTarget(entry)
+                                setConfirmText('')
+                              }}>
+                                <Trash2 size={14} />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </CardHeader>
                     <CardContent>
                       <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
                       <p className="student-resource-card__summary">{entry.email}</p>
                       <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
-                    </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem' }}>
-                      <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
-                        <KeyRound size={14} />
-                        Reset Password
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setDeleteModalTarget(entry)
-                          setConfirmText('')
-                        }}
-                      >
-                        Delete
-                      </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -745,9 +810,9 @@ export default function AdminDashboard() {
                       <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
                     </CardContent>
                     <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}><RefreshCcw size={14} />Pending</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}><Shield size={14} />Review</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}><CheckCircle2 size={14} />Done</Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -842,6 +907,7 @@ export default function AdminDashboard() {
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+            <X size={14} />
             Cancel
           </Button>
           <Button type="button" onClick={handleCreateUser} disabled={submittingCreate}>
@@ -887,6 +953,7 @@ export default function AdminDashboard() {
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" disabled={resetModal?.submitting} onClick={() => setResetModal(null)}>
+            <X size={14} />
             Cancel
           </Button>
           <Button
@@ -900,6 +967,7 @@ export default function AdminDashboard() {
               handleResetCredentials(resetModal.user, resetModal.password.trim() || null)
             }}
           >
+            <RefreshCcw size={14} />
             {resetModal?.submitting ? 'Processing...' : 'Reset Password'}
           </Button>
         </DialogFooter>
@@ -927,9 +995,11 @@ export default function AdminDashboard() {
             </div>
             <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
               <Button type="button" variant="ghost" onClick={() => setDeleteModalTarget(null)} disabled={isDeleting}>
+                <X size={14} />
                 Keep Account
               </Button>
               <Button type="button" onClick={confirmHardDelete} disabled={isDeleting || confirmText !== 'DELETE'}>
+                <Trash2 size={14} />
                 {isDeleting ? 'Removing...' : 'Permanently Delete'}
               </Button>
             </div>

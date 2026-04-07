@@ -9,10 +9,13 @@ import {
   HelpCircle,
   Inbox,
   Library,
-  Plus,
+  Mail,
+  RotateCcw,
   Shield,
+  ShieldCheck,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -510,8 +513,6 @@ export default function FacultyDashboard() {
           role="faculty"
           title="Faculty Dashboard"
           subtitle="Upload and manage course publications"
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
           onOpenMenu={() => setMobileNavOpen(true)}
           onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
           unreadCount={unreadNotificationCount}
@@ -625,6 +626,15 @@ export default function FacultyDashboard() {
                   <FileText size={14} />
                   <span>Filters</span>
                 </div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search by title, class, subject, or status"
+                    aria-label="Search publications"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Class</span>
                   <select
@@ -658,6 +668,19 @@ export default function FacultyDashboard() {
                 <Badge variant="outline" className="student-filter-count">
                   {visibleResources.length} result(s)
                 </Badge>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setSearchInput('')
+                    setSearchTerm('')
+                    setSelectedClass('All Classes')
+                    setSelectedSubject('All Subjects')
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  Clear filters
+                </Button>
               </CardContent>
             </Card>
 
@@ -694,6 +717,7 @@ export default function FacultyDashboard() {
                           variant={entry.status === 'draft' ? 'default' : 'outline'}
                           onClick={() => toggleResourceStatus(entry)}
                         >
+                          {entry.status === 'draft' ? <BookOpen size={14} /> : <FileText size={14} />}
                           {entry.status === 'draft' ? 'Publish' : 'Move to Draft'}
                         </Button>
                         <Button type="button" variant="outline" onClick={() => openEditModal(entry)} aria-label={`Edit ${entry.title}`}>
@@ -718,7 +742,7 @@ export default function FacultyDashboard() {
             <Card>
               <CardContent className="student-download-list">
                 <Button type="button" onClick={openCreateModal}>
-                  <Plus size={14} />
+                  <Upload size={14} />
                   Upload Resource
                 </Button>
                 {uploadJobs.length > 0 ? (
@@ -755,6 +779,7 @@ export default function FacultyDashboard() {
                   <CardDescription>Role</CardDescription>
                   <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                     <RoleAvatar role="faculty" size="sm" label="Faculty role icon" />
+                    <ShieldCheck size={14} />
                     Faculty
                   </CardTitle>
                 </CardHeader>
@@ -762,7 +787,10 @@ export default function FacultyDashboard() {
               <Card>
                 <CardHeader>
                   <CardDescription>Email</CardDescription>
-                  <CardTitle>{user?.email || 'faculty@spseducationam.edu'}</CardTitle>
+                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Mail size={14} />
+                    {user?.email || 'faculty@spseducationam.edu'}
+                  </CardTitle>
                 </CardHeader>
               </Card>
               <Card>
@@ -810,6 +838,7 @@ export default function FacultyDashboard() {
                     />
                   </label>
                   <Button type="submit" disabled={passwordLoading}>
+                    <Shield size={14} />
                     {passwordLoading ? 'Updating...' : 'Update Password'}
                   </Button>
                 </form>
@@ -887,6 +916,7 @@ export default function FacultyDashboard() {
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={closeEditor} disabled={isSaving}>
+            <X size={14} />
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={isSaving}>
@@ -906,9 +936,11 @@ export default function FacultyDashboard() {
             </div>
             <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
               <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)}>
+                <X size={14} />
                 Cancel
               </Button>
               <Button type="button" onClick={confirmDelete}>
+                <Trash2 size={14} />
                 Delete Publication
               </Button>
             </div>

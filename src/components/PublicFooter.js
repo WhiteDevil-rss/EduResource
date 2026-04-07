@@ -64,11 +64,12 @@ export default function PublicFooter({
                   href={item.href}
                   className="public-footer__social"
                   aria-label={item.label}
+                  title={item.label}
                   target={item.external ? '_blank' : undefined}
                   rel={item.external ? 'noopener noreferrer' : undefined}
                 >
                   <Icon size={14} />
-                  <span>{item.label}</span>
+                  <span className="sr-only">{item.label}</span>
                 </a>
               )
             })}

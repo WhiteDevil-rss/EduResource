@@ -114,6 +114,7 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
                   target={entry.isMail ? undefined : '_blank'}
                   rel={entry.isMail ? undefined : 'noopener noreferrer'}
                   aria-label={entry.label}
+                  title={entry.label}
                   className="team-card__social-link"
                 >
                   <Icon size={16} />

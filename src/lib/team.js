@@ -2,6 +2,7 @@ import sumitSirImage from '../../team/SumitSir.jpeg'
 import prakashSirImage from '../../team/PrakashSir.jpeg'
 import shivamTiwariImage from '../../team/ShivamTiwari.png'
 import rajputShivamSinghImage from '../../team/RajputShivamSingh.jpg'
+import { ins } from 'framer-motion/client'
 
 export const TEAM_FALLBACK_IMAGE = rajputShivamSinghImage
 
@@ -14,6 +15,9 @@ export const TEAM_MEMBERS = [
       'MCA professional and educator building fast, dependable learning tools that help students study with less friction and more momentum.',
     socials: {
       email: 'spseducationam.surat@gmail.com',
+      youtube: 'https://youtube.com/@spseducationam',
+      instagram: 'https://www.instagram.com/spseducationam.surat/',
+      whatsapp: 'https://whatsapp.com/channel/0029VbC36593bbV5xSG6gE1W',
     },
   },
   {
@@ -24,6 +28,9 @@ export const TEAM_MEMBERS = [
       'MBA in Marketing with corporate experience. Shapes the learning experience so every note feels practical, structured, and easy to apply.',
     socials: {
       email: 'spseducationam.surat@gmail.com',
+      youtube: 'https://youtube.com/@spseducationam',
+      instagram: 'https://www.instagram.com/spseducationam.surat/',
+      whatsapp: 'https://whatsapp.com/channel/0029VbC36593bbV5xSG6gE1W',
     },
   },
   {
@@ -34,6 +41,9 @@ export const TEAM_MEMBERS = [
       'Commerce and finance mentor with years of teaching experience. Focused on clarity, exam readiness, and long-term student confidence.',
     socials: {
       email: 'spseducationam.surat@gmail.com',
+      youtube: 'https://youtube.com/@spseducationam',
+      instagram: 'https://www.instagram.com/spseducationam.surat/',
+      whatsapp: 'https://whatsapp.com/channel/0029VbC36593bbV5xSG6gE1W',
     },
   },
   {
@@ -47,6 +57,7 @@ export const TEAM_MEMBERS = [
       github: 'https://github.com/WhiteDevil-rss',
       website: 'https://www.zembaa.com',
       instagram: 'https://www.instagram.com/rajputshivamsingh_official/',
+      whatsapp: 'https://wa.me/919327476375?text=Hi%2C%20I%20need%20help%20with%20website%20development%20and%20digital%20marketing.%20Please%20share%20details.%20Thanks%21',
     },
   }
 ]

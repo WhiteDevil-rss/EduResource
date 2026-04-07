@@ -1206,6 +1206,52 @@ h6 {
   background: rgba(182, 160, 255, 0.14);
 }
 
+.public-footer__social svg,
+.team-card__social-link svg,
+.button-primary svg,
+.button-secondary svg,
+.button-ghost svg,
+.button-outline svg,
+.student-sidebar__link svg,
+.dropdown-menu__item svg,
+.student-filter-label svg,
+.student-inline-message svg,
+.student-download-item .ui-button svg,
+.student-notification-actions .ui-button svg,
+.student-resource-card__meta svg {
+  transform-origin: center;
+  transition: transform 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.public-footer__social:hover svg,
+.team-card__social-link:hover svg,
+.button-primary:hover svg,
+.button-secondary:hover svg,
+.button-ghost:hover svg,
+.button-outline:hover svg,
+.student-sidebar__link:hover svg,
+.dropdown-menu__item:hover svg,
+.student-filter-label:hover svg,
+.student-inline-message:hover svg,
+.student-download-item .ui-button:hover svg,
+.student-notification-actions .ui-button:hover svg,
+.student-resource-card__meta:hover svg {
+  transform: scale(1.08);
+}
+
+.public-footer__social:active svg,
+.team-card__social-link:active svg,
+.button-primary:active svg,
+.button-secondary:active svg,
+.button-ghost:active svg,
+.button-outline:active svg,
+.student-sidebar__link:active svg,
+.dropdown-menu__item:active svg,
+.student-download-item .ui-button:active svg,
+.student-notification-actions .ui-button:active svg {
+  transform: scale(0.94);
+}
+
 .dashboard-page {
   min-height: 100vh;
   padding: 1rem;
@@ -3948,6 +3994,11 @@ h6 {
   color: var(--foreground);
 }
 
+.team-card__social-link:hover svg,
+.public-footer__social:hover svg {
+  transform: scale(1.12);
+}
+
 .landing-section--spotlight {
   animation: landingSpotlight 0.8s ease;
 }
@@ -4344,8 +4395,8 @@ h6 {
   }
 
   .student-filter-card__content {
-    display: grid;
-    grid-template-columns: auto repeat(2, minmax(0, 14rem)) auto;
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--dashboard-space-4);
     align-items: end;
   }
@@ -4359,8 +4410,14 @@ h6 {
   }
 
   .student-filter-control {
+    flex: 1 1 14rem;
+    min-width: min(100%, 12rem);
     display: grid;
     gap: 0.35rem;
+  }
+
+  .student-filter-control--search {
+    flex: 1.4 1 18rem;
   }
 
   .student-filter-control span {
@@ -4368,8 +4425,13 @@ h6 {
     color: rgba(240, 240, 253, 0.62);
   }
 
+  .student-filter-card__content > .ui-badge,
+  .student-filter-card__content > .ui-button {
+    flex: 0 0 auto;
+  }
+
   .student-filter-count {
-    justify-self: end;
+    margin-left: auto;
   }
 
   .student-resource-grid {
@@ -4582,6 +4644,24 @@ h6 {
     top: 0;
     width: min(100%, 30rem);
     z-index: 6;
+    max-height: min(50vh, 34rem);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .student-notification-panel .ui-card__header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: rgba(15, 17, 27, 0.98);
+  }
+
+  .student-notification-panel .ui-card__content {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding-top: 0;
+    scrollbar-gutter: stable;
   }
 
   .student-notification-list {
@@ -4670,7 +4750,7 @@ h6 {
     }
 
     .student-filter-card__content {
-      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
     }
 
     .student-filter-count {
@@ -4708,6 +4788,60 @@ h6 {
       width: 100%;
     }
   }
+  .student-section-scroll {
+    max-height: min(50vh, 34rem);
+    overflow-y: auto;
+    padding-right: var(--dashboard-space-2);
+    scrollbar-gutter: stable;
+  }
+  .dashboard-dropdown-menu {
+    min-width: 11rem;
+    padding: 0.4rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .dropdown-menu__root {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .dropdown-menu__trigger {
+    position: relative;
+  }
+  .dropdown-menu__content {
+    position: absolute;
+    z-index: 60;
+    margin-top: 0.45rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 13, 21, 0.98);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(20px);
+  }
+  .dropdown-menu__content--end {
+    right: 0;
+  }
+  .dropdown-menu__item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--dashboard-space-2);
+    border-radius: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    color: var(--foreground);
+    background: transparent;
+    text-align: left;
+  }
+  .dropdown-menu__item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .dropdown-menu__separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 0.1rem 0;
+  }
 
   @media (max-width: 640px) {
     .student-panel__main {
@@ -4716,7 +4850,8 @@ h6 {
 
     .student-metrics,
     .student-filter-card__content {
-      grid-template-columns: 1fr;
+      flex-direction: column;
+      align-items: stretch;
     }
 
     .student-support-card,
