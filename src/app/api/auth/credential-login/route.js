@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
-import { assertSameOrigin, withNoStore } from '@/lib/api-security'
+import { assertRequestNotBlocked, assertSameOrigin, withNoStore } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
+import {
+  clearFailedLoginAttempts,
+  createTwoFactorChallenge,
+  detectNewDeviceAndAlert,
+  emitSuspiciousActivityAlert,
+  getSecurityControlsRecord,
+  isLoginLocked,
+  recordFailedLoginAttempt,
+} from '@/lib/auth-security'
+import { logSuspiciousActivity } from '@/lib/suspicious-activity'
+import { isSuperAdminEmail } from '@/lib/admin-protection'
 import {
   createAuditRecord,
   createSessionRecord,
@@ -32,7 +43,7 @@ function getFriendlyCredentialMessage(error) {
 
 function inferRoleFromIdentifier(identifier = '', email = '') {
   const probe = `${identifier} ${email}`.toLowerCase()
-  if (probe.includes('admin') || probe.includes('ss7051017@gmail.com')) {
+  if (probe.includes('admin') || isSuperAdminEmail(email)) {
     return 'admin'
   }
 
@@ -41,7 +52,7 @@ function inferRoleFromIdentifier(identifier = '', email = '') {
 
 function shouldPromoteToAdmin(identifier = '', email = '') {
   const probe = `${identifier} ${email}`.toLowerCase()
-  return probe.includes('admin') || probe.includes('ss7051017@gmail.com')
+  return probe.includes('admin') || isSuperAdminEmail(email)
 }
 
 
@@ -67,6 +78,7 @@ function isConfigurationError(message = '') {
 export async function POST(request) {
   try {
     assertSameOrigin(request)
+    await assertRequestNotBlocked(request)
 
     const body = await request.json()
     const loginIdentifier = String(body?.email || '').trim().toLowerCase()
@@ -86,6 +98,42 @@ export async function POST(request) {
         NextResponse.json(
           { error: 'Email/login ID and password are required.' },
           { status: 400 }
+        )
+      )
+    }
+
+    const securityControls = await getSecurityControlsRecord().catch(() => null)
+    const maxLoginAttempts = Number(securityControls?.maxLoginAttempts || 5)
+    const lockDurationMinutes = Number(securityControls?.lockDurationMinutes || 15)
+    const alertsEnabled = Boolean(securityControls?.enableAlerts)
+    const twoFactorEnabled = Boolean(securityControls?.enable2FA)
+    const twoFactorMethod = String(securityControls?.twoFAMethod || 'email')
+
+    const lockCheck = await isLoginLocked(loginIdentifier)
+    if (lockCheck.locked) {
+      await logSuspiciousActivity({
+        user: { email: loginIdentifier },
+        action: 'FAILED_LOGIN',
+        description: 'Blocked login attempt against a temporarily locked account.',
+        severity: 'HIGH',
+        request,
+        dedupeWindowSeconds: 90,
+      }).catch(() => null)
+
+      if (alertsEnabled) {
+        await emitSuspiciousActivityAlert({
+          user: { email: loginIdentifier },
+          reason: 'Blocked login due to account lockout threshold',
+          request,
+        }).catch(() => null)
+      }
+
+      return withNoStore(
+        NextResponse.json(
+          {
+            error: `Too many failed attempts. Account temporarily locked until ${new Date(lockCheck.lockedUntil).toLocaleString()}.`,
+          },
+          { status: 429 }
         )
       )
     }
@@ -126,6 +174,33 @@ export async function POST(request) {
       }
 
       if (!resolvedRecord?.user?.email) {
+        const failedAttempt = await recordFailedLoginAttempt({
+          identifier: loginIdentifier,
+          maxLoginAttempts,
+          lockDurationMinutes,
+          request,
+        })
+
+        if (alertsEnabled && failedAttempt.locked) {
+          await emitSuspiciousActivityAlert({
+            user: { email: loginIdentifier },
+            reason: 'Multiple failed login attempts detected',
+            request,
+          }).catch(() => null)
+        }
+
+        if (failedAttempt.attempts >= Math.max(3, maxLoginAttempts - 1)) {
+          await logSuspiciousActivity({
+            user: { email: loginIdentifier },
+            action: 'FAILED_LOGIN',
+            description: `Repeated failed login attempts detected (${failedAttempt.attempts}).`,
+            severity: failedAttempt.locked ? 'HIGH' : 'MEDIUM',
+            request,
+            dedupeWindowSeconds: 60,
+            metadata: { attempts: failedAttempt.attempts },
+          }).catch(() => null)
+        }
+
         await logAction({
           user: { email: loginIdentifier || null, role: 'admin' },
           action: 'LOGIN',
@@ -146,6 +221,18 @@ export async function POST(request) {
     const accountEmail = String(
       resolvedRecord?.user?.email || loginIdentifier
     ).toLowerCase()
+
+    const canonicalLockCheck = await isLoginLocked(accountEmail)
+    if (canonicalLockCheck.locked) {
+      return withNoStore(
+        NextResponse.json(
+          {
+            error: `Too many failed attempts. Account temporarily locked until ${new Date(canonicalLockCheck.lockedUntil).toLocaleString()}.`,
+          },
+          { status: 429 }
+        )
+      )
+    }
 
     let result
     try {
@@ -179,6 +266,33 @@ export async function POST(request) {
       }
 
       if (isCredentialAuthError(message)) {
+        const failedAttempt = await recordFailedLoginAttempt({
+          identifier: accountEmail || loginIdentifier,
+          maxLoginAttempts,
+          lockDurationMinutes,
+          request,
+        })
+
+        if (alertsEnabled && failedAttempt.locked) {
+          await emitSuspiciousActivityAlert({
+            user: { email: accountEmail || loginIdentifier },
+            reason: 'Multiple failed login attempts detected',
+            request,
+          }).catch(() => null)
+        }
+
+        if (failedAttempt.attempts >= Math.max(3, maxLoginAttempts - 1)) {
+          await logSuspiciousActivity({
+            user: { email: accountEmail || loginIdentifier },
+            action: 'FAILED_LOGIN',
+            description: `Credential login failures nearing lock threshold (${failedAttempt.attempts}).`,
+            severity: failedAttempt.locked ? 'HIGH' : 'MEDIUM',
+            request,
+            dedupeWindowSeconds: 60,
+            metadata: { attempts: failedAttempt.attempts },
+          }).catch(() => null)
+        }
+
         await logAction({
           user: { email: accountEmail || null, role: 'admin' },
           action: 'LOGIN',
@@ -213,6 +327,12 @@ export async function POST(request) {
       recordByResolvedEmail?.user ||
       resolvedRecord?.user ||
       null
+
+    if (resolvedUser?.isBlocked) {
+      return withNoStore(
+        NextResponse.json({ error: 'Your account is blocked.' }, { status: 403 })
+      )
+    }
 
     const accountRole = shouldPromoteToAdmin(loginIdentifier, result.email || accountEmail)
       ? 'admin'
@@ -278,6 +398,52 @@ export async function POST(request) {
       )
     }
 
+    await clearFailedLoginAttempts(accountEmail || loginIdentifier).catch(() => null)
+
+    if (twoFactorEnabled) {
+      const challenge = await createTwoFactorChallenge({
+        user: {
+          uid: result.uid,
+          email: effectiveUser.email,
+          role: effectiveUser.role,
+          displayName: effectiveUser.displayName || null,
+          status: effectiveUser.status || 'active',
+        },
+        method: twoFactorMethod,
+        request,
+        ttlMinutes: 5,
+      })
+
+      await logAction({
+        user: {
+          uid: result.uid,
+          name: effectiveUser.displayName || null,
+          email: effectiveUser.email,
+          role: effectiveUser.role,
+        },
+        action: 'LOGIN_2FA_REQUIRED',
+        description: `2FA challenge issued via ${challenge.method}.`,
+        module: 'Auth',
+        status: 'SUCCESS',
+        request,
+        targetId: result.uid,
+        targetRole: effectiveUser.role,
+      }).catch(() => {})
+
+      return withNoStore(
+        NextResponse.json(
+          {
+            requiresTwoFactor: true,
+            challengeId: challenge.challengeId,
+            expiresAt: challenge.expiresAt,
+            method: challenge.method,
+            ...(challenge.otpPreview ? { otpPreview: challenge.otpPreview } : {}),
+          },
+          { status: 202 }
+        )
+      )
+    }
+
     const sessionId = crypto.randomUUID()
     let sessionRegistryCreated = false
 
@@ -319,6 +485,15 @@ export async function POST(request) {
       // Do not block successful credential auth when profile/audit persistence is unavailable.
       console.warn(`Post-login persistence failed: ${message || error}`)
     }
+
+    await detectNewDeviceAndAlert({
+      user: {
+        uid: result.uid,
+        email: effectiveUser.email,
+      },
+      request,
+      alertsEnabled,
+    }).catch(() => null)
 
     const sessionCookie = await createSessionCookie({
       ...(sessionRegistryCreated ? { sid: sessionId } : {}),

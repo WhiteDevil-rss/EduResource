@@ -20,6 +20,7 @@ import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
 import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
+import { UploadDropzone } from '@/components/faculty/UploadDropzone'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -205,6 +206,20 @@ export default function FacultyDashboard() {
 
   const openCreateModal = () => {
     setDraft(EMPTY_DRAFT)
+    setEditorOpen(true)
+  }
+
+  const handleFileSelection = (file) => {
+    if (!file) {
+      return
+    }
+
+    const inferredTitle = file.name.replace(/\.[^/.]+$/, '')
+    setDraft((current) => ({
+      ...current,
+      title: current.title || inferredTitle,
+      file,
+    }))
     setEditorOpen(true)
   }
 
@@ -750,6 +765,12 @@ export default function FacultyDashboard() {
                   <Plus size={14} />
                   Upload Resource
                 </Button>
+                <UploadDropzone
+                  onFileSelect={handleFileSelection}
+                  disabled={isSaving || uploadLockRef.current}
+                  label="Drop course files here to start a new upload"
+                  hint="Drop a file or browse, then complete title, class, and subject in the editor."
+                />
                 {uploadJobs.length > 0 ? (
                   uploadJobs.map((job) => (
                     <div key={job.id} className="student-download-item">
@@ -883,14 +904,11 @@ export default function FacultyDashboard() {
             </label>
             <label>
               <span>Resource file</span>
-              <Input
-                type="file"
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) {
-                    setDraft((current) => ({ ...current, file }))
-                  }
-                }}
+              <UploadDropzone
+                onFileSelect={handleFileSelection}
+                disabled={isSaving || uploadLockRef.current}
+                label={draft.file ? `Selected: ${draft.file.name}` : 'Drag and drop a resource file'}
+                hint="You can drag and drop or browse to select a file."
               />
             </label>
             <label>

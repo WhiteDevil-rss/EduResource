@@ -7,8 +7,8 @@ import {
   withNoStore,
 } from '@/lib/api-security'
 import {
-  PROTECTED_ADMIN_EMAIL,
   isProtectedAdminEmail,
+  getSuperAdminEmail,
 } from '@/lib/admin-protection'
 import { logAction } from '@/lib/audit-log'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
@@ -46,8 +46,9 @@ export async function POST(request) {
     }
 
     try {
-      const result = await signInWithPassword(PROTECTED_ADMIN_EMAIL, password)
-      if (!isProtectedAdminEmail(result?.email || PROTECTED_ADMIN_EMAIL)) {
+      const superAdminEmail = getSuperAdminEmail()
+      const result = await signInWithPassword(superAdminEmail, password)
+      if (!isProtectedAdminEmail(result?.email || superAdminEmail)) {
         throw new ApiError(403, 'Incorrect admin password.')
       }
     } catch (error) {

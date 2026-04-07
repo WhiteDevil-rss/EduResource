@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
-import { assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
+import { assertRequestNotBlocked, assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { auth } from '@/lib/firebase-edge'
 import { createSessionCookie } from '@/lib/session-cookie'
+import { detectNewDeviceAndAlert, getSecurityControlsRecord } from '@/lib/auth-security'
 import { createAuditRecord, createSessionRecord, resolveStudentGoogleUser } from '@/lib/server-data'
 
 export async function POST(request) {
   try {
     assertSameOrigin(request)
+    await assertRequestNotBlocked(request)
 
     const body = await request.json()
     const idToken = String(body?.idToken || '').trim()
@@ -53,6 +55,11 @@ export async function POST(request) {
     }
 
     const student = await resolveStudentGoogleUser(decoded)
+    if (student.isBlocked) {
+      return withNoStore(
+        NextResponse.json({ error: 'Your account is blocked.' }, { status: 403 })
+      )
+    }
     if (student.role !== 'student') {
       return withNoStore(
         NextResponse.json(
@@ -130,6 +137,16 @@ export async function POST(request) {
       name: student.displayName || null,
       exp: Date.now() + SESSION_MAX_AGE_MS,
     })
+
+    const securityControls = await getSecurityControlsRecord().catch(() => null)
+    await detectNewDeviceAndAlert({
+      user: {
+        uid: student.uid,
+        email: student.email,
+      },
+      request,
+      alertsEnabled: Boolean(securityControls?.enableAlerts),
+    }).catch(() => null)
 
     const response = withNoStore(
       NextResponse.json({

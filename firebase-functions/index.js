@@ -3,13 +3,14 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 const db = admin.firestore();
+const superAdminEmail = String(process.env.SUPER_ADMIN_EMAIL || process.env.VITE_SUPER_ADMIN_EMAIL || '').trim().toLowerCase();
 
 // 1. Trigger: Create a user document in Firestore when a new user registers via Auth
 exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
   const { uid, email } = user;
   
   // Custom logic: Initialize specific email as admin
-  const role = email === "ss7051017@gmail.com" ? "admin" : "student";
+  const role = email && email.toLowerCase() === superAdminEmail ? "admin" : "student";
   
   return db.collection("users").doc(uid).set({
     uid,

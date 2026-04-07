@@ -6,6 +6,7 @@ import {
   requireApiSession,
   withNoStore,
 } from '@/lib/api-security'
+import { isSuperAdmin } from '@/lib/admin-protection'
 import {
   normalizeSessionSettings,
   SESSION_SETTINGS_DEFAULTS,
@@ -56,7 +57,12 @@ function validateTimeoutInput(settings) {
 
 export async function GET(request) {
   try {
-    await requireApiSession(request, ['admin'])
+    const session = await requireApiSession(request, ['admin'])
+    
+    if (!isSuperAdmin(session)) {
+      throw new ApiError(403, 'Session settings access is restricted to super admin only.')
+    }
+    
     const settings = await getSessionSettingsRecord()
 
     return withNoStore(
@@ -74,6 +80,11 @@ export async function PUT(request) {
   try {
     assertSameOrigin(request)
     const session = await requireApiSession(request, ['admin'])
+    
+    if (!isSuperAdmin(session)) {
+      throw new ApiError(403, 'Session settings access is restricted to super admin only.')
+    }
+    
     const body = await request.json().catch(() => ({}))
     const validatedSettings = validateTimeoutInput(body)
 

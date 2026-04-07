@@ -13,6 +13,7 @@ import {
   validatePagination,
 } from '@/lib/request-validation'
 import { logAction } from '@/lib/audit-log'
+import { logActivity } from '@/lib/activity-log'
 import { createManagedUser, listUserRecords } from '@/lib/server-data'
 
 /**
@@ -64,6 +65,19 @@ export async function POST(request) {
       request,
       targetId: result?.user?.id || null,
       targetRole: role,
+    })
+
+    await logActivity({
+      userId: session.uid,
+      userName: session.displayName || session.name,
+      userEmail: session.email,
+      role: session.role,
+      action: 'CREATE_USER',
+      description: `Created ${role} account: ${displayName || email}`,
+      metadata: {
+        targetUserEmail: email,
+        targetUserRole: role,
+      },
     })
 
     return withNoStore(

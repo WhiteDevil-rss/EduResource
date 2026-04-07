@@ -1,7 +1,7 @@
 import 'server-only'
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME } from '@/lib/auth-constants'
-import { getSessionRecordById } from '@/lib/server-data'
+import { getBlockedIpRecordByIp, getSessionRecordById, getUserRecordById } from '@/lib/server-data'
 import { readSessionCookie } from '@/lib/session-cookie'
 
 export class ApiError extends Error {
@@ -9,6 +9,29 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
     this.status = status
+  }
+}
+
+function normalizeRequestIp(request) {
+  const directIp = String(request?.ip || '').trim()
+  if (directIp) {
+    return directIp.replace(/^::ffff:/, '')
+  }
+
+  const headers = request?.headers
+  const forwarded = headers?.get('x-forwarded-for') || headers?.get('cf-connecting-ip') || headers?.get('x-real-ip') || ''
+  return String(forwarded).split(',')[0].trim().replace(/^::ffff:/, '')
+}
+
+export async function assertRequestNotBlocked(request) {
+  const ipAddress = normalizeRequestIp(request)
+  if (!ipAddress) {
+    return
+  }
+
+  const blocked = await getBlockedIpRecordByIp(ipAddress).catch(() => null)
+  if (blocked) {
+    throw new ApiError(403, 'Access denied. Your IP is blocked.')
   }
 }
 
@@ -30,6 +53,8 @@ export function assertSameOrigin(request) {
 }
 
 export async function getSessionFromRequest(request) {
+  await assertRequestNotBlocked(request)
+
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value
   if (!sessionCookie) {
     return null
@@ -45,6 +70,11 @@ export async function getSessionFromRequest(request) {
     if (!sessionRecord || sessionRecord.uid !== session.uid) {
       return null
     }
+  }
+
+  const userRecord = await getUserRecordById(session.uid).catch(() => null)
+  if (userRecord?.isBlocked) {
+    throw new ApiError(403, 'Your account is blocked.')
   }
 
   return session

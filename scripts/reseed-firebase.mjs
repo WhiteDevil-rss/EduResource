@@ -35,10 +35,15 @@ if (getApps().length === 0) {
 
 const auth = getAuth();
 const db = getFirestore();
+const superAdminEmail = String(process.env.SUPER_ADMIN_EMAIL || process.env.VITE_SUPER_ADMIN_EMAIL || '').trim().toLowerCase();
+
+if (!superAdminEmail) {
+  throw new Error('SUPER_ADMIN_EMAIL must be configured before reseeding Firebase data.')
+}
 
 const USERS_TO_SEED = [
   {
-    email: 'ss7051017@gmail.com',
+    email: superAdminEmail,
     password: 'password123',
     displayName: 'Admin User',
     role: 'admin',

@@ -4,6 +4,7 @@ import {
   AlertCircle,
   CheckCircle2,
   BookOpen,
+  Bookmark,
   Download,
   Filter,
   HelpCircle,
@@ -31,6 +32,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
+import { useBookmark } from '@/hooks/useBookmark'
 import { formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 
 const DOWNLOADS_STORAGE_KEY = 'sps.educationam.downloads.v1'
@@ -97,6 +99,7 @@ function loadDownloadsFromStorage() {
 
 export default function StudentDashboard() {
   const { user, logout } = useAuth()
+  const { isBookmarked, toggleBookmark, saving: bookmarkSaving } = useBookmark()
   const [resources, setResources] = useState([])
   const [downloads, setDownloads] = useState([])
   const [activeSection, setActiveSection] = useState('overview')
@@ -281,6 +284,7 @@ export default function StudentDashboard() {
 
     return matchesSearch && matchesSubject && matchesClass
   })
+  const favoriteResources = catalog.filter((entry) => isBookmarked(entry.id))
 
   const persistDownloads = (entries) => {
     setDownloads(entries)
@@ -407,6 +411,15 @@ export default function StudentDashboard() {
     }
   }
 
+  const handleToggleBookmark = async (entry) => {
+    if (!entry?.id) {
+      toast.error('Resource is missing a valid ID.')
+      return
+    }
+
+    await toggleBookmark(entry.id)
+  }
+
   if (loading) {
     return <StudentDashboardSkeleton />
   }
@@ -424,6 +437,7 @@ export default function StudentDashboard() {
         navItems={[
           { id: 'overview', label: 'Dashboard', href: '#student-overview', icon: Library },
           { id: 'resources', label: 'Resources', href: '#student-resources', icon: BookOpen },
+          { id: 'favorites', label: 'Saved', href: '#student-favorites', icon: Bookmark },
           { id: 'downloads', label: 'Downloads', href: '#student-downloads', icon: Download },
           { id: 'profile', label: 'Profile', href: '#student-profile', icon: Inbox },
           { id: 'support', label: 'Help & Support', href: '#student-support', icon: HelpCircle },
@@ -652,10 +666,47 @@ export default function StudentDashboard() {
             {filteredResources.length > 0 ? (
               <div className="student-resource-grid">
                 {filteredResources.map((entry) => (
-                  <StudentResourceCard key={entry.id} entry={entry} onDownload={handleResourceAction} />
+                  <StudentResourceCard
+                    key={entry.id}
+                    entry={entry}
+                    onDownload={handleResourceAction}
+                    onToggleBookmark={handleToggleBookmark}
+                    bookmarked={isBookmarked(entry.id)}
+                    bookmarkDisabled={bookmarkSaving}
+                  />
                 ))}
               </div>
             ) : null}
+          </DashboardScrollableSection>
+
+          <DashboardScrollableSection
+            id="student-favorites"
+            ariaLabel="Saved resources"
+            title="My Favorites"
+            description="Your bookmarked resources for quick access."
+          >
+            {favoriteResources.length > 0 ? (
+              <div className="student-resource-grid">
+                {favoriteResources.map((entry) => (
+                  <StudentResourceCard
+                    key={entry.id}
+                    entry={entry}
+                    onDownload={handleResourceAction}
+                    onToggleBookmark={handleToggleBookmark}
+                    bookmarked={isBookmarked(entry.id)}
+                    bookmarkDisabled={bookmarkSaving}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="student-empty-state" role="status" aria-live="polite">
+                <CardContent>
+                  <Bookmark size={32} />
+                  <h3>No saved resources yet</h3>
+                  <p>Tap Save on any resource card to build your favorites list.</p>
+                </CardContent>
+              </Card>
+            )}
           </DashboardScrollableSection>
 
           <DashboardScrollableSection

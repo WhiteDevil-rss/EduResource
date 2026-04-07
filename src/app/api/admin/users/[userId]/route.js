@@ -7,6 +7,7 @@ import {
 } from '@/lib/api-security'
 import { isProtectedAdminEmail } from '@/lib/admin-protection'
 import { logAction } from '@/lib/audit-log'
+import { logActivity } from '@/lib/activity-log'
 import { deleteUserAndData, getUserRecordById, resetManagedCredentials, setManagedUserStatus } from '@/lib/server-data'
 
 export async function DELETE(request, { params }) {
@@ -42,6 +43,19 @@ export async function DELETE(request, { params }) {
       request,
       targetId: targetUser.id,
       targetRole: targetUser.role,
+    })
+
+    await logActivity({
+      userId: session.uid,
+      userName: session.displayName || session.name,
+      userEmail: session.email,
+      role: session.role,
+      action: 'DELETE_USER',
+      description: `Deleted user account: ${targetUser.email}`,
+      metadata: {
+        targetUserEmail: targetUser.email,
+        targetUserId: targetUser.id,
+      },
     })
 
     return NextResponse.json({ 
@@ -112,6 +126,19 @@ export async function PATCH(request, { params }) {
         targetRole: targetUser.role,
       })
 
+      await logActivity({
+        userId: session.uid,
+        userName: session.displayName || session.name,
+        userEmail: session.email,
+        role: session.role,
+        action: 'UPDATE_USER',
+        description: `${status === 'active' ? 'Enabled' : 'Disabled'} user: ${targetUser.email}`,
+        metadata: {
+          targetUserEmail: targetUser.email,
+          action: status === 'active' ? 'ENABLE' : 'DISABLE',
+        },
+      })
+
       return NextResponse.json({ success: true, user })
     }
 
@@ -136,6 +163,19 @@ export async function PATCH(request, { params }) {
         request,
         targetId: targetUser.id,
         targetRole: targetUser.role,
+      })
+
+      await logActivity({
+        userId: session.uid,
+        userName: session.displayName || session.name,
+        userEmail: session.email,
+        role: session.role,
+        action: 'UPDATE_USER',
+        description: `Reset credentials for user: ${targetUser.email}`,
+        metadata: {
+          targetUserEmail: targetUser.email,
+          action: 'RESET_PASSWORD',
+        },
       })
 
       return NextResponse.json({ success: true, ...result })

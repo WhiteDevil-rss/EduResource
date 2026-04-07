@@ -7,10 +7,12 @@ import {
   FileText,
   HelpCircle,
   Inbox,
+  HardDrive,
   KeyRound,
   LayoutPanelTop,
   Library,
   MoreVertical,
+  ShieldAlert,
   Shield,
   Sparkles,
   Trash2,
@@ -21,7 +23,12 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AdminDashboardSkeleton } from '@/components/LoadingStates'
+import { ActivityTimeline } from '@/components/ActivityTimeline'
+import { SuspiciousActivityPanel } from '@/components/SuspiciousActivityPanel'
+import { SecurityBlockManagement } from '@/components/SecurityBlockManagement'
 import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
+import { ExportReportsSection, BackupSystemSection } from '@/components/ExportBackupSection'
+import { SecurityAdvancedSettings } from '@/components/SecurityAdvancedSettings'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
@@ -41,7 +48,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/hooks/useAuth'
-import { getUserManagementActionPolicy, isProtectedAdminEmail, requiresProtectedAdminPasswordForExport } from '@/lib/admin-protection'
+import { useBulkSelection } from '@/hooks/useBulkSelection'
+import { useSessionTimer } from '@/hooks/useSessionTimer'
+import { BulkActionBar } from '@/components/BulkActionBar'
+import { SelectableCard } from '@/components/SelectableCard'
+import { performBulkDelete, performBulkExport } from '@/lib/bulk-operations'
+import { getUserManagementActionPolicy, isProtectedAdminEmail, requiresProtectedAdminPasswordForExport, isSuperAdmin } from '@/lib/admin-protection'
 import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 import { minutesToMs, msToMinutes, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
@@ -108,6 +120,7 @@ function parseTimeoutForm(formState) {
 
 export default function AdminDashboard() {
   const { user, logout, refreshSessionSettings } = useAuth()
+  const sessionTimer = useSessionTimer()
   const [users, setUsers] = useState([])
   const [resources, setResources] = useState([])
   const [requests, setRequests] = useState([])
@@ -157,6 +170,7 @@ export default function AdminDashboard() {
   const [auditStatusFilter, setAuditStatusFilter] = useState('')
   const [auditFromDate, setAuditFromDate] = useState('')
   const [auditToDate, setAuditToDate] = useState('')
+  const [userBulkLoading, setUserBulkLoading] = useState(false)
   const notificationsPanelRef = useRef(null)
   const isProtectedAuditAdmin = isProtectedAdminEmail(user?.email)
 
@@ -164,6 +178,11 @@ export default function AdminDashboard() {
     const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
     return () => window.clearTimeout(timeout)
   }, [searchInput])
+
+  useEffect(() => {
+    // Clear bulk selection when search term or role filter changes
+    userSelection.clearAll()
+  }, [searchTerm, userRoleFilter, userSelection])
 
   const loadOverview = async ({ background = false } = {}) => {
     if (background) {
@@ -306,8 +325,10 @@ export default function AdminDashboard() {
     loadOverview()
     loadRequests()
     loadNotifications()
-    loadSessionTimeoutSettings()
-  }, [user?.uid])
+    if (isSuperAdmin(user)) {
+      loadSessionTimeoutSettings()
+    }
+  }, [user, user?.uid])
 
   useEffect(() => {
     if (!user?.uid) {
@@ -422,6 +443,8 @@ export default function AdminDashboard() {
     const matchesRole = userRoleFilter === 'all' || entry.role === userRoleFilter
     return matchesSearch && matchesRole
   })
+
+  const userSelection = useBulkSelection(filteredUsers.map((u) => u.id))
 
   const filteredResources = resources.filter((entry) => {
     const term = searchTerm.trim().toLowerCase()
@@ -731,6 +754,39 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleBulkDeleteUsers = async () => {
+    setUserBulkLoading(true)
+    try {
+      const result = await performBulkDelete(userSelection.getSelectedArray(), 'user')
+      
+      if (result.deleted.length > 0) {
+        setUsers((current) => current.filter((u) => !result.deleted.includes(u.id)))
+        userSelection.deselectItems(result.deleted)
+      }
+      
+      if (result.failed.length > 0) {
+        toast.error(`Failed to delete ${result.failed.length} user(s). Check the admin logs.`)
+      } else if (result.skipped.length > 0) {
+        toast.warning(`${result.skipped.length} user(s) were protected and could not be deleted.`)
+      }
+    } catch (error) {
+      toast.error(error.message || 'Bulk delete failed.')
+    } finally {
+      setUserBulkLoading(false)
+    }
+  }
+
+  const handleBulkExportUsers = async () => {
+    setUserBulkLoading(true)
+    try {
+      await performBulkExport(userSelection.getSelectedArray(), 'user')
+    } catch (error) {
+      toast.error(error.message || 'Bulk export failed.')
+    } finally {
+      setUserBulkLoading(false)
+    }
+  }
+
   if (loading) {
     return <AdminDashboardSkeleton />
   }
@@ -743,12 +799,16 @@ export default function AdminDashboard() {
         subtitle="Access Control"
         navItems={[
           { id: 'overview', label: 'Dashboard', href: '#admin-overview', icon: LayoutPanelTop },
-          { id: 'security', label: 'Security', href: '#admin-security', icon: Shield },
+          ...(isSuperAdmin(user) ? [{ id: 'security', label: 'Security', href: '#admin-security', icon: Shield }] : []),
           { id: 'users', label: 'Users', href: '#admin-users', icon: Users },
           { id: 'resources', label: 'Resources', href: '#admin-resources', icon: FileText },
           { id: 'requests', label: 'Requests', href: '#admin-requests', icon: Library },
           ...(isProtectedAuditAdmin ? [{ id: 'activity', label: 'Audit Logs', href: '#admin-activity', icon: Shield }] : []),
-        ]}
+          ...(isSuperAdmin(user) ? [{ id: 'blocking', label: 'IP/User Blocking', href: '#admin-blocking', icon: ShieldAlert }] : []),
+          ...(isSuperAdmin(user) ? [{ id: 'suspicious', label: 'Suspicious Activity', href: '#admin-suspicious', icon: ShieldAlert }] : []),
+          ...(isSuperAdmin(user) ? [{ id: 'timeline', label: 'Activity Timeline', href: '#admin-timeline', icon: FileText }] : []),
+            ...(isSuperAdmin(user) ? [{ id: 'export', label: 'Export Reports', href: '#admin-export', icon: Download }, { id: 'backup', label: 'Backup', href: '#admin-backup', icon: HardDrive }] : []),
+          ]}
         mobileOpen={mobileNavOpen}
         onMobileOpenChange={setMobileNavOpen}
         activeSection={activeSection}
@@ -766,6 +826,20 @@ export default function AdminDashboard() {
           onOpenMenu={() => setMobileNavOpen(true)}
           onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
           unreadCount={unreadNotificationCount}
+          sessionIndicator={
+            sessionTimer.isVisible ? (
+              <div
+                className={`session-indicator ${sessionTimer.isWarning ? 'session-indicator--warning' : ''}`}
+                role="status"
+                aria-live="polite"
+              >
+                <span>Session {sessionTimer.formatted}</span>
+                <Button type="button" variant="ghost" onClick={sessionTimer.onExtendSession}>
+                  Extend
+                </Button>
+              </div>
+            ) : null
+          }
           userLabel={getDisplayName(user?.email, 'Admin')}
         />
 
@@ -863,25 +937,27 @@ export default function AdminDashboard() {
             </div>
           </section>
 
+          {isSuperAdmin(user) ? (
           <section id="admin-security" className="student-section" aria-label="Session security settings">
             <div className="student-section__heading">
               <h2>Session Control</h2>
               <p>Configure inactivity logout, warning timing, and max session duration globally.</p>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>Changes sync globally and are applied to active users on the next settings refresh cycle.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div
-                  className="student-request-form"
-                  style={{
-                    gap: '1rem',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  }}
-                >
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Security Settings</CardTitle>
+                  <CardDescription>Changes sync globally and are applied to active users on the next settings refresh cycle.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    className="student-request-form"
+                    style={{
+                      gap: '1rem',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    }}
+                  >
                   <label>
                     <span>Inactivity Timeout (minutes)</span>
                     <Input
@@ -972,7 +1048,23 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            <div style={{ marginTop: '1rem' }}>
+              <SecurityAdvancedSettings />
+            </div>
           </section>
+          ) : null}
+
+          {isSuperAdmin(user) ? (
+            <DashboardScrollableSection
+              id="admin-blocking"
+              ariaLabel="IP and user blocking"
+              title="IP Management"
+              description="Block malicious IPs and disable or re-enable user accounts from one place."
+            >
+              <SecurityBlockManagement users={users} onChanged={() => loadOverview({ background: true })} />
+            </DashboardScrollableSection>
+          ) : null}
 
           {pendingCredentials ? (
             <section className="student-section" aria-label="One-time credentials">
@@ -1034,6 +1126,22 @@ export default function AdminDashboard() {
                     Reset Filters
                   </Button>
                 </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <Button 
+                    type="button" 
+                    variant={userSelection.isSomeSelected ? 'secondary' : 'outline'}
+                    onClick={userSelection.toggleAll}
+                    disabled={filteredUsers.length === 0}
+                  >
+                    <CheckCircle2 size={14} />
+                    {userSelection.isAllSelected ? 'Deselect All' : 'Select All'}
+                  </Button>
+                  {userSelection.selectedCount > 0 && (
+                    <span style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', borderRadius: '0.375rem', backgroundColor: 'rgba(168, 85, 247, 0.1)', color: '#c084fc', fontSize: '0.875rem' }}>
+                      {userSelection.selectedCount} selected
+                    </span>
+                  )}
+                </div>
                 <Button type="button" variant="outline" onClick={exportUsers} disabled={isExportingCsv || isExportVerifying}><Download size={14} />{isExportingCsv ? 'Exporting...' : 'Export CSV'}</Button>
                 <Button type="button" onClick={() => setCreateOpen(true)}><Sparkles size={14} />Create Account</Button>
               </CardContent>
@@ -1046,18 +1154,31 @@ export default function AdminDashboard() {
                   const actionPolicy = getUserManagementActionPolicy(user, entry)
 
                   return (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
-                        <Badge>{entry.role}</Badge>
-                        <Badge variant={entry.status === 'disabled' ? 'outline' : 'secondary'}>{entry.status === 'disabled' ? 'Disabled' : 'Enabled'}</Badge>
-                      </div>
-                      <Badge variant="outline">{authProviderLabel(entry)}</Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.email}</p>
+                  <SelectableCard 
+                    key={entry.id}
+                    id={entry.id}
+                    isSelected={userSelection.isSelected(entry.id)}
+                    onToggle={() => userSelection.toggleItem(entry.id)}
+                  >
+                    <Card className={`student-resource-card ${entry.isBlocked ? 'student-resource-card--blocked' : ''}`}>
+                      <CardHeader className="student-resource-card__header">
+                        <div className="student-resource-card__meta">
+                          <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
+                          <Badge>{entry.role}</Badge>
+                          <Badge
+                            variant={entry.isBlocked ? 'destructive' : entry.status === 'disabled' ? 'outline' : 'secondary'}
+                          >
+                            {entry.isBlocked ? 'Blocked' : entry.status === 'disabled' ? 'Disabled' : 'Enabled'}
+                          </Badge>
+                          {entry.isBlocked && entry.blockedExpiresAt ? (
+                            <Badge variant="outline">Expires {formatDisplayDate(entry.blockedExpiresAt)}</Badge>
+                          ) : null}
+                        </div>
+                        <Badge variant="outline">{authProviderLabel(entry)}</Badge>
+                      </CardHeader>
+                      <CardContent>
+                        <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
+                        <p className="student-resource-card__summary">{entry.email}</p>
                       <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
                     </CardContent>
                     <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1115,10 +1236,19 @@ export default function AdminDashboard() {
                       )}
                     </CardContent>
                   </Card>
+                  </SelectableCard>
                   )
                 })}
               </div>
             )}
+            <BulkActionBar 
+              selectedCount={userSelection.selectedCount}
+              itemType="user"
+              onDelete={handleBulkDeleteUsers}
+              onExport={handleBulkExportUsers}
+              onClear={userSelection.clearAll}
+              isLoading={userBulkLoading}
+            />
           </DashboardScrollableSection>
 
           <DashboardScrollableSection
@@ -1410,6 +1540,48 @@ export default function AdminDashboard() {
               </Card>
             </DashboardScrollableSection>
           ) : null}
+
+          {isSuperAdmin(user) ? (
+            <DashboardScrollableSection
+              id="admin-suspicious"
+              ariaLabel="Suspicious activity monitoring"
+              title="Suspicious Activity"
+              description="Monitor abnormal sign-ins, unauthorized attempts, unusual locations, and spam-like behavior."
+            >
+              <SuspiciousActivityPanel />
+            </DashboardScrollableSection>
+          ) : null}
+
+          {isSuperAdmin(user) ? (
+            <DashboardScrollableSection
+              id="admin-timeline"
+              ariaLabel="Activity timeline"
+              title="Activity Timeline"
+              description="User activity tracking including logins, resource operations, and user management."
+            >
+              <ActivityTimeline />
+            </DashboardScrollableSection>
+          ) : null}
+
+            {isSuperAdmin(user) ? (
+              <section id="admin-export" className="student-section" aria-label="Export reports">
+                <div className="student-section__heading">
+                  <h2>Export Reports</h2>
+                  <p>Download users, logs, or analytics in CSV or PDF format</p>
+                </div>
+                <ExportReportsSection />
+              </section>
+            ) : null}
+
+            {isSuperAdmin(user) ? (
+              <section id="admin-backup" className="student-section" aria-label="Backup system">
+                <div className="student-section__heading">
+                  <h2>Backup System</h2>
+                  <p>Backup users and resources data</p>
+                </div>
+                <BackupSystemSection />
+              </section>
+            ) : null}
         </main>
       </div>
 
@@ -1552,7 +1724,7 @@ export default function AdminDashboard() {
         <DialogHeader>
           <DialogTitle id="admin-export-verify-title">Admin Verification Required</DialogTitle>
           <DialogDescription>
-            Enter password for ss7051017@gmail.com to continue CSV export.
+            Enter the super admin password to continue CSV export.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>

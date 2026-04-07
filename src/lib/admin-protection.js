@@ -1,15 +1,38 @@
-export const PROTECTED_ADMIN_EMAIL = 'ss7051017@gmail.com'
-
 function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase()
 }
 
+function readConfiguredSuperAdminEmail() {
+  const frontendEmail =
+    typeof import.meta !== 'undefined' && import.meta.env
+      ? import.meta.env.VITE_SUPER_ADMIN_EMAIL
+      : ''
+  const backendEmail = typeof process !== 'undefined' ? process.env.SUPER_ADMIN_EMAIL : ''
+  return normalizeEmail(frontendEmail || backendEmail)
+}
+
+export const PROTECTED_ADMIN_EMAIL = readConfiguredSuperAdminEmail()
+
+export function getSuperAdminEmail() {
+  return PROTECTED_ADMIN_EMAIL
+}
+
+export function isSuperAdminEmail(email) {
+  return isProtectedAdminEmail(email)
+}
+
 export function isProtectedAdminEmail(email) {
-  return normalizeEmail(email) === PROTECTED_ADMIN_EMAIL
+  const configuredEmail = getSuperAdminEmail()
+  return Boolean(configuredEmail) && normalizeEmail(email) === configuredEmail
 }
 
 export function requiresProtectedAdminPasswordForExport(currentUserEmail) {
   return !isProtectedAdminEmail(currentUserEmail)
+}
+
+export function isSuperAdmin(user) {
+  if (!user) return false
+  return isProtectedAdminEmail(user.email)
 }
 
 export function isSameUser(currentUser, targetUser) {

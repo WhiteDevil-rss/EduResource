@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, CheckCircle2, Download, LoaderCircle } from 'lucide-react'
+import { AlertCircle, Bookmark, CheckCircle2, Download, LoaderCircle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,13 @@ const statusMap = {
   failed: { label: 'Failed', icon: AlertCircle, tone: 'student-status--failed' },
 }
 
-export function StudentResourceCard({ entry, onDownload }) {
+export function StudentResourceCard({
+  entry,
+  onDownload,
+  onToggleBookmark,
+  bookmarked = false,
+  bookmarkDisabled = false,
+}) {
   const status = statusMap[entry.uploadStatus] || statusMap.completed
   const StatusIcon = status.icon
   const showProgress = entry.uploadStatus === 'uploading' || entry.uploadStatus === 'failed'
@@ -44,16 +50,29 @@ export function StudentResourceCard({ entry, onDownload }) {
 
       <CardFooter className="student-resource-card__footer">
         <span className="student-resource-card__updated">{entry.updatedLabel}</span>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => onDownload(entry)}
-          disabled={entry.uploadStatus === 'uploading'}
-          aria-label={`Download ${entry.title}`}
-        >
-          <Download size={14} />
-          Download
-        </Button>
+        <div className="student-resource-card__actions">
+          <Button
+            type="button"
+            variant={bookmarked ? 'default' : 'outline'}
+            onClick={() => onToggleBookmark?.(entry)}
+            disabled={bookmarkDisabled}
+            aria-label={`${bookmarked ? 'Remove bookmark for' : 'Save'} ${entry.title}`}
+            className="student-bookmark-button"
+          >
+            <Bookmark size={14} className={bookmarked ? 'student-bookmark-button__icon--active' : ''} />
+            {bookmarked ? 'Saved' : 'Save'}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => onDownload(entry)}
+            disabled={entry.uploadStatus === 'uploading'}
+            aria-label={`Download ${entry.title}`}
+          >
+            <Download size={14} />
+            Download
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   )

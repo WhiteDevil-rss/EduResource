@@ -1,5 +1,6 @@
 import 'server-only'
 import { auth, firestore } from '@/lib/firebase-edge'
+import { isProtectedAdminEmail } from '@/lib/admin-protection'
 import { normalizeSessionSettings, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
 const USERS_COLLECTION = 'users'
@@ -11,6 +12,7 @@ const NOTIFICATIONS_COLLECTION = 'notifications'
 const APP_CONFIG_COLLECTION = 'app_config'
 const SESSION_SETTINGS_DOC_ID = 'session_timeout'
 const EXPORT_VERIFICATIONS_COLLECTION = 'admin_export_verifications'
+const BLOCKED_IPS_COLLECTION = 'blocked_ips'
 
 function nowIso() {
   return new Date().toISOString()
@@ -22,6 +24,18 @@ function normalizeEmail(email) {
 
 function normalizeLoginId(loginId) {
   return String(loginId || '').trim().toLowerCase()
+}
+
+function normalizeIpAddress(ipAddress) {
+  return String(ipAddress || '')
+    .trim()
+    .replace(/^::ffff:/, '')
+    .split(',')[0]
+    .trim()
+}
+
+function encodeIpDocId(ipAddress) {
+  return encodeURIComponent(normalizeIpAddress(ipAddress))
 }
 
 function buildPendingStudentId(emailLower) {
@@ -58,6 +72,10 @@ function generateTemporaryPassword(length = 14) {
 }
 
 function sanitizeUserData(docId, data = {}) {
+  const bookmarks = Array.isArray(data.bookmarks)
+    ? data.bookmarks.map((value) => String(value || '').trim()).filter(Boolean)
+    : []
+
   return {
     id: docId,
     uid: data.uid || docId,
@@ -72,6 +90,13 @@ function sanitizeUserData(docId, data = {}) {
     updatedAt: data.updatedAt || null,
     lastLoginAt: data.lastLoginAt || null,
     avatar: data.avatar || null,
+    bookmarks,
+    isBlocked: Boolean(data.isBlocked),
+    blockedAt: data.blockedAt || null,
+    blockedBy: data.blockedBy || null,
+    blockedReason: data.blockedReason || '',
+    blockedExpiresAt: data.blockedExpiresAt || null,
+    isTemporaryBlock: Boolean(data.isBlocked && data.blockedExpiresAt),
   }
 }
 
@@ -183,6 +208,29 @@ function sanitizeExportVerificationData(docId, data = {}) {
     expiresAt: data.expiresAt || null,
     usedAt: data.usedAt || null,
   }
+}
+
+function sanitizeBlockedIpData(docId, data = {}) {
+  return {
+    id: docId,
+    ipAddress: data.ipAddress || decodeURIComponent(docId),
+    reason: data.reason || '',
+    blockedAt: data.blockedAt || null,
+    blockedBy: data.blockedBy || '',
+    expiresAt: data.expiresAt || null,
+    isTemporary: Boolean(data.expiresAt),
+    createdAt: data.createdAt || data.blockedAt || null,
+    updatedAt: data.updatedAt || data.blockedAt || null,
+  }
+}
+
+function isExpiredTimestamp(value) {
+  const parsed = Date.parse(String(value || ''))
+  return Number.isFinite(parsed) && parsed <= Date.now()
+}
+
+async function deleteBlockedIpDoc(docId) {
+  await firestore.deleteDoc(`${BLOCKED_IPS_COLLECTION}/${docId}`).catch(() => null)
 }
 
 export async function getRecentAuditCount(actorUid, action, windowMs = 600000) {
@@ -297,13 +345,243 @@ async function getCollectionRecords(collectionName) {
   return firestore.listDocs(collectionName)
 }
 
+async function syncExpiredUserBlock(docId, data) {
+  if (!data?.isBlocked) {
+    return data
+  }
+
+  const blockedExpiresAt = getTimestampValue(data.blockedExpiresAt)
+  if (!blockedExpiresAt || Date.now() <= blockedExpiresAt) {
+    return data
+  }
+
+  const updated = {
+    ...data,
+    isBlocked: false,
+    blockedAt: null,
+    blockedBy: null,
+    blockedReason: '',
+    blockedExpiresAt: null,
+    updatedAt: nowIso(),
+  }
+
+  await firestore.setDoc(`${USERS_COLLECTION}/${docId}`, updated, true)
+
+  if (updated.uid) {
+    try {
+      await auth.updateUser(updated.uid, {
+        disabled: String(updated.status || '').toLowerCase() === 'disabled',
+      })
+    } catch (error) {
+      console.warn('Firebase Auth block expiry sync warning:', error?.message || error)
+    }
+  }
+
+  await createAuditRecord({
+    actorUid: null,
+    actorRole: 'system',
+    action: 'security.user.block.expired',
+    targetId: docId,
+    targetRole: updated.role,
+    message: `Temporary block expired for ${updated.email || docId}.`,
+    metadata: {
+      expiredAt: new Date(blockedExpiresAt).toISOString(),
+    },
+  }).catch(() => null)
+
+  return updated
+}
+
 export async function getUserRecordById(userId) {
   if (!userId || typeof userId !== 'string' || userId.trim() === '') {
     return null;
   }
   const data = await firestore.getDoc(`${USERS_COLLECTION}/${userId}`)
   if (!data) return null
-  return sanitizeUserData(data.id, data)
+  const activeData = await syncExpiredUserBlock(data.id, data)
+  return sanitizeUserData(data.id, activeData)
+}
+
+export async function getBlockedIpRecordByIp(ipAddress) {
+  const normalized = normalizeIpAddress(ipAddress)
+  if (!normalized) {
+    return null
+  }
+
+  const docId = encodeIpDocId(normalized)
+  const data = await firestore.getDoc(`${BLOCKED_IPS_COLLECTION}/${docId}`).catch(() => null)
+  if (!data) {
+    return null
+  }
+
+  if (data.expiresAt && isExpiredTimestamp(data.expiresAt)) {
+    await deleteBlockedIpDoc(docId)
+    return null
+  }
+
+  return sanitizeBlockedIpData(data.id, data)
+}
+
+export async function isBlockedIpAddress(ipAddress) {
+  const record = await getBlockedIpRecordByIp(ipAddress)
+  return Boolean(record)
+}
+
+export async function listBlockedIpRecords() {
+  const records = await getCollectionRecords(BLOCKED_IPS_COLLECTION).catch(() => [])
+  const activeRecords = []
+
+  for (const document of records) {
+    const record = sanitizeBlockedIpData(document.id, getDocumentData(document))
+    if (record.expiresAt && isExpiredTimestamp(record.expiresAt)) {
+      await deleteBlockedIpDoc(document.id)
+      continue
+    }
+
+    activeRecords.push(record)
+  }
+
+  return activeRecords.sort((left, right) => String(right.blockedAt || '').localeCompare(String(left.blockedAt || '')))
+}
+
+export async function blockIpAddress({ ipAddress, reason, actor, expiresAt = null }) {
+  const normalized = normalizeIpAddress(ipAddress)
+  if (!normalized) {
+    throw new Error('A valid IP address is required.')
+  }
+
+  const expiresAtValue = getTimestampValue(expiresAt)
+  const resolvedExpiresAt = expiresAtValue ? new Date(expiresAtValue).toISOString() : null
+  if (resolvedExpiresAt && Date.now() >= expiresAtValue) {
+    throw new Error('Block expiry must be in the future.')
+  }
+
+  const docId = encodeIpDocId(normalized)
+  const existing = await firestore.getDoc(`${BLOCKED_IPS_COLLECTION}/${docId}`).catch(() => null)
+  if (existing) {
+    throw new Error('This IP address is already blocked.')
+  }
+
+  const blockedAt = nowIso()
+  const payload = {
+    ipAddress: normalized,
+    reason: String(reason || '').trim() || 'Blocked by super admin.',
+    blockedAt,
+    blockedBy: String(actor?.email || actor?.name || actor?.uid || '').trim() || 'super-admin',
+    expiresAt: resolvedExpiresAt,
+    createdAt: blockedAt,
+    updatedAt: blockedAt,
+  }
+
+  await firestore.setDoc(`${BLOCKED_IPS_COLLECTION}/${docId}`, payload, true)
+
+  await createAuditRecord({
+    actorUid: actor?.uid || null,
+    actorRole: actor?.role || null,
+    action: 'security.ip.blocked',
+    targetId: normalized,
+    targetRole: 'ip_address',
+    message: `Blocked IP ${normalized}.`,
+    metadata: {
+      reason: payload.reason,
+      blockedBy: payload.blockedBy,
+      expiresAt: payload.expiresAt,
+    },
+  })
+
+  return sanitizeBlockedIpData(docId, payload)
+}
+
+export async function unblockIpAddress({ ipAddress, actor }) {
+  const normalized = normalizeIpAddress(ipAddress)
+  if (!normalized) {
+    throw new Error('A valid IP address is required.')
+  }
+
+  const docId = encodeIpDocId(normalized)
+  const existing = await firestore.getDoc(`${BLOCKED_IPS_COLLECTION}/${docId}`).catch(() => null)
+  if (!existing) {
+    throw new Error('This IP address is not blocked.')
+  }
+
+  await firestore.deleteDoc(`${BLOCKED_IPS_COLLECTION}/${docId}`)
+
+  await createAuditRecord({
+    actorUid: actor?.uid || null,
+    actorRole: actor?.role || null,
+    action: 'security.ip.unblocked',
+    targetId: normalized,
+    targetRole: 'ip_address',
+    message: `Unblocked IP ${normalized}.`,
+  })
+
+  return { ipAddress: normalized, removed: true }
+}
+
+async function updateUserBlockedState({ userId, isBlocked, actor, reason = '', expiresAt = null }) {
+  const record = await getRawUserRecordById(userId)
+  if (!record) {
+    throw new Error('User account not found.')
+  }
+
+  if (isProtectedAdminEmail(record.data.email) && isBlocked) {
+    throw new Error('This protected admin account cannot be blocked.')
+  }
+
+  if (Boolean(record.data.isBlocked) === Boolean(isBlocked)) {
+    throw new Error(isBlocked ? 'This user is already blocked.' : 'This user is not blocked.')
+  }
+
+  const expiresAtValue = getTimestampValue(expiresAt)
+  const resolvedExpiresAt = isBlocked && expiresAtValue ? new Date(expiresAtValue).toISOString() : null
+  if (resolvedExpiresAt && Date.now() >= expiresAtValue) {
+    throw new Error('Block expiry must be in the future.')
+  }
+
+  const updated = {
+    ...record.data,
+    isBlocked: Boolean(isBlocked),
+    blockedAt: isBlocked ? nowIso() : null,
+    blockedBy: isBlocked ? String(actor?.email || actor?.name || actor?.uid || '').trim() || 'super-admin' : null,
+    blockedReason: isBlocked ? String(reason || '').trim() : '',
+    blockedExpiresAt: resolvedExpiresAt,
+    updatedAt: nowIso(),
+  }
+
+  await firestore.setDoc(`${USERS_COLLECTION}/${record.id}`, updated, true)
+
+  if (record.data.uid) {
+    try {
+      await auth.updateUser(record.data.uid, {
+        disabled: Boolean(isBlocked) || record.data.status === 'disabled',
+      })
+    } catch (error) {
+      console.warn('Firebase Auth blocked status sync warning:', error?.message || error)
+    }
+  }
+
+  await createAuditRecord({
+    actorUid: actor?.uid || null,
+    actorRole: actor?.role || null,
+    action: isBlocked ? 'security.user.blocked' : 'security.user.unblocked',
+    targetId: record.id,
+    targetRole: updated.role,
+    message: `${isBlocked ? 'Blocked' : 'Unblocked'} user ${updated.email || record.id}.`,
+    metadata: {
+      blockedReason: isBlocked ? updated.blockedReason : null,
+      blockedExpiresAt: updated.blockedExpiresAt,
+    },
+  })
+
+  return sanitizeUserData(record.id, updated)
+}
+
+export async function blockUserAccount({ userId, actor, reason = '', expiresAt = null }) {
+  return updateUserBlockedState({ userId, isBlocked: true, actor, reason, expiresAt })
+}
+
+export async function unblockUserAccount({ userId, actor }) {
+  return updateUserBlockedState({ userId, isBlocked: false, actor })
 }
 
 export async function getResourceRecordById(resourceId) {
@@ -342,10 +620,12 @@ export async function findUserRecordByEmail(email) {
     return null
   }
 
+  const activeData = await syncExpiredUserBlock(match.id, match)
+
   return {
     id: match.id,
-    data: match,
-    user: sanitizeUserData(match.id, match),
+    data: activeData,
+    user: sanitizeUserData(match.id, activeData),
   }
 }
 
@@ -360,20 +640,27 @@ export async function findUserRecordByLoginId(loginId) {
     return null
   }
 
+  const activeData = await syncExpiredUserBlock(match.id, match)
+
   return {
     id: match.id,
-    data: match,
-    user: sanitizeUserData(match.id, match),
+    data: activeData,
+    user: sanitizeUserData(match.id, activeData),
   }
 }
 
 export async function listUserRecords() {
   const records = await getCollectionRecords(USERS_COLLECTION)
-  return records
-    .map((document) => sanitizeUserData(document.id, getDocumentData(document)))
-    .sort((left, right) =>
-      String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
-    )
+  const activeRecords = []
+
+  for (const document of records) {
+    const data = await syncExpiredUserBlock(document.id, getDocumentData(document))
+    activeRecords.push(sanitizeUserData(document.id, data))
+  }
+
+  return activeRecords.sort((left, right) =>
+    String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
+  )
 }
 
 export async function listResourceRecords() {
@@ -383,6 +670,73 @@ export async function listResourceRecords() {
     .sort((left, right) =>
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
+}
+
+export async function listBookmarkedResourcesByStudent(uid) {
+  const user = await getUserRecordById(uid)
+  if (!user) {
+    throw new Error('User not found.')
+  }
+
+  const bookmarkIds = Array.isArray(user.bookmarks) ? user.bookmarks : []
+  if (bookmarkIds.length === 0) {
+    return []
+  }
+
+  const resources = await listResourceRecords()
+  return resources.filter((resource) => bookmarkIds.includes(String(resource.id || '').trim()))
+}
+
+export async function toggleBookmarkForStudent({ studentUid, resourceId }) {
+  const normalizedStudentUid = String(studentUid || '').trim()
+  const normalizedResourceId = String(resourceId || '').trim()
+
+  if (!normalizedStudentUid || !normalizedResourceId) {
+    throw new Error('Student and resource identifiers are required.')
+  }
+
+  const userDocPath = `${USERS_COLLECTION}/${normalizedStudentUid}`
+  const userRaw = await firestore.getDoc(userDocPath)
+  if (!userRaw) {
+    throw new Error('User not found.')
+  }
+
+  const resource = await getResourceRecordById(normalizedResourceId)
+  if (!resource || String(resource.status || '').toLowerCase() !== 'live') {
+    throw new Error('Resource is unavailable for bookmarking.')
+  }
+
+  const currentBookmarks = Array.isArray(userRaw.bookmarks)
+    ? userRaw.bookmarks.map((value) => String(value || '').trim()).filter(Boolean)
+    : []
+
+  const hasBookmark = currentBookmarks.includes(normalizedResourceId)
+  const nextBookmarks = hasBookmark
+    ? currentBookmarks.filter((value) => value !== normalizedResourceId)
+    : [...new Set([...currentBookmarks, normalizedResourceId])]
+
+  await firestore.setDoc(
+    userDocPath,
+    {
+      bookmarks: nextBookmarks,
+      updatedAt: nowIso(),
+    },
+    true
+  )
+
+  await createAuditRecord({
+    actorUid: normalizedStudentUid,
+    actorRole: 'student',
+    action: hasBookmark ? 'resource.bookmark.removed' : 'resource.bookmark.added',
+    targetId: normalizedResourceId,
+    targetRole: 'resource',
+    message: `${hasBookmark ? 'Removed bookmark for' : 'Bookmarked'} resource ${normalizedResourceId}.`,
+  })
+
+  return {
+    bookmarked: !hasBookmark,
+    bookmarks: nextBookmarks,
+  }
 }
 
 export async function listResourceRequestRecords() {
@@ -982,6 +1336,10 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
       emailLower: normalizedEmail,
       role: 'student',
       status: 'active',
+      isBlocked: Boolean(existingByEmail?.data?.isBlocked),
+      blockedAt: existingByEmail?.data?.blockedAt || null,
+      blockedBy: existingByEmail?.data?.blockedBy || null,
+      blockedReason: existingByEmail?.data?.blockedReason || '',
       authProvider: 'google',
       pending: existingByEmail?.data?.uid ? false : true,
       createdAt: existingByEmail?.data?.createdAt || createdAt,
@@ -1030,6 +1388,10 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
     status: 'active',
     authProvider: 'credentials',
     pending: false,
+    isBlocked: false,
+    blockedAt: null,
+    blockedBy: null,
+    blockedReason: '',
     createdAt,
     updatedAt: createdAt,
     lastLoginAt: null,
@@ -1055,18 +1417,18 @@ export async function createManagedUser({ role, email, displayName, actorUid, ac
 }
 
 export async function setManagedUserStatus({ userId, nextStatus, actorUid, actorRole }) {
-  const record = await getRawUserRecordById(userId)
+  const record = await getUserRecordById(userId)
   if (!record) {
     throw new Error('User account not found.')
   }
 
   const normalizedStatus = nextStatus === 'active' ? 'active' : 'disabled'
-  if (record.data.role === 'admin' && record.id === actorUid && normalizedStatus !== 'active') {
+  if (record.role === 'admin' && record.id === actorUid && normalizedStatus !== 'active') {
     throw new Error('You cannot disable your own admin account from this panel.')
   }
 
   const updated = {
-    ...record.data,
+    ...record,
     status: normalizedStatus,
     updatedAt: nowIso(),
   }
@@ -1076,7 +1438,7 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
   if (updated.uid) {
     try {
       await auth.updateUser(updated.uid, {
-        disabled: normalizedStatus !== 'active',
+        disabled: normalizedStatus !== 'active' || Boolean(record.isBlocked),
       })
     } catch (error) {
       console.warn('Firebase Auth status sync warning:', error?.message || error)
@@ -1096,41 +1458,41 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
 }
 
 export async function resetManagedCredentials({ userId, actorUid, actorRole, newPassword }) {
-  const record = await getRawUserRecordById(userId)
+  const record = await getUserRecordById(userId)
   if (!record) {
     throw new Error('User account not found.')
   }
 
   // Ensure the user has a Firebase Auth UID
-  if (!record.data.uid) {
+  if (!record.uid) {
     throw new Error('This account has not yet been linked to an authentication provider.')
   }
 
   const temporaryPassword = newPassword || generateTemporaryPassword()
-  let loginId = record.data.loginId
-  const normalizedStatus = record.data.status === 'disabled' ? 'disabled' : 'active'
+  let loginId = record.loginId
+  const normalizedStatus = record.status === 'disabled' ? 'disabled' : 'active'
 
   // If the user doesn't have a Login ID (e.g. Google-only student), generate one
   if (!loginId) {
     loginId = await ensureUniqueLoginId(
-      record.data.email?.split('@')[0] || record.data.displayName || record.data.role || 'user'
+      record.email?.split('@')[0] || record.displayName || record.role || 'user'
     )
   }
 
-  await auth.updateUser(record.data.uid, {
+  await auth.updateUser(record.uid, {
     password: temporaryPassword,
-    disabled: normalizedStatus !== 'active',
+    disabled: normalizedStatus !== 'active' || Boolean(record.isBlocked),
   })
 
   const updatedData = {
-    ...record.data,
+    ...record,
     status: normalizedStatus,
     loginId,
     updatedAt: nowIso(),
   }
 
   // If they were Google-only, we now effectively support credentials too
-  if (record.data.authProvider === 'google') {
+  if (record.authProvider === 'google') {
     updatedData.authProvider = 'credentials'
   }
 
@@ -1141,8 +1503,8 @@ export async function resetManagedCredentials({ userId, actorUid, actorRole, new
     actorRole,
     action: 'user.credentials.reset',
     targetId: record.id,
-    targetRole: record.data.role,
-    message: `Reset credentials for ${record.data.email || record.id}.`,
+    targetRole: record.role,
+    message: `Reset credentials for ${record.email || record.id}.`,
   })
 
   return {
@@ -1165,25 +1527,29 @@ export async function resolveStudentGoogleUser(decodedToken) {
     throw new Error('Only Gmail addresses are permitted for student access.')
   }
 
-  const currentRecord = await getRawUserRecordById(decodedToken.uid)
+  const currentRecord = await getUserRecordById(decodedToken.uid)
   if (currentRecord) {
-    if (currentRecord.data.role !== 'student') {
+    if (currentRecord.role !== 'student') {
       throw new Error('This Google account is not assigned to the student portal.')
     }
 
     const merged = {
-      ...currentRecord.data,
+      ...currentRecord,
       uid: decodedToken.uid,
       email,
       emailLower: email,
       displayName:
-        currentRecord.data.displayName ||
+        currentRecord.displayName ||
         decodedToken.name ||
         email.split('@')[0],
       authProvider: 'google',
       pending: false,
       updatedAt: nowIso(),
       lastLoginAt: nowIso(),
+    }
+
+    if (merged.isBlocked) {
+      throw new Error('Your account is blocked.')
     }
 
     await firestore.setDoc(`${USERS_COLLECTION}/${decodedToken.uid}`, merged, true)
@@ -1209,6 +1575,10 @@ export async function resolveStudentGoogleUser(decodedToken) {
       pending: false,
       updatedAt: nowIso(),
       lastLoginAt: nowIso(),
+    }
+
+    if (merged.isBlocked) {
+      throw new Error('Your account is blocked.')
     }
 
     const ops = [

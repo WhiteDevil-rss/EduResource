@@ -15,6 +15,7 @@ export function DashboardTopbar({
   onOpenNotifications,
   unreadCount,
   userLabel,
+  sessionIndicator,
 }) {
   return (
     <header className="student-topbar">
@@ -55,6 +56,8 @@ export function DashboardTopbar({
           <Bell size={16} />
           {unreadCount > 0 ? <span className="student-topbar__badge">{unreadCount}</span> : null}
         </Button>
+
+        {sessionIndicator ? <div className="student-topbar__session">{sessionIndicator}</div> : null}
 
         <div className="student-topbar__profile" role="img" aria-label={`${role} user profile`}>
           <RoleAvatar role={role} size="sm" label={`${role} profile icon`} />

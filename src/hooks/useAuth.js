@@ -271,6 +271,11 @@ export function AuthProvider({ children }) {
       });
 
       const payload = await response.json().catch(() => ({}));
+
+      if (response.status === 202 && payload?.requiresTwoFactor) {
+        return payload;
+      }
+
       if (!response.ok) {
         throw new Error(payload?.error || "Credential sign-in failed.");
       }
@@ -293,16 +298,82 @@ export function AuthProvider({ children }) {
       writeSessionStart(Date.now());
       if (typeof window !== "undefined") {
         window.location.replace(`/dashboard/${nextRole}`);
-        return;
+        return null;
       }
 
       router.replace(`/dashboard/${nextRole}`);
+      return null;
     } catch (error) {
       throw new Error(error?.message || "Credential sign-in failed.");
     } finally {
       setIsAuthenticating(false);
       setLoading(false);
     }
+  };
+
+  const verifyTwoFactorCode = async (challengeId, otp) => {
+    try {
+      setIsAuthenticating(true);
+
+      const response = await fetch("/api/auth/verify-2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: String(challengeId || "").trim(),
+          otp: String(otp || "").trim(),
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.error || "2FA verification failed.");
+      }
+
+      const nextRole = payload?.role || null;
+      const allowedRoles = ["admin", "faculty", "student"];
+
+      if (!nextRole || !allowedRoles.includes(nextRole)) {
+        throw new Error("Account role resolution failed or access denied.");
+      }
+
+      const nextSession = {
+        user: payload?.user || null,
+        role: nextRole,
+        status: payload?.user?.status || "active",
+        authProvider: "credentials",
+      };
+
+      applySession(nextSession);
+      writeSessionStart(Date.now());
+      if (typeof window !== "undefined") {
+        window.location.replace(`/dashboard/${nextRole}`);
+        return;
+      }
+
+      router.replace(`/dashboard/${nextRole}`);
+    } catch (error) {
+      throw new Error(error?.message || "2FA verification failed.");
+    } finally {
+      setIsAuthenticating(false);
+      setLoading(false);
+    }
+  };
+
+  const resendTwoFactorCode = async (challengeId) => {
+    const response = await fetch("/api/auth/resend-2fa", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        challengeId: String(challengeId || "").trim(),
+      }),
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error || "Could not resend verification code.");
+    }
+
+    return payload;
   };
 
   const clearBrowserAuthArtifacts = () => {
@@ -414,9 +485,12 @@ export function AuthProvider({ children }) {
     loading: loading || isAuthenticating,
     isAuthenticating,
     loginWithCredentials,
+    verifyTwoFactorCode,
+    resendTwoFactorCode,
     loginWithGoogle,
     signInWithGoogleStudent,
     logout,
+    stayLoggedIn: autoLogout.stayLoggedIn,
     sessionSettings,
     refreshSessionSettings,
   };
