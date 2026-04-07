@@ -16,6 +16,7 @@ import { StudentDashboardSkeleton } from '@/components/LoadingStates'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { StudentResourceCard } from '@/components/student/StudentResourceCard'
+import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -545,12 +546,12 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section id="student-resources" className="student-section" aria-label="Resource library">
-            <div className="student-section__heading">
-              <h2>Resource Library</h2>
-              <p>Filter by class and subject to quickly find what you need.</p>
-            </div>
-
+          <DashboardScrollableSection
+            id="student-resources"
+            ariaLabel="Resource library"
+            title="Resource Library"
+            description="Filter by class and subject to quickly find what you need."
+          >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
                 <div className="student-filter-label">
@@ -632,14 +633,14 @@ export default function StudentDashboard() {
                 ))}
               </div>
             ) : null}
-          </section>
+          </DashboardScrollableSection>
 
-          <section id="student-downloads" className="student-section" aria-label="Recent downloads">
-            <div className="student-section__heading">
-              <h2>My Downloads</h2>
-              <p>Recently opened files from this device.</p>
-            </div>
-
+          <DashboardScrollableSection
+            id="student-downloads"
+            ariaLabel="Recent downloads"
+            title="My Downloads"
+            description="Recently opened files from this device."
+          >
             <Card>
               <CardContent className="student-download-list">
                 {downloads.length > 0 ? (
@@ -662,7 +663,7 @@ export default function StudentDashboard() {
                 )}
               </CardContent>
             </Card>
-          </section>
+          </DashboardScrollableSection>
 
           <section id="student-profile" className="student-section" aria-label="Profile details">
             <div className="student-section__heading">
@@ -692,12 +693,12 @@ export default function StudentDashboard() {
             </div>
           </section>
 
-          <section id="student-support" className="student-section" aria-label="Help and support">
-            <div className="student-section__heading">
-              <h2>Help and Requests</h2>
-              <p>Need specific materials? Submit a request for faculty review.</p>
-            </div>
-
+          <DashboardScrollableSection
+            id="student-support"
+            ariaLabel="Help and support"
+            title="Help and Requests"
+            description="Need specific materials? Submit a request for faculty review."
+          >
             <Card>
               <CardContent className="student-support-card">
                 <div>
@@ -710,7 +711,7 @@ export default function StudentDashboard() {
                 </Button>
               </CardContent>
             </Card>
-          </section>
+          </DashboardScrollableSection>
         </main>
       </div>
 

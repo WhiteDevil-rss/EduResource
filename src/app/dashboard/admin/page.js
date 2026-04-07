@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { AdminDashboardSkeleton } from '@/components/LoadingStates'
+import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
@@ -593,11 +594,12 @@ export default function AdminDashboard() {
             </section>
           ) : null}
 
-          <section id="admin-users" className="student-section" aria-label="User management">
-            <div className="student-section__heading">
-              <h2>User Management</h2>
-              <p>Create, review, and remove accounts with role-aware controls.</p>
-            </div>
+          <DashboardScrollableSection
+            id="admin-users"
+            ariaLabel="User management"
+            title="User Management"
+            description="Create, review, and remove accounts with role-aware controls."
+          >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
                 <div className="student-filter-label"><Users size={14} /><span>Filters</span></div>
@@ -617,51 +619,50 @@ export default function AdminDashboard() {
             {filteredUsers.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
             ) : (
-              <div className="dashboard-list-scroll">
+              <div className="student-resource-grid">
                 {filteredUsers.map((entry) => (
-                  <Card key={entry.id} className="dashboard-list-row">
-                    <CardContent className="dashboard-list-row__content">
-                      <div className="dashboard-list-row__main">
-                        <div className="dashboard-list-row__header">
-                          <div className="student-resource-card__meta">
-                            <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
-                            <Badge>{entry.role}</Badge>
-                            <Badge variant="outline">{entry.status}</Badge>
-                          </div>
-                          <Badge variant="outline">{authProviderLabel(entry)}</Badge>
-                        </div>
-                        <CardTitle className="dashboard-list-row__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
-                        <p className="dashboard-list-row__summary">{entry.email}</p>
-                        <p className="dashboard-list-row__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
+                        <Badge>{entry.role}</Badge>
+                        <Badge variant="outline">{entry.status}</Badge>
                       </div>
-                      <div className="dashboard-list-row__actions">
-                        <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
-                          <KeyRound size={14} />
-                          Reset Password
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setDeleteModalTarget(entry)
-                            setConfirmText('')
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </div>
+                      <Badge variant="outline">{authProviderLabel(entry)}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.email}</p>
+                      <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
+                    </CardContent>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem' }}>
+                      <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                        <KeyRound size={14} />
+                        Reset Password
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setDeleteModalTarget(entry)
+                          setConfirmText('')
+                        }}
+                      >
+                        Delete
+                      </Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
-          </section>
+          </DashboardScrollableSection>
 
-          <section id="admin-resources" className="student-section" aria-label="Resource audit">
-            <div className="student-section__heading">
-              <h2>Resources & Publications</h2>
-              <p>Audit platform publications with class and subject filters.</p>
-            </div>
+          <DashboardScrollableSection
+            id="admin-resources"
+            ariaLabel="Resource audit"
+            title="Resources & Publications"
+            description="Audit platform publications with class and subject filters."
+          >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
                 <div className="student-filter-label"><FileText size={14} /><span>Filters</span></div>
@@ -687,37 +688,33 @@ export default function AdminDashboard() {
             {filteredResources.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No resources found</h3><p>Adjust search, class, or subject filters.</p></CardContent></Card>
             ) : (
-              <div className="dashboard-list-scroll">
+              <div className="student-resource-grid">
                 {filteredResources.map((entry) => (
-                  <Card key={entry.id} className="dashboard-list-row">
-                    <CardContent className="dashboard-list-row__content">
-                      <div className="dashboard-list-row__main">
-                        <div className="dashboard-list-row__header">
-                          <div className="student-resource-card__meta">
-                            <Badge>{entry.subject || 'General'}</Badge>
-                            <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
-                          </div>
-                          <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
-                        </div>
-                        <CardTitle className="dashboard-list-row__title">{entry.title}</CardTitle>
-                        <p className="dashboard-list-row__summary">{entry.summary || 'No summary provided.'}</p>
-                        <p className="dashboard-list-row__updated">{formatDisplayDate(entry.createdAt)}</p>
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.subject || 'General'}</Badge>
+                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
                       </div>
-                      <div className="dashboard-list-row__actions">
-                        <Badge variant="outline">Audit only</Badge>
-                      </div>
+                      <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
+                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
-          </section>
+          </DashboardScrollableSection>
 
-          <section id="admin-requests" className="student-section" aria-label="Resource requests">
-            <div className="student-section__heading">
-              <h2>Resource Requests</h2>
-              <p>Track student requests and update statuses with one click.</p>
-            </div>
+          <DashboardScrollableSection
+            id="admin-requests"
+            ariaLabel="Resource requests"
+            title="Resource Requests"
+            description="Track student requests and update statuses with one click."
+          >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
                 <div className="student-filter-label"><Library size={14} /><span>Filters</span></div>
@@ -736,63 +733,56 @@ export default function AdminDashboard() {
             {filteredRequests.length === 0 ? (
               <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No requests found</h3><p>Try a different search term or status filter.</p></CardContent></Card>
             ) : (
-              <div className="dashboard-list-scroll">
+              <div className="student-resource-grid">
                 {filteredRequests.map((entry) => (
-                  <Card key={entry.id} className="dashboard-list-row">
-                    <CardContent className="dashboard-list-row__content">
-                      <div className="dashboard-list-row__main">
-                        <div className="dashboard-list-row__header">
-                          <div className="student-resource-card__meta">
-                            <Badge>{entry.courseName || 'No course'}</Badge>
-                            <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
-                          </div>
-                          <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
-                        </div>
-                        <CardTitle className="dashboard-list-row__title">{entry.titleName || 'Untitled request'}</CardTitle>
-                        <p className="dashboard-list-row__summary">{entry.studentName || entry.studentEmail}</p>
-                        <p className="dashboard-list-row__updated">{formatDisplayDate(entry.createdAt)}</p>
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.courseName || 'No course'}</Badge>
+                        <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
                       </div>
-                      <div className="dashboard-list-row__actions">
-                        <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
-                        <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
-                        <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
-                      </div>
+                      <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.titleName || 'Untitled request'}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.studentName || entry.studentEmail}</p>
+                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
+                    </CardContent>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
-          </section>
+          </DashboardScrollableSection>
 
-          <section id="admin-activity" className="student-section" aria-label="Activity log">
-            <div className="student-section__heading">
-              <h2>Activity</h2>
-              <p>Recent access-control and moderation events.</p>
-            </div>
-            <div className="dashboard-activity-grid">
-              {activity.length > 0 ? (
-                activity.map((entry) => (
-                  <Card key={entry.id} className="dashboard-activity-card">
-                    <CardHeader>
-                      <div className="dashboard-list-row__header">
-                        <CardTitle className="dashboard-list-row__title">{entry.message || entry.action}</CardTitle>
-                        <Badge variant="outline">{entry.action}</Badge>
+          <DashboardScrollableSection
+            id="admin-activity"
+            ariaLabel="Activity log"
+            title="Activity"
+            description="Recent access-control and moderation events."
+          >
+            <Card>
+              <CardContent className="student-download-list">
+                {activity.length > 0 ? (
+                  activity.map((entry) => (
+                    <div key={entry.id} className="student-download-item">
+                      <div>
+                        <strong>{entry.message || entry.action}</strong>
+                        <p>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="dashboard-list-row__summary">{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <Card className="dashboard-activity-card">
-                  <CardContent>
-                    <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </section>
+                      <Badge variant="outline">{entry.action}</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
+                )}
+              </CardContent>
+            </Card>
+          </DashboardScrollableSection>
         </main>
       </div>
 

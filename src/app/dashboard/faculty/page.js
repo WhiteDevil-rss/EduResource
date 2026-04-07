@@ -17,13 +17,14 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
+import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogBody,
@@ -613,12 +614,12 @@ export default function FacultyDashboard() {
             </div>
           </section>
 
-          <section id="faculty-publications" className="student-section" aria-label="Faculty publications">
-            <div className="student-section__heading">
-              <h2>Publications</h2>
-              <p>Use search, class, and subject filters to manage published materials.</p>
-            </div>
-
+          <DashboardScrollableSection
+            id="faculty-publications"
+            ariaLabel="Faculty publications"
+            title="Publications"
+            description="Use search, class, and subject filters to manage published materials."
+          >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
                 <div className="student-filter-label">
@@ -673,22 +674,22 @@ export default function FacultyDashboard() {
               <div className="student-resource-grid">
                 {visibleResources.map((entry) => (
                   <Card key={entry.id} className="student-resource-card">
-                    <CardContent className="student-resource-card__content">
-                      <div className="student-resource-card__main">
-                        <div className="student-resource-card__header">
-                          <div className="student-resource-card__meta">
-                            <Badge>{entry.subject || 'General'}</Badge>
-                            <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
-                          </div>
-                          <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
-                            {entry.status === 'draft' ? 'Draft' : 'Live'}
-                          </Badge>
-                        </div>
-                        <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
-                        <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
-                        <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.subject || 'General'}</Badge>
+                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
                       </div>
-                      <div className="student-resource-card__actions">
+                      <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
+                        {entry.status === 'draft' ? 'Draft' : 'Live'}
+                      </Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
+                    </CardContent>
+                    <CardFooter className="student-resource-card__footer">
+                      <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
+                      <div className="table-action-group">
                         <Button
                           type="button"
                           variant={entry.status === 'draft' ? 'default' : 'outline'}
@@ -703,18 +704,19 @@ export default function FacultyDashboard() {
                           <Trash2 size={14} />
                         </Button>
                       </div>
-                    </CardContent>
+                    </CardFooter>
                   </Card>
                 ))}
               </div>
             )}
-          </section>
+          </DashboardScrollableSection>
 
-          <section id="faculty-uploads" className="student-section" aria-label="Upload queue">
-            <div className="student-section__heading">
-              <h2>Uploads</h2>
-              <p>Track ongoing publication uploads with progress and status updates.</p>
-            </div>
+          <DashboardScrollableSection
+            id="faculty-uploads"
+            ariaLabel="Upload queue"
+            title="Uploads"
+            description="Track ongoing publication uploads with progress and status updates."
+          >
             <Card>
               <CardContent className="student-download-list">
                 <Button type="button" onClick={openCreateModal}>
@@ -742,7 +744,7 @@ export default function FacultyDashboard() {
                 )}
               </CardContent>
             </Card>
-          </section>
+          </DashboardScrollableSection>
 
           <section id="faculty-profile" className="student-section" aria-label="Faculty profile">
             <div className="student-section__heading">
