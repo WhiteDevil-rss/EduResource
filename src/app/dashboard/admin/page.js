@@ -173,6 +173,19 @@ export default function AdminDashboard() {
   const [userBulkLoading, setUserBulkLoading] = useState(false)
   const notificationsPanelRef = useRef(null)
   const isProtectedAuditAdmin = isProtectedAdminEmail(user?.email)
+  const filteredUsers = users.filter((entry) => {
+    const term = searchTerm.trim().toLowerCase()
+    const matchesSearch =
+      !term ||
+      [entry.displayName, entry.email, entry.loginId, entry.role, entry.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
+    const matchesRole = userRoleFilter === 'all' || entry.role === userRoleFilter
+    return matchesSearch && matchesRole
+  })
+  const userSelection = useBulkSelection(filteredUsers.map((u) => u.id))
+  const { clearAll: clearUserSelection } = userSelection
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
@@ -181,8 +194,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     // Clear bulk selection when search term or role filter changes
-    userSelection.clearAll()
-  }, [searchTerm, userRoleFilter, userSelection])
+    clearUserSelection()
+  }, [searchTerm, userRoleFilter, clearUserSelection])
 
   const loadOverview = async ({ background = false } = {}) => {
     if (background) {
@@ -431,20 +444,6 @@ export default function AdminDashboard() {
     () => ['All Subjects', ...new Set(resources.map((entry) => entry.subject).filter(Boolean))],
     [resources]
   )
-
-  const filteredUsers = users.filter((entry) => {
-    const term = searchTerm.trim().toLowerCase()
-    const matchesSearch =
-      !term ||
-      [entry.displayName, entry.email, entry.loginId, entry.role, entry.status]
-        .join(' ')
-        .toLowerCase()
-        .includes(term)
-    const matchesRole = userRoleFilter === 'all' || entry.role === userRoleFilter
-    return matchesSearch && matchesRole
-  })
-
-  const userSelection = useBulkSelection(filteredUsers.map((u) => u.id))
 
   const filteredResources = resources.filter((entry) => {
     const term = searchTerm.trim().toLowerCase()
