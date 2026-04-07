@@ -1,59 +1,45 @@
 'use client'
 
-import Image from 'next/image'
 import {
   AlertCircle,
-  Bell,
   CheckCircle2,
-  Circle,
   Download,
   FileText,
-  KeyRound,
   HelpCircle,
+  Inbox,
+  KeyRound,
   LayoutPanelTop,
-  LogOut,
-  RefreshCw,
-  Search,
-  Settings2,
+  Library,
   Shield,
   Sparkles,
   Users,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { useAuth } from '@/hooks/useAuth'
-import {
-  ADMIN_PROFILE,
-  formatDisplayDate,
-  formatRelativeUpdate,
-  getDisplayName,
-  getInitials,
-  getSafeAvatarUrl,
-} from '@/lib/demo-content'
 import { AdminDashboardSkeleton } from '@/components/LoadingStates'
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
+import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
+import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { useAuth } from '@/hooks/useAuth'
+import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 
 const EMPTY_CREATE_FORM = {
   role: 'faculty',
   displayName: '',
   email: '',
-}
-
-function roleChipClassName(role) {
-  if (role === 'faculty') return 'role-chip role-chip--faculty'
-  if (role === 'admin') return 'role-chip role-chip--admin'
-  return 'role-chip role-chip--student'
-}
-
-function statusClassName(status) {
-  if (status === 'active') return 'status-state status-state--active'
-  return 'status-state status-state--banned'
-}
-
-function requestStatusClassName(status) {
-  if (status === 'done') return 'status-state status-state--active'
-  if (status === 'underreview') return 'status-state status-state--draft'
-  return 'status-state status-state--pending'
 }
 
 function requestStatusLabel(status) {
@@ -66,7 +52,6 @@ function authProviderLabel(entry) {
   if (entry.authProvider === 'google') {
     return entry.pending ? 'Google access pending' : 'Google OAuth'
   }
-
   return 'Admin-issued credentials'
 }
 
@@ -79,12 +64,6 @@ export default function AdminDashboard() {
   const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [userSearchTerm, setUserSearchTerm] = useState('')
-  const [userStatusFilter, setUserStatusFilter] = useState('all')
-  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
-  const [resourceStatusFilter, setResourceStatusFilter] = useState('all')
-  const [requestSearchTerm, setRequestSearchTerm] = useState('')
-  const [requestStatusFilter, setRequestStatusFilter] = useState('all')
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [notificationsSaving, setNotificationsSaving] = useState(false)
@@ -98,10 +77,20 @@ export default function AdminDashboard() {
   const [deleteModalTarget, setDeleteModalTarget] = useState(null)
   const [confirmText, setConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const [activeSection, setActiveSection] = useState('overview')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [userRoleFilter, setUserRoleFilter] = useState('all')
+  const [resourceClassFilter, setResourceClassFilter] = useState('All Classes')
+  const [resourceSubjectFilter, setResourceSubjectFilter] = useState('All Subjects')
+  const [requestStatusFilter, setRequestStatusFilter] = useState('all')
   const notificationsPanelRef = useRef(null)
-  const deferredUserSearch = useDeferredValue(userSearchTerm)
-  const deferredResourceSearch = useDeferredValue(resourceSearchTerm)
-  const deferredRequestSearch = useDeferredValue(requestSearchTerm)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
+    return () => window.clearTimeout(timeout)
+  }, [searchInput])
 
   const loadOverview = async ({ background = false } = {}) => {
     if (background) {
@@ -213,82 +202,60 @@ export default function AdminDashboard() {
     }
   }, [notificationsOpen])
 
+  const resourceClassOptions = useMemo(
+    () => ['All Classes', ...new Set(resources.map((entry) => entry.class).filter(Boolean))],
+    [resources]
+  )
+
+  const resourceSubjectOptions = useMemo(
+    () => ['All Subjects', ...new Set(resources.map((entry) => entry.subject).filter(Boolean))],
+    [resources]
+  )
+
   const filteredUsers = users.filter((entry) => {
-    const term = deferredUserSearch.trim().toLowerCase()
-    if (!term) {
-      if (userStatusFilter !== 'all' && entry.status !== userStatusFilter) {
-        return false
-      }
-
-      return true
-    }
-
-    const matchesTerm = [
-      entry.displayName,
-      entry.email,
-      entry.loginId,
-      entry.role,
-      entry.status,
-      entry.authProvider,
-    ]
-      .join(' ')
-      .toLowerCase()
-      .includes(term)
-
-    if (!matchesTerm) {
-      return false
-    }
-
-    if (userStatusFilter !== 'all' && entry.status !== userStatusFilter) {
-      return false
-    }
-
-    return true
+    const term = searchTerm.trim().toLowerCase()
+    const matchesSearch =
+      !term ||
+      [entry.displayName, entry.email, entry.loginId, entry.role, entry.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
+    const matchesRole = userRoleFilter === 'all' || entry.role === userRoleFilter
+    return matchesSearch && matchesRole
   })
 
   const filteredResources = resources.filter((entry) => {
-    const term = deferredResourceSearch.trim().toLowerCase()
-    const matchesTerm = !term || [entry.title, entry.class, entry.subject, entry.summary, entry.status]
-      .join(' ')
-      .toLowerCase()
-      .includes(term)
+    const term = searchTerm.trim().toLowerCase()
+    const matchesSearch =
+      !term ||
+      [entry.title, entry.class, entry.subject, entry.summary, entry.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
 
-    if (!matchesTerm) {
-      return false
-    }
+    const matchesClass =
+      resourceClassFilter === 'All Classes' || !resourceClassFilter || entry.class === resourceClassFilter
+    const matchesSubject =
+      resourceSubjectFilter === 'All Subjects' || !resourceSubjectFilter || entry.subject === resourceSubjectFilter
 
-    if (resourceStatusFilter !== 'all' && entry.status !== resourceStatusFilter) {
-      return false
-    }
-
-    return true
+    return matchesSearch && matchesClass && matchesSubject
   })
 
   const filteredRequests = requests.filter((entry) => {
-    const term = deferredRequestSearch.trim().toLowerCase()
-    const matchesTerm =
+    const term = searchTerm.trim().toLowerCase()
+    const matchesSearch =
       !term ||
       [entry.studentName, entry.studentEmail, entry.courseName, entry.titleName, entry.preferredFormat, entry.status]
         .join(' ')
         .toLowerCase()
         .includes(term)
 
-    if (!matchesTerm) {
-      return false
-    }
-
-    if (requestStatusFilter !== 'all' && entry.status !== requestStatusFilter) {
-      return false
-    }
-
-    return true
+    const matchesStatus = requestStatusFilter === 'all' || entry.status === requestStatusFilter
+    return matchesSearch && matchesStatus
   })
 
-  const activeStudents = users.filter(
-    (entry) => entry.role === 'student' && entry.status === 'active'
-  ).length
+  const activeStudents = users.filter((entry) => entry.role === 'student' && entry.status === 'active').length
   const facultyCount = users.filter((entry) => entry.role === 'faculty').length
-  const disabledUsers = users.filter((entry) => entry.status !== 'active').length
   const openRequests = requests.filter((entry) => entry.status !== 'done').length
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
@@ -332,11 +299,15 @@ export default function AdminDashboard() {
         throw new Error(payload?.error || 'Could not create the requested account.')
       }
 
-      setPendingCredentials(payload?.credentials ? {
-        ...payload.credentials,
-        role: payload?.user?.role || createForm.role,
-        email: payload?.user?.email || createForm.email,
-      } : null)
+      setPendingCredentials(
+        payload?.credentials
+          ? {
+              ...payload.credentials,
+              role: payload?.user?.role || createForm.role,
+              email: payload?.user?.email || createForm.email,
+            }
+          : null
+      )
       setCreateForm(EMPTY_CREATE_FORM)
       setCreateOpen(false)
       toast.success('Account created successfully.')
@@ -346,11 +317,6 @@ export default function AdminDashboard() {
     } finally {
       setSubmittingCreate(false)
     }
-  }
-
-  const handleDeleteUser = async (entry) => {
-    setDeleteModalTarget(entry)
-    setConfirmText('')
   }
 
   const confirmHardDelete = async () => {
@@ -386,7 +352,7 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'resetCredentials',
-          password: forcedPassword || undefined
+          password: forcedPassword || undefined,
         }),
       })
 
@@ -407,7 +373,7 @@ export default function AdminDashboard() {
     } catch (error) {
       toast.error(error.message || 'Could not reset the credentials.')
       if (resetModal) {
-        setResetModal(prev => ({ ...prev, submitting: false }))
+        setResetModal((prev) => ({ ...prev, submitting: false }))
       }
     }
   }
@@ -425,17 +391,11 @@ export default function AdminDashboard() {
         throw new Error(payload?.error || 'Could not update the request status.')
       }
 
-      setRequests((current) =>
-        current.map((entry) => (entry.id === requestEntry.id ? payload.request : entry))
-      )
+      setRequests((current) => current.map((entry) => (entry.id === requestEntry.id ? payload.request : entry)))
       toast.success(`Request moved to ${requestStatusLabel(status).toLowerCase()}.`)
     } catch (error) {
       toast.error(error.message || 'Could not update the request status.')
     }
-  }
-
-  const openNotifications = () => {
-    setNotificationsOpen((current) => !current)
   }
 
   const markNotificationRead = async (notificationId) => {
@@ -454,7 +414,6 @@ export default function AdminDashboard() {
       }
 
       setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-      toast.success('Notification marked as read.')
     } catch (error) {
       toast.error(error.message || 'Could not update notifications.')
     } finally {
@@ -491,824 +450,488 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-layout">
-        <aside className="dashboard-sidebar glass">
-          <div className="dashboard-sidebar__brand">
-            <h1 className="premium-gradient-text" style={{ fontSize: '2.4rem' }}>
-              SPS EDUCATIONAM
-            </h1>
-            <p className="dashboard-sidebar__eyebrow">Admin Center</p>
-          </div>
+    <div className="student-panel">
+      <DashboardSidebar
+        role="admin"
+        title="Admin Center"
+        subtitle="Access Control"
+        navItems={[
+          { id: 'overview', label: 'Dashboard', href: '#admin-overview', icon: LayoutPanelTop },
+          { id: 'users', label: 'Users', href: '#admin-users', icon: Users },
+          { id: 'resources', label: 'Resources', href: '#admin-resources', icon: FileText },
+          { id: 'requests', label: 'Requests', href: '#admin-requests', icon: Library },
+          { id: 'activity', label: 'Activity', href: '#admin-activity', icon: Shield },
+        ]}
+        mobileOpen={mobileNavOpen}
+        onMobileOpenChange={setMobileNavOpen}
+        activeSection={activeSection}
+        onNavigate={setActiveSection}
+        onLogout={logout}
+      />
 
-          <nav className="dashboard-nav">
-            <a href="#admin-users" className="dashboard-nav__link dashboard-nav__link--active">
-              <Users size={18} />
-              User Access
-            </a>
-            <a href="#admin-resources" className="dashboard-nav__link">
-              <FileText size={18} />
-              Resource Audit
-            </a>
-            <a href="#admin-requests" className="dashboard-nav__link dashboard-nav__link--requests">
-              <LayoutPanelTop size={18} />
-              <span className="dashboard-nav__label">Resource Requests</span>
-              {openRequests > 0 ? <span className="dashboard-nav__count">{openRequests}</span> : null}
-            </a>
-            <a href="#admin-activity" className="dashboard-nav__link">
-              <LayoutPanelTop size={18} />
-              Activity
-            </a>
-            <a href="#admin-system" className="dashboard-nav__link">
-              <Settings2 size={18} />
-              Security
-            </a>
-          </nav>
+      <div className="student-panel__main">
+        <DashboardTopbar
+          role="admin"
+          title="Admin Dashboard"
+          subtitle="Manage users, publications, and requests"
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          onOpenMenu={() => setMobileNavOpen(true)}
+          onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
+          unreadCount={unreadNotificationCount}
+          userLabel={getDisplayName(user?.email, 'Admin')}
+        />
 
-          <div className="dashboard-sidebar__footer">
-            <button type="button" className="button-secondary" onClick={openNotifications}>
-              <Bell size={16} />
-              Notifications
-              {unreadNotificationCount > 0 ? <span className="dashboard-nav__count">{unreadNotificationCount}</span> : null}
-            </button>
-            <button type="button" className="button-primary" onClick={() => setCreateOpen(true)}>
-              <Sparkles size={16} />
-              Create Account
-            </button>
-
-            <div className="dashboard-profile">
-              <div className="dashboard-profile__avatar">
-                <Image
-                  src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)}
-                  alt="Admin profile"
-                  width={44}
-                  height={44}
-                />
-              </div>
-              <div>
-                <strong>{user?.name || getDisplayName(user?.email, ADMIN_PROFILE.name)}</strong>
-                <p className="dashboard-sidebar__eyebrow" style={{ marginTop: '0.15rem' }}>
-                  {ADMIN_PROFILE.subtitle}
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="dashboard-content">
-          <header className="dashboard-topbar glass" style={{ justifyContent: 'flex-end' }}>
-            <div className="dashboard-topbar__actions" style={{ marginLeft: 'auto' }}>
-              <button
-                type="button"
-                className="dashboard-topbar__icon"
-                aria-label="Notifications"
-                aria-haspopup="dialog"
-                aria-expanded={notificationsOpen}
-                onClick={openNotifications}
-              >
-                <Bell size={18} />
-                {unreadNotificationCount > 0 ? <span className="dashboard-topbar__badge">{unreadNotificationCount}</span> : null}
-              </button>
-              <button
-                type="button"
-                className="dashboard-topbar__icon"
-                aria-label="Refresh data"
-                onClick={() => {
-                  loadOverview({ background: true })
-                  loadRequests({ background: true })
-                }}
-              >
-                <RefreshCw size={18} />
-              </button>
-              <button type="button" className="dashboard-topbar__icon" aria-label="Log out" onClick={logout}>
-                <LogOut size={18} />
-              </button>
-
-              <div className="dashboard-topbar__user">
-                <div className="dashboard-topbar__user-meta">
-                  <strong>{user?.name || getDisplayName(user?.email, ADMIN_PROFILE.name)}</strong>
-                  <span>{ADMIN_PROFILE.subtitle}</span>
-                </div>
-                <div className="dashboard-profile__avatar">
-                  <Image
-                    src={getSafeAvatarUrl(user?.avatar, ADMIN_PROFILE.avatar)}
-                    alt="Admin profile"
-                    width={44}
-                    height={44}
-                  />
-                </div>
-              </div>
-
-              {notificationsOpen ? (
-                <div className="notification-popover glass" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
-                  <div className="notification-popover__header">
-                    <div>
-                      <strong>Notifications</strong>
-                      <span>{unreadNotificationCount} unread</span>
+        <main className="student-panel__content">
+          {notificationsOpen ? (
+            <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
+              <Card className="student-notification-panel" role="dialog" aria-label="Notifications center">
+                <CardHeader>
+                  <CardTitle>Notifications</CardTitle>
+                  <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
+                </CardHeader>
+                <CardContent className="student-notification-list">
+                  {notificationsError ? (
+                    <div className="student-inline-message student-inline-message--error">
+                      <HelpCircle size={16} />
+                      <span>{notificationsError}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="dashboard-topbar__icon"
-                      aria-label="Close notifications"
-                      onClick={() => setNotificationsOpen(false)}
-                    >
-                      <Circle size={16} />
-                    </button>
-                  </div>
-
-                  <div className="notification-shell notification-shell--popover">
-                    {notificationsError ? (
-                      <div className="auth-alert">
-                        <HelpCircle size={18} color="var(--tertiary)" />
-                        <span>{notificationsError}</span>
-                      </div>
-                    ) : null}
-
-                    {notificationsLoading ? (
-                      <div className="empty-state">Fetching your latest platform notifications and account alerts...</div>
-                    ) : notifications.length > 0 ? (
-                      notifications.slice(0, 5).map((notification) => (
-                        <article
+                  ) : null}
+                  {notificationsLoading ? <p>Fetching updates...</p> : null}
+                  {!notificationsLoading && notifications.length === 0 ? <p>No notifications available.</p> : null}
+                  {!notificationsLoading && notifications.length > 0
+                    ? notifications.slice(0, 5).map((notification) => (
+                        <button
+                          type="button"
                           key={notification.id}
-                          className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
+                          className="student-notification-item"
+                          onClick={() => markNotificationRead(notification.id)}
                         >
-                          <button
-                            type="button"
-                            className="notification-card__mark"
-                            onClick={() => markNotificationRead(notification.id)}
-                          >
-                            {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                          </button>
-                          <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
-                            <strong>{notification.resourceTitle || notification.message || 'New notification'}</strong>
+                          <div>
+                            <strong>{notification.resourceTitle || notification.message || 'Update'}</strong>
                             <p>{notification.message || 'A new dashboard update is available.'}</p>
-                            <span>
-                              {notification.facultyName || notification.studentName || notification.facultyEmail || notification.studentEmail || 'System'} · {formatRelativeUpdate(notification.createdAt)}
-                            </span>
+                            <span>{formatRelativeUpdate(notification.createdAt)}</span>
                           </div>
-                          {!notification.readAt ? <span className="notification-card__dot" /> : null}
-                        </article>
+                          {!notification.readAt ? <Badge>New</Badge> : <Badge variant="outline">Read</Badge>}
+                        </button>
                       ))
-                    ) : (
-                      <div className="empty-state">You do not have any notifications yet.</div>
-                    )}
-                  </div>
-
-                  <div className="notification-popover__footer">
-                    <button
+                    : null}
+                  <div className="student-notification-actions">
+                    <Button
                       type="button"
-                      className="button-secondary"
+                      variant="outline"
                       onClick={readAllNotifications}
                       disabled={notificationsSaving || unreadNotificationCount === 0}
                     >
-                      <CheckCircle2 size={16} />
-                      {notificationsSaving ? 'Updating...' : 'Read all at once'}
-                    </button>
+                      <CheckCircle2 size={14} />
+                      Mark all as read
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
+                      Close
+                    </Button>
                   </div>
-                </div>
-              ) : null}
+                </CardContent>
+              </Card>
             </div>
-          </header>
+          ) : null}
 
-          <section className="dashboard-section">
-            <div className="section-header">
-              <div>
-                <span className="auth-kicker">Security Governance</span>
-                <h2>Role-Based Access Control</h2>
-                <p>
-                  Provision Google-only student access, issue faculty and admin
-                  credentials, and monitor account activity from one protected environment.
-                </p>
-              </div>
+          {errorMessage ? (
+            <div className="student-inline-message student-inline-message--error" role="alert">
+              <AlertCircle size={16} />
+              <span>{errorMessage}</span>
             </div>
+          ) : null}
 
-            {errorMessage ? (
-              <div className="auth-alert" style={{ marginBottom: '1rem' }}>
-                <AlertCircle size={18} color="var(--tertiary)" />
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
-
-            <div className="metric-grid">
-              <article className="metric-card glass">
-                <div className="metric-card__top">
-                  <div className="metric-card__icon" style={{ background: 'rgba(182, 160, 255, 0.16)', color: 'var(--primary)' }}>
-                    <Users size={22} />
-                  </div>
-                  <span className="metric-card__trend">Live</span>
-                </div>
-                <span className="metric-card__label">Total Accounts</span>
-                <strong className="metric-card__value">{users.length}</strong>
-              </article>
-
-              <article className="metric-card glass">
-                <div className="metric-card__top">
-                  <div className="metric-card__icon" style={{ background: 'rgba(0, 175, 254, 0.14)', color: 'var(--secondary)' }}>
-                    <Shield size={22} />
-                  </div>
-                  <span className="metric-card__trend">Protected</span>
-                </div>
-                <span className="metric-card__label">Active Students</span>
-                <strong className="metric-card__value">{activeStudents}</strong>
-              </article>
-
-              <article className="status-panel glass">
-                <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Total Resources Uploaded</span>
-                <strong className="metric-card__value" style={{ fontSize: '2rem' }}>{resources.length}</strong>
-                <div className="status-panel__state">
-                  <span className="status-panel__dot" />
-                  {refreshing ? 'Refreshing' : 'Live Count'}
-                </div>
-              </article>
+          <section id="admin-overview" className="student-section" aria-label="Admin overview">
+            <div className="student-section__heading">
+              <h2>Overview</h2>
+              <p>Unified governance across users, content, and requests.</p>
+              <p className="student-muted-text">{refreshing ? 'Refreshing live data...' : 'Data synced from protected APIs.'}</p>
+            </div>
+            <div className="student-metrics">
+              <Card>
+                <CardHeader>
+                  <CardDescription>Total Accounts</CardDescription>
+                  <CardTitle>{users.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Active Students</CardDescription>
+                  <CardTitle>{activeStudents}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Faculty Accounts</CardDescription>
+                  <CardTitle>{facultyCount}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Open Requests</CardDescription>
+                  <CardTitle>{openRequests}</CardTitle>
+                </CardHeader>
+              </Card>
             </div>
           </section>
 
           {pendingCredentials ? (
-            <section className="dashboard-section">
-              <div className="support-grid">
-                <article className="support-card">
-                  <span className="metric-card__label">One-Time Credentials</span>
-                  <strong className="metric-card__value" style={{ fontSize: '2rem' }}>
-                    {pendingCredentials.loginId || 'Google Only'}
-                  </strong>
-                  <p>Share these credentials securely now. The temporary password is shown only once from this admin session.</p>
-                  <div className="downloads-list">
-                    <div className="profile-list__item">
-                      <span>Role</span>
-                      <strong>{pendingCredentials.role}</strong>
-                    </div>
-                    <div className="profile-list__item">
-                      <span>Email</span>
-                      <strong>{pendingCredentials.email}</strong>
-                    </div>
-                    {pendingCredentials.loginId ? (
-                      <div className="profile-list__item">
-                        <span>Login ID</span>
-                        <strong>{pendingCredentials.loginId}</strong>
-                      </div>
-                    ) : null}
-                    {pendingCredentials.temporaryPassword ? (
-                      <div className="profile-list__item">
-                        <span>Temporary Password</span>
-                        <strong>{pendingCredentials.temporaryPassword}</strong>
-                      </div>
-                    ) : null}
-                  </div>
-                </article>
-              </div>
+            <section className="student-section" aria-label="One-time credentials">
+              <Card>
+                <CardHeader>
+                  <CardTitle>One-Time Credentials</CardTitle>
+                  <CardDescription>Copy and share securely. This view appears once per admin session.</CardDescription>
+                </CardHeader>
+                <CardContent className="student-download-list">
+                  <div className="student-download-item"><strong>Role</strong><p>{pendingCredentials.role}</p></div>
+                  <div className="student-download-item"><strong>Email</strong><p>{pendingCredentials.email}</p></div>
+                  {pendingCredentials.loginId ? <div className="student-download-item"><strong>Login ID</strong><p>{pendingCredentials.loginId}</p></div> : null}
+                  {pendingCredentials.temporaryPassword ? <div className="student-download-item"><strong>Temporary Password</strong><p>{pendingCredentials.temporaryPassword}</p></div> : null}
+                </CardContent>
+              </Card>
             </section>
           ) : null}
 
-          <section className="dashboard-section" id="admin-users">
-            <div className="filter-row" style={{ marginBottom: '1rem' }}>
-              <div>
-                <h3>User Moderation</h3>
-                <p>Enable or disable account access, review role assignment, and reset credentials for managed staff accounts.</p>
-              </div>
-              <div className="filter-row__actions">
-                <div className="filter-input" style={{ width: 'min(100%, 18rem)' }}>
-                  <Search size={18} />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={userSearchTerm}
-                    onChange={(event) => setUserSearchTerm(event.target.value)}
-                  />
-                </div>
-                {[
-                  ['all', 'All Accounts'],
-                  ['active', 'Active'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={userStatusFilter === value ? 'filter-chip filter-chip--active' : 'filter-chip'}
-                    onClick={() => setUserStatusFilter(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-                <button type="button" className="button-secondary" onClick={() => setCreateOpen(true)}>
-                  <Sparkles size={16} />
-                  Create Account
-                </button>
-                <button type="button" className="button-secondary" onClick={exportUsers}>
-                  <Download size={16} />
-                  Export CSV
-                </button>
-              </div>
+          <section id="admin-users" className="student-section" aria-label="User management">
+            <div className="student-section__heading">
+              <h2>User Management</h2>
+              <p>Create, review, and remove accounts with role-aware controls.</p>
             </div>
-
-            <div className="table-shell glass">
-              <table className="data-table data-table--responsive">
-                <thead>
-                  <tr>
-                    <th>User Entity</th>
-                    <th>Identity</th>
-                    <th>Role</th>
-                    <th>Auth</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.length > 0 ? (
-                    filteredUsers.map((entry) => (
-                      <tr key={entry.id}>
-                        <td data-label="User Entity">
-                          <div className="table-entity">
-                            <div className="table-avatar table-avatar--initials">
-                              {getInitials(entry.displayName || entry.email || 'ER')}
-                            </div>
-                            <div className="table-entity__copy">
-                              <strong>{entry.displayName || getDisplayName(entry.email, 'User')}</strong>
-                              <span>{entry.pending ? 'Awaiting Google onboarding' : 'Managed account'}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td data-label="Identity">
-                          <div className="table-entity__copy">
-                            <strong>{entry.email}</strong>
-                            <span>{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only student identity'}</span>
-                          </div>
-                        </td>
-                        <td data-label="Role">
-                          <span className={roleChipClassName(entry.role)}>{entry.role}</span>
-                        </td>
-                        <td data-label="Auth">{authProviderLabel(entry)}</td>
-                        <td data-label="Status">
-                          <span className={statusClassName(entry.status)}>
-                            <span className="status-state__dot" />
-                            {entry.status}
-                          </span>
-                        </td>
-                        <td data-label="Actions" style={{ textAlign: 'right' }}>
-                          <div className="table-action-group">
-                            <button
-                              type="button"
-                              className="text-action text-action--danger"
-                              onClick={() => handleDeleteUser(entry)}
-                            >
-                              Delete
-                            </button>
-                            <button
-                              type="button"
-                              className="text-action text-action--primary"
-                              onClick={() => setResetModal({ user: entry, password: '', submitting: false })}
-                            >
-                              Reset Password
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td data-label="User Entity" colSpan={6}>
-                        <div className="empty-state">No accounts matched the current search or filter.</div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              <div className="table-shell__footer">
-                <span>{filteredUsers.length} account(s) matched your search and filter.</span>
-                <span>{disabledUsers} account(s) currently disabled.</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="dashboard-section" id="admin-resources">
-            <div className="section-header">
-              <div>
-                <h3>Resource Oversight</h3>
-                <p>Review recently published academic materials and verify the owner attached to each faculty upload.</p>
-              </div>
-            </div>
-
-            <div className="filter-row" style={{ marginBottom: '1rem' }}>
-              <div>
-                <h4 className="filter-row__title">Search and Filter</h4>
-                <p>Review live or draft publications by title, class, or subject.</p>
-              </div>
-              <div className="filter-row__actions">
-                <div className="filter-input" style={{ width: 'min(100%, 18rem)' }}>
-                  <Search size={18} />
-                  <input
-                    type="text"
-                    placeholder="Search resources..."
-                    value={resourceSearchTerm}
-                    onChange={(event) => setResourceSearchTerm(event.target.value)}
-                  />
-                </div>
-                {[
-                  ['all', 'All'],
-                  ['live', 'Live'],
-                  ['draft', 'Draft'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={resourceStatusFilter === value ? 'filter-chip filter-chip--active' : 'filter-chip'}
-                    onClick={() => setResourceStatusFilter(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="table-shell">
-              <table className="data-table data-table--responsive">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Class</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                    <th>Published</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredResources.slice(0, 6).map((entry) => (
-                    <tr key={entry.id}>
-                      <td data-label="Title">{entry.title}</td>
-                      <td data-label="Class">{entry.class}</td>
-                      <td data-label="Subject">
-                        <span className="subject-chip subject-chip--faculty">{entry.subject}</span>
-                      </td>
-                      <td data-label="Status">
-                        <span className={entry.status === 'live' ? 'status-state status-state--active' : 'status-state status-state--draft'}>
-                          <span className="status-state__dot" />
-                          {entry.status}
-                        </span>
-                      </td>
-                      <td data-label="Published">{formatDisplayDate(entry.createdAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredResources.length === 0 ? (
-                <div className="empty-state" style={{ margin: '1rem 1.5rem' }}>No resources matched the current search or filter.</div>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="dashboard-section" id="admin-requests">
-            <div className="section-header">
-              <div>
-                <h3>Resource Requests</h3>
-                <p>Track student requests, assign status, and follow up when a resource needs a human review.</p>
-              </div>
-            </div>
-
-            <div className="filter-row" style={{ marginBottom: '1rem' }}>
-              <div>
-                <h4 className="filter-row__title">Search and Filter</h4>
-                <p>Review requests by student, course, title, or current status.</p>
-              </div>
-              <div className="filter-row__actions">
-                <div className="filter-input" style={{ width: 'min(100%, 18rem)' }}>
-                  <Search size={18} />
-                  <input
-                    type="text"
-                    placeholder="Search requests..."
-                    value={requestSearchTerm}
-                    onChange={(event) => setRequestSearchTerm(event.target.value)}
-                  />
-                </div>
-                {[
-                  ['all', 'All'],
-                  ['pending', 'Pending'],
-                  ['underreview', 'Under Review'],
-                  ['done', 'Done'],
-                ].map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={requestStatusFilter === value ? 'filter-chip filter-chip--active' : 'filter-chip'}
-                    onClick={() => setRequestStatusFilter(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="table-shell">
-              <table className="data-table data-table--responsive">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Course</th>
-                    <th>Requested Item</th>
-                    <th>Status</th>
-                    <th>Submitted</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRequests.length > 0 ? (
-                    filteredRequests.map((entry) => (
-                      <tr key={entry.id}>
-                        <td data-label="Student">
-                          <div className="table-entity__copy">
-                            <strong>{entry.studentName || entry.studentEmail}</strong>
-                            <span>{entry.studentEmail}</span>
-                          </div>
-                        </td>
-                        <td data-label="Course">{entry.courseName || 'Not specified'}</td>
-                        <td data-label="Requested Item">
-                          <div className="table-entity__copy">
-                            <strong>{entry.titleName || 'Untitled request'}</strong>
-                            <span>{entry.preferredFormat || 'No preferred format'}</span>
-                          </div>
-                        </td>
-                        <td data-label="Status">
-                          <span className={requestStatusClassName(entry.status)}>
-                            <span className="status-state__dot" />
-                            {requestStatusLabel(entry.status)}
-                          </span>
-                        </td>
-                        <td data-label="Submitted">{formatDisplayDate(entry.createdAt)}</td>
-                        <td data-label="Actions" style={{ textAlign: 'right' }}>
-                          <div className="table-action-group">
-                            <button
-                              type="button"
-                              className="text-action text-action--primary"
-                              onClick={() => handleRequestStatusChange(entry, 'pending')}
-                              disabled={entry.status === 'pending'}
-                            >
-                              Pending
-                            </button>
-                            <button
-                              type="button"
-                              className="text-action text-action--primary"
-                              onClick={() => handleRequestStatusChange(entry, 'underreview')}
-                              disabled={entry.status === 'underreview'}
-                            >
-                              Review
-                            </button>
-                            <button
-                              type="button"
-                              className="text-action text-action--primary"
-                              onClick={() => handleRequestStatusChange(entry, 'done')}
-                              disabled={entry.status === 'done'}
-                            >
-                              Done
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td data-label="Student" colSpan={6}>
-                        <div className="empty-state">No resource requests matched the current search or filter.</div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              <div className="table-shell__footer">
-                <span>{filteredRequests.length} request(s) in the queue.</span>
-                <span>Statuses available: pending, under review, done.</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="dashboard-section" id="admin-activity">
-            <div className="section-header">
-              <div>
-                <h3>Security Activity</h3>
-                <p>Recent account and access events recorded by the protected server APIs.</p>
-              </div>
-            </div>
-
-            <div className="support-grid">
-              <article className="support-card">
-                <span className="metric-card__label">Recent Activity</span>
-                <div className="downloads-list">
-                  {activity.length > 0 ? (
-                    activity.map((entry) => (
-                      <div key={entry.id} className="downloads-item">
-                        <div className="downloads-item__copy">
-                          <strong>{entry.message || entry.action}</strong>
-                          <span>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</span>
-                        </div>
-                        <span className="subject-chip subject-chip--neutral">
-                          {entry.action}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="empty-state">Audit events will appear here after protected actions are performed.</div>
-                  )}
-                </div>
-              </article>
-
-              <article className="support-card" id="admin-system">
-                <span className="metric-card__label">Security Summary</span>
-                <div className="downloads-list">
-                  <div className="profile-list__item">
-                    <span>Faculty Accounts</span>
-                    <strong>{facultyCount}</strong>
-                  </div>
-                  <div className="profile-list__item">
-                    <span>Disabled Accounts</span>
-                    <strong>{disabledUsers}</strong>
-                  </div>
-                  <div className="profile-list__item">
-                    <span>Protected Resources</span>
-                    <strong>{resources.length}</strong>
-                  </div>
-                </div>
-                <p style={{ marginTop: '1rem' }}>
-                  Each dashboard now reads and writes through signed-session APIs.
-                  Students authenticate with Google only, while faculty and admin
-                  accounts are issued by this panel.
-                </p>
-              </article>
-            </div>
-          </section>
-        </div>
-      </div>
-
-      {createOpen ? (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <h3>Create Account</h3>
-            <p>Provision Google-only student access or generate staff credentials directly from the admin workspace.</p>
-
-            <form className="modal-form" onSubmit={handleCreateUser}>
-              <div className="auth-field auth-select">
-                <label htmlFor="admin-role">Role</label>
-                <div className="auth-select">
-                  <select
-                    id="admin-role"
-                    value={createForm.role}
-                    onChange={(event) =>
-                      setCreateForm((current) => ({
-                        ...current,
-                        role: event.target.value,
-                      }))
-                    }
-                  >
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label"><Users size={14} /><span>Filters</span></div>
+                <label className="student-filter-control">
+                  <span>Role</span>
+                  <select className="ui-input" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
+                    <option value="all">All Roles</option>
+                    <option value="student">Student</option>
                     <option value="faculty">Faculty</option>
                     <option value="admin">Admin</option>
-                    <option value="student">Student</option>
                   </select>
-                </div>
+                </label>
+                <Button type="button" variant="outline" onClick={exportUsers}><Download size={14} />Export CSV</Button>
+                <Button type="button" onClick={() => setCreateOpen(true)}><Sparkles size={14} />Create Account</Button>
+              </CardContent>
+            </Card>
+            {filteredUsers.length === 0 ? (
+              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No users found</h3><p>Adjust search or role filters.</p></CardContent></Card>
+            ) : (
+              <div className="student-resource-grid">
+                {filteredUsers.map((entry) => (
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <RoleAvatar role={entry.role} size="sm" label={`${entry.role} icon`} />
+                        <Badge>{entry.role}</Badge>
+                        <Badge variant="outline">{entry.status}</Badge>
+                      </div>
+                      <Badge variant="outline">{authProviderLabel(entry)}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.displayName || getDisplayName(entry.email, 'User')}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.email}</p>
+                      <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
+                    </CardContent>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem' }}>
+                      <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
+                        <KeyRound size={14} />
+                        Reset Password
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setDeleteModalTarget(entry)
+                          setConfirmText('')
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
+            )}
+          </section>
 
-              <div className="auth-field">
-                <label htmlFor="admin-display-name">Display Name</label>
-                <input
-                  id="admin-display-name"
-                  className="auth-textarea"
-                  type="text"
-                  value={createForm.displayName}
-                  onChange={(event) =>
-                    setCreateForm((current) => ({
-                      ...current,
-                      displayName: event.target.value,
-                    }))
-                  }
-                  placeholder="Dr. Elena Kostic"
-                />
+          <section id="admin-resources" className="student-section" aria-label="Resource audit">
+            <div className="student-section__heading">
+              <h2>Resources & Publications</h2>
+              <p>Audit platform publications with class and subject filters.</p>
+            </div>
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label"><FileText size={14} /><span>Filters</span></div>
+                <label className="student-filter-control">
+                  <span>Class</span>
+                  <select className="ui-input" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
+                    {resourceClassOptions.map((entryClass) => (
+                      <option key={entryClass} value={entryClass}>{entryClass}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="student-filter-control">
+                  <span>Subject</span>
+                  <select className="ui-input" value={resourceSubjectFilter} onChange={(event) => setResourceSubjectFilter(event.target.value)}>
+                    {resourceSubjectOptions.map((subject) => (
+                      <option key={subject} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </label>
+                <Badge variant="outline" className="student-filter-count">{filteredResources.length} result(s)</Badge>
+              </CardContent>
+            </Card>
+            {filteredResources.length === 0 ? (
+              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No resources found</h3><p>Adjust search, class, or subject filters.</p></CardContent></Card>
+            ) : (
+              <div className="student-resource-grid">
+                {filteredResources.map((entry) => (
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.subject || 'General'}</Badge>
+                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                      </div>
+                      <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
+                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
+            )}
+          </section>
 
-              <div className="auth-field">
-                <label htmlFor="admin-email">Email</label>
-                <input
-                  id="admin-email"
-                  className="auth-textarea"
-                  type="email"
-                  value={createForm.email}
-                  onChange={(event) =>
-                    setCreateForm((current) => ({
-                      ...current,
-                      email: event.target.value,
-                    }))
-                  }
-                  placeholder="user@institution.edu"
-                  required
-                />
+          <section id="admin-requests" className="student-section" aria-label="Resource requests">
+            <div className="student-section__heading">
+              <h2>Resource Requests</h2>
+              <p>Track student requests and update statuses with one click.</p>
+            </div>
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label"><Library size={14} /><span>Filters</span></div>
+                <label className="student-filter-control">
+                  <span>Status</span>
+                  <select className="ui-input" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
+                    <option value="all">All</option>
+                    <option value="pending">Pending</option>
+                    <option value="underreview">Under Review</option>
+                    <option value="done">Done</option>
+                  </select>
+                </label>
+                <Badge variant="outline" className="student-filter-count">{filteredRequests.length} result(s)</Badge>
+              </CardContent>
+            </Card>
+            {filteredRequests.length === 0 ? (
+              <Card className="student-empty-state"><CardContent><Inbox size={32} /><h3>No requests found</h3><p>Try a different search term or status filter.</p></CardContent></Card>
+            ) : (
+              <div className="student-resource-grid">
+                {filteredRequests.map((entry) => (
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.courseName || 'No course'}</Badge>
+                        <Badge variant="outline">{entry.preferredFormat || 'Any format'}</Badge>
+                      </div>
+                      <Badge variant={entry.status === 'done' ? 'secondary' : 'outline'}>{requestStatusLabel(entry.status)}</Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.titleName || 'Untitled request'}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.studentName || entry.studentEmail}</p>
+                      <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
+                    </CardContent>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
+                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
+            )}
+          </section>
 
-              <div className="auth-alert">
-                <KeyRound size={18} color="var(--secondary)" />
-                <span>
-                  Faculty and admin accounts receive a generated login ID and temporary password.
-                  Student accounts are prepared for Google OAuth only.
-                </span>
-              </div>
+          <section id="admin-activity" className="student-section" aria-label="Activity log">
+            <div className="student-section__heading">
+              <h2>Activity</h2>
+              <p>Recent access-control and moderation events.</p>
+            </div>
+            <Card>
+              <CardContent className="student-download-list">
+                {activity.length > 0 ? (
+                  activity.map((entry) => (
+                    <div key={entry.id} className="student-download-item">
+                      <div>
+                        <strong>{entry.message || entry.action}</strong>
+                        <p>{formatDisplayDate(entry.createdAt, 'Activity recorded')}</p>
+                      </div>
+                      <Badge variant="outline">{entry.action}</Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="student-muted-text">Audit events will appear after protected actions are performed.</p>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+        </main>
+      </div>
 
-              <div className="modal-form__actions">
-                <button
-                  type="button"
-                  className="button-secondary"
-                  onClick={() => setCreateOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={submittingCreate}>
-                  {submittingCreate ? 'Creating...' : 'Create Account'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen} labelledBy="admin-create-account-title" className="student-request-modal">
+        <DialogHeader>
+          <DialogTitle id="admin-create-account-title">Create Account</DialogTitle>
+          <DialogDescription>
+            Provision Google-only students or admin-issued credentials for faculty/admin roles.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form className="student-request-form" onSubmit={handleCreateUser}>
+            <label>
+              <span>Role</span>
+              <select
+                className="ui-input"
+                value={createForm.role}
+                onChange={(event) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    role: event.target.value,
+                  }))
+                }
+              >
+                <option value="faculty">Faculty</option>
+                <option value="admin">Admin</option>
+                <option value="student">Student</option>
+              </select>
+            </label>
+            <label>
+              <span>Display name</span>
+              <Input
+                type="text"
+                value={createForm.displayName}
+                onChange={(event) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    displayName: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              <span>Email</span>
+              <Input
+                type="email"
+                required
+                value={createForm.email}
+                onChange={(event) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    email: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <div className="student-inline-message">
+              <KeyRound size={16} />
+              <span>Staff accounts receive temporary credentials. Students use Google OAuth.</span>
+            </div>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleCreateUser} disabled={submittingCreate}>
+            {submittingCreate ? 'Creating...' : 'Create Account'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
-      {resetModal ? (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <h3>Reset User Password</h3>
-            <p>
-              Set a new password for <strong>{resetModal.user.displayName || resetModal.user.email}</strong>.
-              Leave the field blank for an auto-generated secure password.
-            </p>
+      <Dialog open={Boolean(resetModal)} onOpenChange={(open) => !open && setResetModal(null)} labelledBy="admin-reset-password-title" className="student-request-modal">
+        <DialogHeader>
+          <DialogTitle id="admin-reset-password-title">Reset User Password</DialogTitle>
+          <DialogDescription>
+            Set a manual password or leave empty for a generated secure password.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form
+            className="student-request-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!resetModal) {
+                return
+              }
+              setResetModal((prev) => ({ ...prev, submitting: true }))
+              handleResetCredentials(resetModal.user, resetModal.password.trim() || null)
+            }}
+          >
+            <label>
+              <span>Manual password (optional)</span>
+              <Input
+                type="text"
+                autoComplete="off"
+                value={resetModal?.password || ''}
+                onChange={(event) => setResetModal((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Leave blank to auto-generate"
+              />
+            </label>
+            <div className="student-inline-message">
+              <Shield size={16} />
+              <span>Credentials are generated instantly and shown in this admin session.</span>
+            </div>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" disabled={resetModal?.submitting} onClick={() => setResetModal(null)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={resetModal?.submitting}
+            onClick={() => {
+              if (!resetModal) {
+                return
+              }
+              setResetModal((prev) => ({ ...prev, submitting: true }))
+              handleResetCredentials(resetModal.user, resetModal.password.trim() || null)
+            }}
+          >
+            {resetModal?.submitting ? 'Processing...' : 'Reset Password'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
-            <form
-              className="modal-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                setResetModal(prev => ({ ...prev, submitting: true }))
-                handleResetCredentials(resetModal.user, resetModal.password.trim() || null)
-              }}
-            >
-              <div className="auth-field">
-                <label htmlFor="reset-new-password">Manual Password (Optional)</label>
-                <input
-                  id="reset-new-password"
-                  className="auth-textarea"
-                  type="text"
-                  autoComplete="off"
-                  value={resetModal.password}
-                  onChange={(e) => setResetModal(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Leave blank to auto-generate"
-                />
-              </div>
-
-              <div className="auth-alert">
-                <Shield size={18} color="var(--primary)" />
-                <span>
-                  Resetting the password will create or update the underlying identity record and display the new credentials immediately.
-                </span>
-              </div>
-
-              <div className="modal-form__actions">
-                <button
-                  type="button"
-                  className="button-secondary"
-                  disabled={resetModal.submitting}
-                  onClick={() => setResetModal(null)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={resetModal.submitting}>
-                  {resetModal.submitting ? 'Processing...' : 'Reset Password Now'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
       <AlertDialog open={Boolean(deleteModalTarget)} onOpenChange={(open) => !open && setDeleteModalTarget(null)}>
         {deleteModalTarget ? (
           <div className="ui-dialog__content">
             <div className="ui-dialog__header">
               <h3 className="ui-dialog__title">Permanently delete account?</h3>
               <p className="ui-dialog__description">
-                Remove "{deleteModalTarget.displayName || deleteModalTarget.email}" from the system.
-                This will <strong>immediately</strong> revoke authentication and delete all associated data.
+                Remove "{deleteModalTarget.displayName || deleteModalTarget.email}" from the system and revoke authentication.
               </p>
             </div>
-
-            <div className="auth-field" style={{ marginTop: '1.5rem' }}>
-              <label>Type <strong>DELETE</strong> to confirm</label>
-              <input
-                type="text"
-                className="auth-textarea"
-                placeholder="DELETE"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-              />
+            <div className="student-request-form" style={{ marginTop: '1rem' }}>
+              <label>
+                <span>Type DELETE to confirm</span>
+                <Input
+                  type="text"
+                  value={confirmText}
+                  onChange={(event) => setConfirmText(event.target.value)}
+                  placeholder="DELETE"
+                />
+              </label>
             </div>
-
-            <div className="modal-form__actions" style={{ marginTop: '1.5rem' }}>
-              <button type="button" className="button-secondary" onClick={() => setDeleteModalTarget(null)} disabled={isDeleting}>
+            <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
+              <Button type="button" variant="ghost" onClick={() => setDeleteModalTarget(null)} disabled={isDeleting}>
                 Keep Account
-              </button>
-              <button 
-                type="button" 
-                className="button-primary button-primary--danger" 
-                onClick={confirmHardDelete}
-                disabled={isDeleting || confirmText !== 'DELETE'}
-              >
+              </Button>
+              <Button type="button" onClick={confirmHardDelete} disabled={isDeleting || confirmText !== 'DELETE'}>
                 {isDeleting ? 'Removing...' : 'Permanently Delete'}
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}

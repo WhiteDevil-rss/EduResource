@@ -1,37 +1,42 @@
 'use client'
 
-import Image from 'next/image'
 import {
   AlertCircle,
-  Bell,
+  BookOpen,
   CheckCircle2,
-  Circle,
   Edit3,
   FileText,
-  Filter,
-  LogOut,
   HelpCircle,
+  Inbox,
+  Library,
   Plus,
-  Search,
-  Settings,
+  Shield,
   Trash2,
   Upload,
-  UserCircle2,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { useAuth } from '@/hooks/useAuth'
-import {
-  FACULTY_PROFILE,
-  formatDisplayDate,
-  formatRelativeUpdate,
-  getDisplayName,
-  getSafeAvatarUrl,
-  getSubjectTone,
-} from '@/lib/demo-content'
 import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
+import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
+import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 import { AlertDialog } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/useAuth'
+import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 
 const EMPTY_DRAFT = {
   id: null,
@@ -39,12 +44,9 @@ const EMPTY_DRAFT = {
   class: '',
   subject: '',
   fileUrl: '',
-  fileType: '',
-  fileSize: 0,
-  fileFormat: '',
   summary: '',
   status: 'live',
-  file: null, // Temporary client-side file object
+  file: null,
 }
 
 function formatCompactNumber(value) {
@@ -54,19 +56,12 @@ function formatCompactNumber(value) {
   }).format(value)
 }
 
-function statusClassName(status) {
-  if (status === 'draft') return 'status-state status-state--draft'
-  return 'status-state status-state--active'
-}
-
 export default function FacultyDashboard() {
   const { user, logout } = useAuth()
   const [resources, setResources] = useState([])
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [notificationsSaving, setNotificationsSaving] = useState(false)
@@ -78,15 +73,23 @@ export default function FacultyDashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [uploadJobs, setUploadJobs] = useState([])
   const [isSaving, setIsSaving] = useState(false)
-  const notificationsPanelRef = useRef(null)
-  const uploadLockRef = useRef(false)
-  const deferredSearch = useDeferredValue(searchTerm)
-
-  // Password change states
+  const [activeSection, setActiveSection] = useState('overview')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedClass, setSelectedClass] = useState('All Classes')
+  const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
+  const notificationsPanelRef = useRef(null)
+  const uploadLockRef = useRef(false)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
+    return () => window.clearTimeout(timeout)
+  }, [searchInput])
 
   const loadResources = async ({ background = false } = {}) => {
     if (background) {
@@ -103,7 +106,7 @@ export default function FacultyDashboard() {
       }
 
       setResources(Array.isArray(payload?.resources) ? payload.resources : [])
-  setTotalDownloads(Number(payload?.totalDownloads || 0))
+      setTotalDownloads(Number(payload?.totalDownloads || 0))
       setErrorMessage('')
     } catch (error) {
       console.error('Faculty resource error:', error)
@@ -120,7 +123,6 @@ export default function FacultyDashboard() {
     try {
       const response = await fetch('/api/notifications', { cache: 'no-store' })
       const payload = await response.json().catch(() => ({}))
-
       if (!response.ok) {
         throw new Error(payload?.error || 'Could not load notifications.')
       }
@@ -171,35 +173,30 @@ export default function FacultyDashboard() {
     }
   }, [notificationsOpen])
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hash === '#faculty-upload') {
-      setEditorOpen(true)
-    }
-  }, [])
+  const classOptions = useMemo(
+    () => ['All Classes', ...new Set(resources.map((entry) => entry.class).filter(Boolean))],
+    [resources]
+  )
 
-  const subjectOptions = ['All Subjects', ...new Set(resources.map((entry) => entry.subject).filter(Boolean))]
+  const subjectOptions = useMemo(
+    () => ['All Subjects', ...new Set(resources.map((entry) => entry.subject).filter(Boolean))],
+    [resources]
+  )
 
   const visibleResources = resources.filter((entry) => {
-    const term = deferredSearch.trim().toLowerCase()
+    const term = searchTerm.trim().toLowerCase()
     const matchesSearch =
       !term ||
-      [
-        entry.title,
-        entry.class,
-        entry.subject,
-        entry.status,
-        entry.summary,
-        entry.fileFormat,
-        entry.fileType,
-      ]
-      .join(' ')
-      .toLowerCase()
-      .includes(term)
+      [entry.title, entry.class, entry.subject, entry.status, entry.summary]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
 
+    const matchesClass = selectedClass === 'All Classes' || !selectedClass || entry.class === selectedClass
     const matchesSubject =
-      !selectedSubject || selectedSubject === 'All Subjects' || entry.subject === selectedSubject
+      selectedSubject === 'All Subjects' || !selectedSubject || entry.subject === selectedSubject
 
-    return matchesSearch && matchesSubject
+    return matchesSearch && matchesClass && matchesSubject
   })
 
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
@@ -216,9 +213,6 @@ export default function FacultyDashboard() {
       class: entry.class,
       subject: entry.subject,
       fileUrl: entry.fileUrl,
-      fileType: entry.fileType || '',
-      fileSize: entry.fileSize || 0,
-      fileFormat: entry.fileFormat || '',
       summary: entry.summary || '',
       status: entry.status || 'live',
       file: null,
@@ -231,10 +225,8 @@ export default function FacultyDashboard() {
     setDraft(EMPTY_DRAFT)
   }
 
-  
-
   const handleSave = async (event) => {
-    event.preventDefault()
+    event?.preventDefault?.()
 
     if (isSaving || uploadLockRef.current) {
       return
@@ -270,17 +262,15 @@ export default function FacultyDashboard() {
       const xhr = new XMLHttpRequest()
       xhr.open('POST', '/api/faculty/resources')
 
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) {
+      xhr.upload.onprogress = (progressEvent) => {
+        if (!progressEvent.lengthComputable) {
           return
         }
 
-        const percentComplete = Math.round((event.loaded / event.total) * 100)
+        const percentComplete = Math.round((progressEvent.loaded / progressEvent.total) * 100)
         setUploadJobs((current) =>
           current.map((job) =>
-            job.id === uploadId
-              ? { ...job, progress: percentComplete, status: 'uploading' }
-              : job
+            job.id === uploadId ? { ...job, progress: percentComplete, status: 'uploading' } : job
           )
         )
       }
@@ -319,9 +309,7 @@ export default function FacultyDashboard() {
       xhr.onerror = () => {
         setUploadJobs((current) =>
           current.map((job) =>
-            job.id === uploadId
-              ? { ...job, status: 'failed', error: 'Network error during upload.' }
-              : job
+            job.id === uploadId ? { ...job, status: 'failed', error: 'Network error during upload.' } : job
           )
         )
         toast.error('Network error during upload.')
@@ -364,10 +352,6 @@ export default function FacultyDashboard() {
     }
   }
 
-  const handleDelete = async (entry) => {
-    setDeleteTarget(entry)
-  }
-
   const toggleResourceStatus = async (entry) => {
     const nextStatus = entry.status === 'draft' ? 'live' : 'draft'
 
@@ -383,17 +367,11 @@ export default function FacultyDashboard() {
         throw new Error(payload?.error || 'Could not update the resource status.')
       }
 
-      setResources((current) =>
-        current.map((item) => (item.id === entry.id ? payload.resource : item))
-      )
+      setResources((current) => current.map((item) => (item.id === entry.id ? payload.resource : item)))
       toast.success(`${entry.title} is now ${nextStatus}.`)
     } catch (error) {
       toast.error(error.message || 'Could not update the resource status.')
     }
-  }
-
-  const openNotifications = () => {
-    setNotificationsOpen((current) => !current)
   }
 
   const markNotificationRead = async (notificationId) => {
@@ -412,7 +390,6 @@ export default function FacultyDashboard() {
       }
 
       setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-      toast.success('Notification marked as read.')
     } catch (error) {
       toast.error(error.message || 'Could not update notifications.')
     } finally {
@@ -509,563 +486,435 @@ export default function FacultyDashboard() {
   }
 
   return (
-    <div className="dashboard-page">
+    <div className="student-panel">
+      <DashboardSidebar
+        role="faculty"
+        title="Faculty Workspace"
+        subtitle="Publishing Console"
+        navItems={[
+          { id: 'overview', label: 'Dashboard', href: '#faculty-overview', icon: Library },
+          { id: 'publications', label: 'Publications', href: '#faculty-publications', icon: FileText },
+          { id: 'uploads', label: 'Uploads', href: '#faculty-uploads', icon: Upload },
+          { id: 'profile', label: 'Profile', href: '#faculty-profile', icon: BookOpen },
+          { id: 'security', label: 'Security', href: '#faculty-security', icon: Shield },
+        ]}
+        mobileOpen={mobileNavOpen}
+        onMobileOpenChange={setMobileNavOpen}
+        activeSection={activeSection}
+        onNavigate={setActiveSection}
+        onLogout={logout}
+      />
+
+      <div className="student-panel__main">
+        <DashboardTopbar
+          role="faculty"
+          title="Faculty Dashboard"
+          subtitle="Upload and manage course publications"
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          onOpenMenu={() => setMobileNavOpen(true)}
+          onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
+          unreadCount={unreadNotificationCount}
+          userLabel={getDisplayName(user?.email, 'Faculty')}
+        />
+
+        <main className="student-panel__content">
+          {notificationsOpen ? (
+            <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
+              <Card className="student-notification-panel" role="dialog" aria-label="Notifications">
+                <CardHeader>
+                  <CardTitle>Notifications</CardTitle>
+                  <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
+                </CardHeader>
+                <CardContent className="student-notification-list">
+                  {notificationsError ? (
+                    <div className="student-inline-message student-inline-message--error">
+                      <HelpCircle size={16} />
+                      <span>{notificationsError}</span>
+                    </div>
+                  ) : null}
+
+                  {notificationsLoading ? <p>Fetching updates...</p> : null}
+                  {!notificationsLoading && notifications.length === 0 ? <p>No notifications available.</p> : null}
+                  {!notificationsLoading && notifications.length > 0
+                    ? notifications.slice(0, 5).map((notification) => (
+                        <button
+                          type="button"
+                          key={notification.id}
+                          className="student-notification-item"
+                          onClick={() => markNotificationRead(notification.id)}
+                        >
+                          <div>
+                            <strong>{notification.resourceTitle || notification.message || 'Update'}</strong>
+                            <p>{notification.message || 'A new dashboard update is available.'}</p>
+                            <span>{formatRelativeUpdate(notification.createdAt)}</span>
+                          </div>
+                          {!notification.readAt ? <Badge>New</Badge> : <Badge variant="outline">Read</Badge>}
+                        </button>
+                      ))
+                    : null}
+
+                  <div className="student-notification-actions">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={readAllNotifications}
+                      disabled={notificationsSaving || unreadNotificationCount === 0}
+                    >
+                      <CheckCircle2 size={14} />
+                      Mark all as read
+                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
+                      Close
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+
+          {errorMessage ? (
+            <div className="student-inline-message student-inline-message--error" role="alert">
+              <AlertCircle size={16} />
+              <span>{errorMessage}</span>
+            </div>
+          ) : null}
+
+          <section id="faculty-overview" className="student-section" aria-label="Faculty overview">
+            <div className="student-section__heading">
+              <h2>Overview</h2>
+              <p>Track your publications, downloads, and upload performance.</p>
+            </div>
+            <div className="student-metrics">
+              <Card>
+                <CardHeader>
+                  <CardDescription>Publications</CardDescription>
+                  <CardTitle>{resources.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Total Downloads</CardDescription>
+                  <CardTitle>{formatCompactNumber(totalDownloads)}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Filtered Results</CardDescription>
+                  <CardTitle>{visibleResources.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Status</CardDescription>
+                  <CardTitle>{refreshing ? 'Syncing' : 'Live'}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          </section>
+
+          <section id="faculty-publications" className="student-section" aria-label="Faculty publications">
+            <div className="student-section__heading">
+              <h2>Publications</h2>
+              <p>Use search, class, and subject filters to manage published materials.</p>
+            </div>
+
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label">
+                  <FileText size={14} />
+                  <span>Filters</span>
+                </div>
+                <label className="student-filter-control">
+                  <span>Class</span>
+                  <select
+                    className="ui-input"
+                    value={selectedClass}
+                    onChange={(event) => setSelectedClass(event.target.value)}
+                    aria-label="Filter publications by class"
+                  >
+                    {classOptions.map((courseClass) => (
+                      <option key={courseClass} value={courseClass}>
+                        {courseClass}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="student-filter-control">
+                  <span>Subject</span>
+                  <select
+                    className="ui-input"
+                    value={selectedSubject}
+                    onChange={(event) => setSelectedSubject(event.target.value)}
+                    aria-label="Filter publications by subject"
+                  >
+                    {subjectOptions.map((subject) => (
+                      <option key={subject} value={subject}>
+                        {subject}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Badge variant="outline" className="student-filter-count">
+                  {visibleResources.length} result(s)
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {visibleResources.length === 0 ? (
+              <Card className="student-empty-state" role="status" aria-live="polite">
+                <CardContent>
+                  <Inbox size={32} />
+                  <h3>No results found</h3>
+                  <p>Try changing search text, class, or subject filters.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="student-resource-grid">
+                {visibleResources.map((entry) => (
+                  <Card key={entry.id} className="student-resource-card">
+                    <CardHeader className="student-resource-card__header">
+                      <div className="student-resource-card__meta">
+                        <Badge>{entry.subject || 'General'}</Badge>
+                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                      </div>
+                      <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
+                        {entry.status === 'draft' ? 'Draft' : 'Live'}
+                      </Badge>
+                    </CardHeader>
+                    <CardContent>
+                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
+                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
+                    </CardContent>
+                    <CardFooter className="student-resource-card__footer">
+                      <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
+                      <div className="table-action-group">
+                        <Button
+                          type="button"
+                          variant={entry.status === 'draft' ? 'default' : 'outline'}
+                          onClick={() => toggleResourceStatus(entry)}
+                        >
+                          {entry.status === 'draft' ? 'Publish' : 'Move to Draft'}
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => openEditModal(entry)} aria-label={`Edit ${entry.title}`}>
+                          <Edit3 size={14} />
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setDeleteTarget(entry)} aria-label={`Delete ${entry.title}`}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section id="faculty-uploads" className="student-section" aria-label="Upload queue">
+            <div className="student-section__heading">
+              <h2>Uploads</h2>
+              <p>Track ongoing publication uploads with progress and status updates.</p>
+            </div>
+            <Card>
+              <CardContent className="student-download-list">
+                <Button type="button" onClick={openCreateModal}>
+                  <Plus size={14} />
+                  Upload Resource
+                </Button>
+                {uploadJobs.length > 0 ? (
+                  uploadJobs.map((job) => (
+                    <div key={job.id} className="student-download-item">
+                      <div>
+                        <strong>{job.fileName}</strong>
+                        <p>
+                          {job.status === 'failed'
+                            ? job.error || 'Upload failed.'
+                            : `${job.status} (${job.progress}%)`}
+                        </p>
+                      </div>
+                      <div style={{ width: '12rem' }}>
+                        <Progress value={job.progress} aria-label={`${job.fileName} upload progress`} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="student-muted-text">No active upload jobs.</p>
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
+          <section id="faculty-profile" className="student-section" aria-label="Faculty profile">
+            <div className="student-section__heading">
+              <h2>Profile</h2>
+              <p>Faculty identity and role information.</p>
+            </div>
+            <div className="student-profile-cards">
+              <Card>
+                <CardHeader>
+                  <CardDescription>Role</CardDescription>
+                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <RoleAvatar role="faculty" size="sm" label="Faculty role icon" />
+                    Faculty
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Email</CardDescription>
+                  <CardTitle>{user?.email || 'faculty@spseducationam.edu'}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Last Sync</CardDescription>
+                  <CardTitle>{refreshing ? 'Syncing now' : 'Up to date'}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          </section>
+
+          <section id="faculty-security" className="student-section" aria-label="Security settings">
+            <div className="student-section__heading">
+              <h2>Security</h2>
+              <p>Update your password to keep your account protected.</p>
+            </div>
+            <Card>
+              <CardContent>
+                <form className="student-request-form" onSubmit={handlePasswordChange}>
+                  <label>
+                    <span>Current password</span>
+                    <Input
+                      type="password"
+                      required
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>New password</span>
+                    <Input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>Confirm new password</span>
+                    <Input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                    />
+                  </label>
+                  <Button type="submit" disabled={passwordLoading}>
+                    {passwordLoading ? 'Updating...' : 'Update Password'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </section>
+        </main>
+      </div>
+
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen} labelledBy="faculty-editor-title" className="student-request-modal">
+        <DialogHeader>
+          <DialogTitle id="faculty-editor-title">{draft.id ? 'Edit Publication' : 'Upload Resource'}</DialogTitle>
+          <DialogDescription>
+            Publish through the faculty API with ownership checks and audit logging.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form className="student-request-form" onSubmit={handleSave}>
+            <label>
+              <span>Title</span>
+              <Input
+                value={draft.title}
+                onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+                required
+              />
+            </label>
+            <label>
+              <span>Class</span>
+              <Input
+                value={draft.class}
+                onChange={(event) => setDraft((current) => ({ ...current, class: event.target.value }))}
+                required
+              />
+            </label>
+            <label>
+              <span>Subject</span>
+              <Input
+                value={draft.subject}
+                onChange={(event) => setDraft((current) => ({ ...current, subject: event.target.value }))}
+                required
+              />
+            </label>
+            <label>
+              <span>Resource file</span>
+              <Input
+                type="file"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) {
+                    setDraft((current) => ({ ...current, file }))
+                  }
+                }}
+              />
+            </label>
+            <label>
+              <span>Summary</span>
+              <Textarea
+                rows={4}
+                value={draft.summary}
+                onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span>Publication status</span>
+              <select
+                className="ui-input"
+                value={draft.status}
+                onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value }))}
+              >
+                <option value="live">Live</option>
+                <option value="draft">Draft</option>
+              </select>
+            </label>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={closeEditor} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : draft.id ? 'Save Changes' : 'Publish Resource'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         {deleteTarget ? (
           <div className="ui-dialog__content">
             <div className="ui-dialog__header">
               <h3 className="ui-dialog__title">Delete publication?</h3>
               <p className="ui-dialog__description">
-                Remove "{deleteTarget.title}" from the publication list. This cannot be undone.
+                Remove "{deleteTarget.title}" from your publication list. This cannot be undone.
               </p>
             </div>
-            <div className="modal-form__actions" style={{ marginTop: '1.5rem' }}>
-              <button type="button" className="button-secondary" onClick={() => setDeleteTarget(null)}>
+            <div className="modal-form__actions" style={{ marginTop: '1rem' }}>
+              <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)}>
                 Cancel
-              </button>
-              <button type="button" className="button-primary" onClick={confirmDelete}>
-                Delete publication
-              </button>
+              </Button>
+              <Button type="button" onClick={confirmDelete}>
+                Delete Publication
+              </Button>
             </div>
           </div>
         ) : null}
       </AlertDialog>
-
-      <div className="dashboard-layout">
-        <aside className="dashboard-sidebar glass">
-          <div className="dashboard-sidebar__brand">
-            <h1 className="premium-gradient-text" style={{ fontSize: '2.4rem' }}>
-              SPS EDUCATIONAM
-            </h1>
-            <p className="dashboard-sidebar__eyebrow">Faculty Workspace</p>
-          </div>
-
-          <nav className="dashboard-nav">
-            <a href="#faculty-library" className="dashboard-nav__link">
-              <FileText size={18} />
-              Library
-            </a>
-            <a href="#faculty-publications" className="dashboard-nav__link dashboard-nav__link--active">
-              <Upload size={18} />
-              My Publications
-            </a>
-            <a href="#faculty-portal" className="dashboard-nav__link">
-              <UserCircle2 size={18} />
-              Faculty Profile
-            </a>
-            <a href="#faculty-settings" className="dashboard-nav__link">
-              <Settings size={18} />
-              Security
-            </a>
-          </nav>
-
-          <div className="dashboard-sidebar__footer">
-            <button type="button" className="button-primary" onClick={openCreateModal}>
-              <Upload size={16} />
-              Upload Resource
-            </button>
-
-            <div className="dashboard-profile">
-              <div className="dashboard-profile__avatar">
-                <Image
-                  src={getSafeAvatarUrl(user?.avatar, FACULTY_PROFILE.avatar)}
-                  alt="Faculty profile"
-                  width={44}
-                  height={44}
-                />
-              </div>
-              <div>
-                <strong>{user?.name || getDisplayName(user?.email, FACULTY_PROFILE.name)}</strong>
-                <p className="dashboard-sidebar__eyebrow" style={{ marginTop: '0.15rem' }}>
-                  Faculty Publisher
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <div className="dashboard-content">
-          <header className="dashboard-topbar glass">
-            <div className="dashboard-topbar__search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Search your publications..."
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-              />
-            </div>
-
-            <div className="dashboard-topbar__actions">
-              <button
-                type="button"
-                className="dashboard-topbar__icon"
-                aria-label="Notifications"
-                aria-haspopup="dialog"
-                aria-expanded={notificationsOpen}
-                onClick={openNotifications}
-              >
-                <Bell size={18} />
-                {unreadNotificationCount > 0 ? <span className="dashboard-topbar__badge">{unreadNotificationCount}</span> : null}
-              </button>
-              <button
-                type="button"
-                className="dashboard-topbar__icon"
-                aria-label="Refresh resources"
-                onClick={() => loadResources({ background: true })}
-              >
-                <Filter size={18} />
-              </button>
-              <button type="button" className="dashboard-topbar__icon" aria-label="Log out" onClick={logout}>
-                <LogOut size={18} />
-              </button>
-
-              {notificationsOpen ? (
-                <div className="notification-popover glass" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
-                  <div className="notification-popover__header">
-                    <div>
-                      <strong>Notifications</strong>
-                      <span>{unreadNotificationCount} unread</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="dashboard-topbar__icon"
-                      aria-label="Close notifications"
-                      onClick={() => setNotificationsOpen(false)}
-                    >
-                      <Circle size={16} />
-                    </button>
-                  </div>
-
-                  <div className="notification-shell notification-shell--popover">
-                    {notificationsError ? (
-                      <div className="auth-alert">
-                        <HelpCircle size={18} color="var(--tertiary)" />
-                        <span>{notificationsError}</span>
-                      </div>
-                    ) : null}
-
-                    {notificationsLoading ? (
-                      <div className="empty-state">Fetching your latest publishing updates and faculty notifications...</div>
-                    ) : notifications.length > 0 ? (
-                      notifications.slice(0, 5).map((notification) => (
-                        <article
-                          key={notification.id}
-                          className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
-                        >
-                          <button
-                            type="button"
-                            className="notification-card__mark"
-                            onClick={() => markNotificationRead(notification.id)}
-                          >
-                            {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                          </button>
-                          <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
-                            <strong>{notification.resourceTitle || notification.message || 'New notification'}</strong>
-                            <p>{notification.message || 'A new dashboard update is available.'}</p>
-                            <span>
-                              {notification.facultyName || notification.studentName || notification.facultyEmail || notification.studentEmail || 'System'} · {formatRelativeUpdate(notification.createdAt)}
-                            </span>
-                          </div>
-                          {!notification.readAt ? <span className="notification-card__dot" /> : null}
-                        </article>
-                      ))
-                    ) : (
-                      <div className="empty-state">You do not have any notifications yet.</div>
-                    )}
-                  </div>
-
-                  <div className="notification-popover__footer">
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={readAllNotifications}
-                      disabled={notificationsSaving || unreadNotificationCount === 0}
-                    >
-                      <CheckCircle2 size={16} />
-                      {notificationsSaving ? 'Updating...' : 'Read all at once'}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </header>
-
-          <section className="dashboard-section" id="faculty-library">
-            <article className="dashboard-hero">
-              <div className="dashboard-hero__content">
-                <span className="auth-kicker">Faculty Workspace</span>
-                <h2>Secure Publishing</h2>
-                <p>
-                  Publish and update course resources through faculty-only APIs.
-                  Every action is tied to your signed session and audited by the
-                  admin console.
-                </p>
-                <div className="dashboard-hero__actions">
-                  <button type="button" className="button-primary" onClick={openCreateModal}>
-                    Upload New Resource
-                  </button>
-                  <button type="button" className="button-secondary" onClick={() => loadResources({ background: true })}>
-                    {refreshing ? 'Refreshing...' : 'Refresh Publications'}
-                  </button>
-                </div>
-              </div>
-            </article>
-          </section>
-
-          {errorMessage ? (
-            <div className="auth-alert" style={{ marginBottom: '1rem' }}>
-              <AlertCircle size={18} color="var(--tertiary)" />
-              <span>{errorMessage}</span>
-            </div>
-          ) : null}
-
-          <section className="dashboard-section" id="faculty-publications">
-            {uploadJobs.length > 0 ? (
-              <div className="upload-job-list" style={{ marginBottom: '1.5rem' }}>
-                {uploadJobs.map((job) => (
-                  <article key={job.id} className="upload-job-card glass">
-                    <div className="upload-job-card__header">
-                      <div>
-                        <strong>{job.fileName}</strong>
-                        <p>
-                          {job.status === 'completed'
-                            ? 'Upload completed successfully.'
-                            : job.status === 'failed'
-                              ? job.error || 'Upload failed.'
-                              : 'Uploading in the background.'}
-                        </p>
-                      </div>
-                      <span className={`status-state status-state--${job.status === 'completed' ? 'active' : job.status === 'failed' ? 'banned' : 'draft'}`}>
-                        <span className="status-state__dot" />
-                        {job.status}
-                      </span>
-                    </div>
-                    <Progress value={job.progress} />
-                    <div className="upload-job-card__footer">
-                      <span>{job.progress}%</span>
-                      <span>{job.status === 'failed' ? 'Action required' : 'Background upload locked'}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : null}
-            <div className="metric-grid" style={{ marginBottom: '1.5rem' }}>
-              <article className="metric-card glass">
-                <span className="metric-card__label">Publications</span>
-                <strong className="metric-card__value">{resources.length}</strong>
-              </article>
-              <article className="metric-card glass">
-                <span className="metric-card__label">Total Downloads</span>
-                <strong className="metric-card__value">{formatCompactNumber(totalDownloads)}</strong>
-              </article>
-              <article className="status-panel glass">
-                <span className="metric-card__label" style={{ color: 'var(--secondary)' }}>Publishing Policy</span>
-                <strong className="metric-card__value" style={{ fontSize: '2rem' }}>Faculty Only</strong>
-              </article>
-            </div>
-
-            <div className="filter-row" style={{ marginBottom: '1rem' }}>
-              <div className="filter-row__actions">
-                {subjectOptions.map((subject) => (
-                  <button
-                    key={subject}
-                    type="button"
-                    className={subject === selectedSubject ? 'button-primary' : 'button-secondary'}
-                    onClick={() => setSelectedSubject(subject)}
-                  >
-                    {subject}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="table-shell glass">
-              <div className="table-shell__header">
-                <div>
-                  <h3>Your Publications</h3>
-                </div>
-                <div className="filter-row__actions">
-                  <button type="button" className="button-secondary" onClick={openCreateModal}>
-                    <Plus size={16} />
-                    New
-                  </button>
-                </div>
-              </div>
-
-              <table className="data-table data-table--responsive">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Class</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleResources.length > 0 ? (
-                    visibleResources.map((entry) => (
-                      <tr key={entry.id}>
-                        <td data-label="Title">
-                          <div className="table-entity">
-                            <div className="metric-card__icon" style={{ width: '2.5rem', height: '2.5rem', background: 'rgba(182, 160, 255, 0.12)', color: 'var(--primary)' }}>
-                              <FileText size={18} />
-                            </div>
-                            <div className="table-entity__copy">
-                              <strong>{entry.title}</strong>
-                              <span>{entry.summary || 'No summary provided'}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td data-label="Class">{entry.class}</td>
-                        <td data-label="Subject">
-                          <span className={`subject-chip subject-chip--${getSubjectTone(entry.subject)}`}>
-                            {entry.subject}
-                          </span>
-                        </td>
-                        <td data-label="Status">
-                          <span className={statusClassName(entry.status)}>
-                            <span className="status-state__dot" />
-                            {entry.status === 'draft' ? 'Draft' : 'Live'}
-                          </span>
-                        </td>
-                        <td data-label="Date">{formatDisplayDate(entry.createdAt)}</td>
-                        <td data-label="Actions" style={{ textAlign: 'right' }}>
-                          <div className="table-action-group">
-                            <button
-                              type="button"
-                              className={entry.status === 'draft' ? 'button-secondary' : 'button-primary'}
-                              onClick={() => toggleResourceStatus(entry)}
-                            >
-                              {entry.status === 'draft' ? 'Publish' : 'Draft'}
-                            </button>
-                            <button type="button" className="dashboard-topbar__icon" aria-label={`Edit ${entry.title}`} onClick={() => openEditModal(entry)}>
-                              <Edit3 size={16} />
-                            </button>
-                            <button type="button" className="dashboard-topbar__icon" aria-label={`Delete ${entry.title}`} onClick={() => handleDelete(entry)}>
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td data-label="Title" colSpan={6}>
-                        <div className="empty-state">No faculty publications matched the current filter.</div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              <div className="table-shell__footer">
-                <span>{visibleResources.length} publication(s) available in your secure workspace.</span>
-                <span>Only this faculty account can modify these resources.</span>
-              </div>
-            </div>
-          </section>
-
-          <section className="dashboard-section" id="faculty-portal">
-            <div className="support-grid">
-              <article className="support-card glass">
-                <span className="metric-card__label">Faculty Profile</span>
-                <div className="downloads-list">
-                  <div className="profile-list__item">
-                    <span>Email</span>
-                    <strong>{user?.email || 'faculty@spseducationam.edu'}</strong>
-                  </div>
-                  <div className="profile-list__item">
-                    <span>Login ID</span>
-                    <strong>{user?.loginId || 'Issued by admin'}</strong>
-                  </div>
-                  <div className="profile-list__item">
-                    <span>Role</span>
-                    <strong>Faculty</strong>
-                  </div>
-                </div>
-              </article>
-
-              <article className="support-card glass" id="faculty-settings">
-                <span className="metric-card__label">Security Controls</span>
-                <form className="modal-form" style={{ marginTop: '1rem' }} onSubmit={handlePasswordChange}>
-                  <div className="auth-field">
-                    <label htmlFor="current-password">Current Password</label>
-                    <input
-                      id="current-password"
-                      type="password"
-                      className="auth-textarea"
-                      placeholder="••••••••"
-                      required
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="auth-field">
-                    <label htmlFor="new-password">New Password</label>
-                    <input
-                      id="new-password"
-                      type="password"
-                      className="auth-textarea"
-                      placeholder="Min. 6 characters"
-                      required
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="auth-field">
-                    <label htmlFor="confirm-password">Confirm New Password</label>
-                    <input
-                      id="confirm-password"
-                      type="password"
-                      className="auth-textarea"
-                      placeholder="Confirm your new password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                  </div>
-                  <button 
-                    type="submit" 
-                    className="button-primary" 
-                    style={{ width: '100%', marginTop: '0.5rem' }}
-                    disabled={passwordLoading}
-                  >
-                    {passwordLoading ? 'Updating...' : 'Update Password'}
-                  </button>
-                </form>
-              </article>
-            </div>
-          </section>
-        </div>
-      </div>
-
-      <button type="button" className="floating-fab" aria-label="Upload resource" onClick={openCreateModal}>
-        <Plus size={28} />
-      </button>
-
-      {editorOpen ? (
-        <div className="modal-backdrop">
-          <div className="modal-card glass">
-            <h3>{draft.id ? 'Edit Publication' : 'Upload Resource'}</h3>
-            <p>Publish through the faculty API with strict ownership checks and server-side auditing.</p>
-
-            <form className="modal-form" onSubmit={handleSave}>
-              <div className="auth-field">
-                <label htmlFor="faculty-title">Title</label>
-                <input
-                  id="faculty-title"
-                  className="auth-textarea"
-                  type="text"
-                  value={draft.title}
-                  onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-                />
-              </div>
-
-              <div className="modal-form__grid">
-                <div className="auth-field">
-                  <label htmlFor="faculty-class">Class</label>
-                  <input
-                    id="faculty-class"
-                    className="auth-textarea"
-                    type="text"
-                    value={draft.class}
-                    onChange={(event) => setDraft((current) => ({ ...current, class: event.target.value }))}
-                  />
-                </div>
-                <div className="auth-field">
-                  <label htmlFor="faculty-subject">Subject</label>
-                  <input
-                    id="faculty-subject"
-                    className="auth-textarea"
-                    type="text"
-                    value={draft.subject}
-                    onChange={(event) => setDraft((current) => ({ ...current, subject: event.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="auth-field">
-                <label>Resource Material (PDF, DOCX, TXT, etc.)</label>
-                <div 
-                  className={`upload-zone ${draft.file ? 'upload-zone--has-file' : ''}`}
-                  onClick={() => document.getElementById('file-upload-input').click()}
-                >
-                  <Upload size={24} color={draft.file ? 'var(--primary)' : 'var(--secondary)'} />
-                  {draft.file ? (
-                    <div className="upload-zone__file">
-                      <strong>{draft.file.name}</strong>
-                      <span>{(draft.file.size / 1024 / 1024).toFixed(2)} MB</span>
-                    </div>
-                  ) : (
-                    <div className="upload-zone__prompt">
-                      <strong>Click to upload or drag & drop</strong>
-                      <span>Max file size: 25MB</span>
-                    </div>
-                  )}
-                  <input 
-                    id="file-upload-input"
-                    type="file" 
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const file = e.target.files[0]
-                      if (file) {
-                        setDraft(curr => ({ ...curr, file }))
-                      }
-                    }}
-                  />
-                </div>
-                {draft.fileUrl && !draft.file ? (
-                  <p className="field-hint">Current file: <a href={draft.fileUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>View existing</a></p>
-                ) : null}
-              </div>
-
-              <div className="auth-field">
-                <label htmlFor="faculty-summary">Summary</label>
-                <textarea
-                  id="faculty-summary"
-                  className="auth-textarea"
-                  rows={4}
-                  value={draft.summary}
-                  onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))}
-                />
-              </div>
-
-              <div className="auth-field auth-select">
-                <label htmlFor="faculty-status">Publication Status</label>
-                <div className="auth-select">
-                  <select
-                    id="faculty-status"
-                    value={draft.status}
-                    onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value }))}
-                  >
-                    <option value="live">Live</option>
-                    <option value="draft">Draft</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="modal-form__actions">
-                <button type="button" className="button-secondary" onClick={closeEditor} disabled={isSaving}>
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <div className="loading-spinner loading-spinner--small" style={{ marginRight: '0.5rem' }} />
-                      Publishing...
-                    </>
-                  ) : (
-                    draft.id ? 'Save Changes' : 'Publish Resource'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }

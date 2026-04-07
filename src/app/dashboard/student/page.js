@@ -1,28 +1,36 @@
 'use client'
 
 import {
+  AlertCircle,
   CheckCircle2,
-  Bell,
   BookOpen,
-  Circle,
   Download,
+  Filter,
   HelpCircle,
+  Inbox,
   Library,
-  LogOut,
-  Play,
-  Search,
-  Settings,
-  User,
 } from 'lucide-react'
-import { useDeferredValue, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { useAuth } from '@/hooks/useAuth'
-import {
-  formatRelativeUpdate,
-  getDisplayName,
-  getSubjectTone,
-} from '@/lib/demo-content'
 import { StudentDashboardSkeleton } from '@/components/LoadingStates'
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
+import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
+import { StudentResourceCard } from '@/components/student/StudentResourceCard'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/useAuth'
+import { formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 
 const DOWNLOADS_STORAGE_KEY = 'sps.educationam.downloads.v1'
 
@@ -43,6 +51,21 @@ function inferResourceFormat(fileUrl) {
 
 function normalizeStudentResource(entry) {
   const inferred = inferResourceFormat(entry?.fileUrl)
+  const incomingStatus = String(entry?.uploadStatus || entry?.status || '').toLowerCase()
+  const safeProgress = Number(entry?.uploadProgress)
+  const uploadStatus = ['uploading', 'failed', 'completed'].includes(incomingStatus)
+    ? incomingStatus
+    : safeProgress > 0 && safeProgress < 100
+      ? 'uploading'
+      : 'completed'
+  const uploadProgress = Number.isFinite(safeProgress)
+    ? Math.max(0, Math.min(100, safeProgress))
+    : uploadStatus === 'uploading'
+      ? 45
+      : uploadStatus === 'failed'
+        ? 0
+        : 100
+
   return {
     id: entry?.id,
     title: entry?.title || 'Untitled Resource',
@@ -54,6 +77,9 @@ function normalizeStudentResource(entry) {
     facultyEmail: entry?.facultyEmail || '',
     createdAt: entry?.createdAt || null,
     updatedAt: entry?.updatedAt || null,
+    uploadStatus,
+    uploadProgress,
+    updatedLabel: formatRelativeUpdate(entry?.updatedAt || entry?.createdAt),
     ...inferred,
   }
 }
@@ -72,6 +98,8 @@ export default function StudentDashboard() {
   const { user, logout } = useAuth()
   const [resources, setResources] = useState([])
   const [downloads, setDownloads] = useState([])
+  const [activeSection, setActiveSection] = useState('overview')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [notificationsSaving, setNotificationsSaving] = useState(false)
@@ -87,11 +115,21 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsError, setNotificationsError] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedClass, setSelectedClass] = useState('All Classes')
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
-  const deferredSearch = useDeferredValue(searchTerm)
   const notificationsPanelRef = useRef(null)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSearchTerm(searchInput)
+    }, 220)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [searchInput])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -215,12 +253,18 @@ export default function StudentDashboard() {
   }, [notificationsOpen])
 
   const catalog = resources
-  const classOptions = ['All Classes', ...new Set(catalog.map((entry) => entry.class))]
-  const subjectOptions = ['All Subjects', ...new Set(catalog.map((entry) => entry.subject))]
+  const classOptions = useMemo(
+    () => ['All Classes', ...new Set(catalog.map((entry) => entry.class))],
+    [catalog]
+  )
+  const subjectOptions = useMemo(
+    () => ['All Subjects', ...new Set(catalog.map((entry) => entry.subject))],
+    [catalog]
+  )
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
 
   const filteredResources = catalog.filter((entry) => {
-    const term = deferredSearch.trim().toLowerCase()
+    const term = searchTerm.trim().toLowerCase()
     const matchesSearch =
       !term ||
       [entry.title, entry.subject, entry.class, entry.summary, entry.facultyName, entry.facultyEmail]
@@ -265,7 +309,7 @@ export default function StudentDashboard() {
   }
 
   const handleRequestSubmit = async (event) => {
-    event.preventDefault()
+    event?.preventDefault?.()
     setRequestSubmitting(true)
 
     try {
@@ -335,6 +379,11 @@ export default function StudentDashboard() {
   }
 
   const handleResourceAction = (entry) => {
+    if (entry.uploadStatus === 'uploading') {
+      toast.error('This resource is still uploading.')
+      return
+    }
+
     const nextDownloads = [
       {
         id: entry.id,
@@ -361,252 +410,161 @@ export default function StudentDashboard() {
     return <StudentDashboardSkeleton />
   }
 
+  const completedCount = catalog.filter((entry) => entry.uploadStatus === 'completed').length
+  const uploadingCount = catalog.filter((entry) => entry.uploadStatus === 'uploading').length
+  const failedCount = catalog.filter((entry) => entry.uploadStatus === 'failed').length
+
   return (
-    <div className="dashboard-page">
-      {requestModalOpen ? (
-        <div className="modal-backdrop" role="presentation" onClick={closeRequestModal}>
-          <div
-            className="modal-card modal-card--compact glass"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="resource-request-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="modal-icon">
-              <Library size={24} color="var(--primary)" />
-            </div>
-            <h3 id="resource-request-title">Academic Support Request</h3>
-            <p>Our academic teams will review your request and attempt to provision the resources within 48-72 business hours.</p>
+    <div className="student-panel">
+      <DashboardSidebar
+        role="student"
+        title="Student Workspace"
+        subtitle="Resource Hub"
+        navItems={[
+          { id: 'overview', label: 'Dashboard', href: '#student-overview', icon: Library },
+          { id: 'resources', label: 'Resources', href: '#student-resources', icon: BookOpen },
+          { id: 'downloads', label: 'Downloads', href: '#student-downloads', icon: Download },
+          { id: 'profile', label: 'Profile', href: '#student-profile', icon: Inbox },
+          { id: 'support', label: 'Help & Support', href: '#student-support', icon: HelpCircle },
+        ]}
+        mobileOpen={mobileNavOpen}
+        onMobileOpenChange={setMobileNavOpen}
+        activeSection={activeSection}
+        onNavigate={setActiveSection}
+        onLogout={logout}
+      />
 
-            <form className="modal-form" onSubmit={handleRequestSubmit}>
-              <div className="auth-field">
-                <label>Authorized Account</label>
-                <div className="auth-textarea" style={{ opacity: 0.6, background: 'rgba(255,255,255,0.03)' }}>
-                   {user?.email || 'Authenticated student'}
-                </div>
-              </div>
+      <div className="student-panel__main">
+        <DashboardTopbar
+          role="student"
+          title="Student Dashboard"
+          subtitle="Find, track, and access your learning resources"
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          onOpenMenu={() => setMobileNavOpen(true)}
+          onOpenNotifications={openNotifications}
+          unreadCount={unreadNotificationCount}
+          userLabel={getDisplayName(user?.email, 'Student')}
+        />
 
-              <div className="modal-form__grid">
-                <div className="auth-field">
-                  <label htmlFor="request-course">Reference Code / Course</label>
-                  <input
-                    id="request-course"
-                    className="auth-textarea"
-                    type="text"
-                    value={resourceRequest.courseName}
-                    onChange={(event) => setResourceRequest((current) => ({ ...current, courseName: event.target.value }))}
-                    placeholder="e.g. CS-402"
-                    required
-                  />
-                </div>
-                <div className="auth-field">
-                  <label htmlFor="request-title">Topic / Title</label>
-                  <input
-                    id="request-title"
-                    className="auth-textarea"
-                    type="text"
-                    value={resourceRequest.titleName}
-                    onChange={(event) => setResourceRequest((current) => ({ ...current, titleName: event.target.value }))}
-                    placeholder="e.g. Memory Management"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="auth-field">
-                <label htmlFor="request-format">Target Format</label>
-                <input
-                  id="request-format"
-                  className="auth-textarea"
-                  type="text"
-                  value={resourceRequest.preferredFormat}
-                  onChange={(event) => setResourceRequest((current) => ({ ...current, preferredFormat: event.target.value }))}
-                  placeholder="PDF, Video, PPTX"
-                  required
-                />
-              </div>
-
-              <div className="auth-field">
-                <label htmlFor="request-details">Specific Requirements</label>
-                <textarea
-                  id="request-details"
-                  className="auth-textarea"
-                  rows={3}
-                  value={resourceRequest.details}
-                  onChange={(event) => setResourceRequest((current) => ({ ...current, details: event.target.value }))}
-                  placeholder="Mention specific chapters or page ranges"
-                />
-              </div>
-
-              <div className="modal-form__actions">
-                <button type="button" className="button-secondary" onClick={closeRequestModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary" disabled={requestSubmitting}>
-                  {requestSubmitting ? 'Submitting...' : 'Submit Request'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="dashboard-layout">
-        <aside className="dashboard-sidebar glass">
-          <div className="dashboard-sidebar__brand">
-            <div className="dashboard-sidebar__logo">
-              <BookOpen size={24} color="var(--primary)" />
-            </div>
-            <div>
-              <h1 className="premium-gradient-text" style={{ fontSize: '2.4rem' }}>SPS EDUCATIONAM</h1>
-              <p className="dashboard-sidebar__eyebrow">Academic Library</p>
-            </div>
-          </div>
-
-          <nav className="dashboard-nav">
-            <a href="#student-library" className="dashboard-nav__link dashboard-nav__link--active">
-              <Library size={18} />
-              Library Catalog
-            </a>
-            <a href="#student-downloads" className="dashboard-nav__link">
-              <Download size={18} />
-              My Downloads
-            </a>
-            <a href="#student-profile" className="dashboard-nav__link">
-              <User size={18} />
-              Student Profile
-            </a>
-          </nav>
-
-          <div className="dashboard-sidebar__footer">
-            <div className="status-indicator">
-              <div className="status-indicator__dot status-indicator__dot--active" />
-              <span>System Online</span>
-            </div>
-            <button type="button" className="dashboard-nav__link" onClick={logout}>
-              <LogOut size={18} />
-              Sign Out
-            </button>
-          </div>
-        </aside>
-
-        <div className="dashboard-content">
-          <header className="dashboard-topbar glass">
-            <div className="dashboard-topbar__brand">
-              <BookOpen size={18} color="var(--primary)" />
-              <strong className="premium-gradient-text" style={{ fontSize: '1.2rem' }}>SPS EDUCATIONAM</strong>
-            </div>
-
-            <div className="dashboard-topbar__actions">
-              <button
-                type="button"
-                className="dashboard-topbar__icon"
-                aria-label="Notifications"
-                aria-haspopup="dialog"
-                aria-expanded={notificationsOpen}
-                onClick={openNotifications}
-              >
-                <Bell size={18} />
-                {unreadNotificationCount > 0 ? <span className="dashboard-topbar__badge">{unreadNotificationCount}</span> : null}
-              </button>
-              <button type="button" className="dashboard-topbar__icon" aria-label="Settings">
-                <Settings size={18} />
-              </button>
-              <div className="dashboard-topbar__user" onClick={() => setSelectedSubject('All Subjects')} style={{ cursor: 'pointer' }}>
-                <div className="dashboard-profile__avatar dashboard-profile__avatar--initials">
-                  {getDisplayName(user?.email, 'S').charAt(0)}
-                </div>
-              </div>
-              {notificationsOpen ? (
-                <div className="notification-popover glass" ref={notificationsPanelRef} role="dialog" aria-label="Notifications">
-                  <div className="notification-popover__header">
-                    <div>
-                      <strong>Notifications Center</strong>
-                      <span>{unreadNotificationCount} unread update(s)</span>
-                    </div>
+        <main className="student-panel__content">
+          {notificationsOpen ? (
+            <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
+              <Card className="student-notification-panel" role="dialog" aria-label="Notifications center">
+              <CardHeader>
+                <CardTitle>Notifications</CardTitle>
+                <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
+              </CardHeader>
+              <CardContent className="student-notification-list">
+                {notificationsError ? (
+                  <div className="student-inline-message student-inline-message--error">
+                    <HelpCircle size={16} />
+                    <span>{notificationsError}</span>
                   </div>
+                ) : null}
 
-                  <div className="notification-shell notification-shell--popover">
-                    {notificationsError ? (
-                      <div className="auth-alert">
-                        <HelpCircle size={18} color="var(--tertiary)" />
-                        <span>{notificationsError}</span>
-                      </div>
-                    ) : null}
-
-                    {notificationsLoading ? (
-                      <div className="empty-state">Syncing updates...</div>
-                    ) : notifications.length > 0 ? (
-                      notifications.slice(0, 5).map((notification) => (
-                        <article
-                          key={notification.id}
-                          className={`notification-card${notification.readAt ? ' notification-card--read' : ' notification-card--unread'}`}
-                        >
-                          <button type="button" className="notification-card__mark" onClick={() => markNotificationRead(notification.id)}>
-                            {notification.readAt ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                          </button>
-                          <div className="notification-card__copy" onClick={() => markNotificationRead(notification.id)}>
-                            <strong>{notification.resourceTitle || 'New resource uploaded'}</strong>
-                            <p>{notification.message || 'A faculty member uploaded a new learning resource.'}</p>
-                            <span>
-                              {notification.facultyName || notification.facultyEmail || 'Faculty'} · {formatRelativeUpdate(notification.createdAt)}
-                            </span>
-                          </div>
-                   {!notification.readAt ? <span className="notification-card__dot" /> : null}
-                        </article>
-                      ))
-                    ) : (
-                      <div className="empty-state">Your inbox is currently clear.</div>
-                    )}
-                  </div>
-
-                  <div className="notification-popover__footer">
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      onClick={readAllNotifications}
-                      disabled={notificationsSaving || unreadNotificationCount === 0}
-                    >
-                      <CheckCircle2 size={16} />
-                      {notificationsSaving ? 'Updating...' : 'Clear All Notifications'}
-                    </button>
-                    <button type="button" className="button-secondary" onClick={() => setNotificationsOpen(false)}>
-                      Close
-                    </button>
-                  </div>
+                {notificationsLoading ? <p>Syncing updates...</p> : null}
+                {!notificationsLoading && notifications.length === 0 ? <p>Your inbox is currently clear.</p> : null}
+                {!notificationsLoading && notifications.length > 0
+                  ? notifications.slice(0, 5).map((notification) => (
+                      <button
+                        type="button"
+                        key={notification.id}
+                        className="student-notification-item"
+                        onClick={() => markNotificationRead(notification.id)}
+                      >
+                        <div>
+                          <strong>{notification.resourceTitle || 'New resource uploaded'}</strong>
+                          <p>{notification.message || 'A faculty member uploaded a new learning resource.'}</p>
+                          <span>
+                            {notification.facultyName || notification.facultyEmail || 'Faculty'}
+                            {' · '}
+                            {formatRelativeUpdate(notification.createdAt)}
+                          </span>
+                        </div>
+                        {!notification.readAt ? <Badge>New</Badge> : <Badge variant="outline">Read</Badge>}
+                      </button>
+                    ))
+                  : null}
+                <div className="student-notification-actions">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={readAllNotifications}
+                    disabled={notificationsSaving || unreadNotificationCount === 0}
+                  >
+                    <CheckCircle2 size={14} />
+                    {notificationsSaving ? 'Updating...' : 'Mark all as read'}
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
+                    Close
+                  </Button>
                 </div>
-              ) : null}
+              </CardContent>
+              </Card>
             </div>
-          </header>
+          ) : null}
 
           {errorMessage ? (
-            <div className="auth-alert" style={{ marginBottom: '1rem' }}>
-              <HelpCircle size={18} color="var(--tertiary)" />
+            <div className="student-inline-message student-inline-message--error" role="alert">
+              <AlertCircle size={16} />
               <span>{errorMessage}</span>
             </div>
           ) : null}
 
-          <section className="dashboard-section" id="student-library">
-            <div className="section-header">
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span className="pill-label">Dashboard</span>
-                  <span style={{ color: 'rgba(240,240,253,0.4)' }}>/</span>
-                  <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Student Library</span>
-                </div>
-                <h2>Curated Resources</h2>
-                <p>
-                  Browse faculty-published learning materials through the student-only
-                  catalog. Access remains restricted to Google-authenticated student accounts.
-                </p>
-              </div>
+          <section id="student-overview" className="student-section" aria-label="Dashboard overview">
+            <div className="student-section__heading">
+              <h2>Overview</h2>
+              <p>Your central space to discover and download academic resources.</p>
+            </div>
+            <div className="student-metrics">
+              <Card>
+                <CardHeader>
+                  <CardDescription>Total Resources</CardDescription>
+                  <CardTitle>{catalog.length}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Ready to Download</CardDescription>
+                  <CardTitle>{completedCount}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Uploading</CardDescription>
+                  <CardTitle>{uploadingCount}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Needs Attention</CardDescription>
+                  <CardTitle>{failedCount}</CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
+          </section>
+
+          <section id="student-resources" className="student-section" aria-label="Resource library">
+            <div className="student-section__heading">
+              <h2>Resource Library</h2>
+              <p>Filter by class and subject to quickly find what you need.</p>
             </div>
 
-            <div className="filter-row" style={{ marginBottom: '1.5rem' }}>
-              <div className="filter-row__actions catalog-controls">
-                <label className="catalog-control">
+            <Card className="student-filter-card">
+              <CardContent className="student-filter-card__content">
+                <div className="student-filter-label">
+                  <Filter size={14} />
+                  <span>Filters</span>
+                </div>
+                <label className="student-filter-control">
                   <span>Class</span>
-                  <select value={selectedClass} onChange={(event) => setSelectedClass(event.target.value)}>
+                  <select
+                    className="ui-input"
+                    value={selectedClass}
+                    onChange={(event) => setSelectedClass(event.target.value)}
+                    aria-label="Filter resources by class"
+                  >
                     {classOptions.map((courseClass) => (
                       <option key={courseClass} value={courseClass}>
                         {courseClass}
@@ -614,10 +572,14 @@ export default function StudentDashboard() {
                     ))}
                   </select>
                 </label>
-
-                <label className="catalog-control">
+                <label className="student-filter-control">
                   <span>Subject</span>
-                  <select value={selectedSubject} onChange={(event) => setSelectedSubject(event.target.value)}>
+                  <select
+                    className="ui-input"
+                    value={selectedSubject}
+                    onChange={(event) => setSelectedSubject(event.target.value)}
+                    aria-label="Filter resources by subject"
+                  >
                     {subjectOptions.map((subject) => (
                       <option key={subject} value={subject}>
                         {subject}
@@ -625,168 +587,193 @@ export default function StudentDashboard() {
                     ))}
                   </select>
                 </label>
+                <Badge variant="outline" className="student-filter-count">
+                  {filteredResources.length} result(s)
+                </Badge>
+              </CardContent>
+            </Card>
 
-                <label className="catalog-control catalog-control--search">
-                  <span>Search title</span>
-                  <div className="dashboard-topbar__search catalog-search-field">
-                    <Search size={16} />
-                    <input
-                      type="text"
-                      placeholder="Search by resource title"
-                      value={searchTerm}
-                      onChange={(event) => setSearchTerm(event.target.value)}
-                    />
-                  </div>
-                </label>
-              </div>
-              <span className="metric-card__label">
-                {filteredResources.length} item(s)
-              </span>
-            </div>
-            {filteredResources.length > 0 ? (
-              <div className="resource-grid">
-                {filteredResources.map((entry) => {
-                  const tone = getSubjectTone(entry.subject)
-                  return (
-                    <article key={entry.id} className="resource-card glass">
-                      <div className="resource-card__meta">
-                        <span className="pill-label pill-label--sm" style={{ 
-                          background: tone === 'primary' ? 'rgba(182,160,255,0.1)' : 'rgba(0,175,254,0.1)',
-                          color: tone === 'primary' ? 'var(--primary)' : 'var(--secondary)'
-                        }}>
-                          {entry.subject}
-                        </span>
-                        <span className="pill-label pill-label--sm">{entry.class}</span>
-                        <span className="resource-card__type">
-                          {(entry.fileFormat || entry.format || 'FILE').toUpperCase()} · {
-                            entry.fileSize 
-                              ? (entry.fileSize / 1024 / 1024).toFixed(1) + ' MB'
-                              : (entry.size || 'Unknown')
-                          }
-                        </span>
-                      </div>
-                      <div className="resource-card__body">
-                        <h3>{entry.title}</h3>
-                        <p>{entry.summary}</p>
-                        <div className="resource-card__uploader">
-                          <div className="dashboard-profile__avatar dashboard-profile__avatar--initials" style={{ width: 22, height: 22, fontSize: 10 }}>
-                            {(entry.facultyName || 'F').charAt(0)}
-                          </div>
-                          <span>{entry.facultyName || entry.facultyEmail || 'Faculty'}</span>
-                        </div>
-                      </div>
-                      <div className="resource-card__footer">
-                        <span className="metric-card__label">{formatRelativeUpdate(entry.updatedAt || entry.createdAt)}</span>
-                        <button type="button" className="resource-card__action" onClick={() => handleResourceAction(entry)}>
-                          {entry.isPlayable ? <Play size={18} fill="currentColor" /> : <Download size={18} />}
-                        </button>
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="support-grid">
-                <article className="support-card glass">
-                  <span className="metric-card__label">No results found</span>
-                  <p>Try another search term or reset class and subject filters to view all resources.</p>
-                  <button
+            {catalog.length === 0 ? (
+              <Card className="student-empty-state" role="status" aria-live="polite">
+                <CardContent>
+                  <Inbox size={32} />
+                  <h3>No resources available yet</h3>
+                  <p>Resources published by faculty will appear here when available.</p>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {catalog.length > 0 && filteredResources.length === 0 ? (
+              <Card className="student-empty-state" role="status" aria-live="polite">
+                <CardContent>
+                  <Library size={32} />
+                  <h3>No results found</h3>
+                  <p>Try a different search term or reset your selected filters.</p>
+                  <Button
                     type="button"
-                    className="button-secondary"
-                    style={{ width: 'fit-content', marginTop: '0.9rem' }}
+                    variant="outline"
                     onClick={() => {
+                      setSearchInput('')
                       setSearchTerm('')
-                      setSelectedSubject('All Subjects')
                       setSelectedClass('All Classes')
+                      setSelectedSubject('All Subjects')
                     }}
                   >
                     Reset filters
-                  </button>
-                </article>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {filteredResources.length > 0 ? (
+              <div className="student-resource-grid">
+                {filteredResources.map((entry) => (
+                  <StudentResourceCard key={entry.id} entry={entry} onDownload={handleResourceAction} />
+                ))}
               </div>
-            )}
+            ) : null}
           </section>
 
-          <section className="dashboard-section" id="student-downloads">
-            <div className="section-header">
-              <div>
-                <h3>My Downloads</h3>
-                <p>Recent downloads are stored locally so you can return quickly to the materials you opened most recently.</p>
-              </div>
+          <section id="student-downloads" className="student-section" aria-label="Recent downloads">
+            <div className="student-section__heading">
+              <h2>My Downloads</h2>
+              <p>Recently opened files from this device.</p>
             </div>
 
-            <div className="downloads-grid">
-              <article className="downloads-card glass">
-                <span className="metric-card__label">Downloaded Resources</span>
-                <div className="downloads-list">
-                  {downloads.length > 0 ? (
-                    downloads.map((entry) => (
-                      <div key={entry.id} className="downloads-item">
-                        <div className="downloads-item__copy">
-                          <strong>{entry.title}</strong>
-                          <span>{entry.subject}</span>
-                        </div>
-                        <a href={`/api/student/resources/${entry.id}/download`} className="button-secondary" target="_blank" rel="noreferrer">
-                          Open
-                        </a>
+            <Card>
+              <CardContent className="student-download-list">
+                {downloads.length > 0 ? (
+                  downloads.map((entry) => (
+                    <div key={entry.id} className="student-download-item">
+                      <div>
+                        <strong>{entry.title}</strong>
+                        <p>{entry.subject}</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="empty-state">Your downloads will appear here after you open a resource.</div>
-                  )}
-                </div>
-              </article>
+                      <a href={`/api/student/resources/${entry.id}/download`} target="_blank" rel="noreferrer">
+                        <Button type="button" variant="secondary">
+                          <Download size={14} />
+                          Open
+                        </Button>
+                      </a>
+                    </div>
+                  ))
+                ) : (
+                  <p className="student-muted-text">Your downloads will appear after you open a resource.</p>
+                )}
+              </CardContent>
+            </Card>
+          </section>
 
-              <article className="support-card glass" id="student-profile">
-                <span className="metric-card__label">Profile Snapshot</span>
-                <div className="profile-list">
-                  <div className="profile-list__item">
-                    <span>Email</span>
-                    <strong>{user?.email || 'student@spseducationam.edu'}</strong>
-                  </div>
-                  <div className="profile-list__item">
-                    <span>Role</span>
-                    <strong>Student</strong>
-                  </div>
-                  <div className="profile-list__item">
-                    <span>Authentication</span>
-                    <strong>Google OAuth</strong>
-                  </div>
-                </div>
-              </article>
+          <section id="student-profile" className="student-section" aria-label="Profile details">
+            <div className="student-section__heading">
+              <h2>Profile</h2>
+              <p>Account and authentication details.</p>
+            </div>
+
+            <div className="student-profile-cards">
+              <Card>
+                <CardHeader>
+                  <CardDescription>Email</CardDescription>
+                  <CardTitle>{user?.email || 'student@spseducationam.edu'}</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Role</CardDescription>
+                  <CardTitle>Student</CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardDescription>Authentication</CardDescription>
+                  <CardTitle>Google OAuth</CardTitle>
+                </CardHeader>
+              </Card>
             </div>
           </section>
 
-          <section className="dashboard-section" id="student-help">
-            <div className="section-header">
-              <div>
-                <h3>Help & Requests</h3>
-                <p>Need a specific paper or module? Contact your faculty member or the academic curator.</p>
-              </div>
+          <section id="student-support" className="student-section" aria-label="Help and support">
+            <div className="student-section__heading">
+              <h2>Help and Requests</h2>
+              <p>Need specific materials? Submit a request for faculty review.</p>
             </div>
 
-            <div className="support-grid">
-              <article className="support-card glass">
-                <span className="metric-card__label">Resource Request</span>
-                <p>Send a request with the course code, title, and preferred format so faculty can review it quickly.</p>
-                <button
-                  type="button"
-                  className="button-primary"
-                  style={{ marginTop: '1rem', width: 'fit-content' }}
-                  onClick={openRequestModal}
-                >
-                  Request Resource
-                </button>
-              </article>
-
-              <article className="support-card glass">
-                <span className="metric-card__label">Request Status</span>
-                <p>Submitted requests are sent to the admin queue so the team can mark them pending, under review, or done.</p>
-              </article>
-            </div>
+            <Card>
+              <CardContent className="student-support-card">
+                <div>
+                  <h3>Request a resource</h3>
+                  <p>Include course code, topic, preferred format, and details for faster turnaround.</p>
+                </div>
+                <Button type="button" onClick={openRequestModal}>
+                  <BookOpen size={14} />
+                  Request resource
+                </Button>
+              </CardContent>
+            </Card>
           </section>
-        </div>
+        </main>
       </div>
+
+      <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen} labelledBy="resource-request-title" className="student-request-modal">
+        <DialogHeader>
+          <DialogTitle id="resource-request-title">Academic Support Request</DialogTitle>
+          <DialogDescription>
+            Our academic teams review requests and usually respond within 48-72 business hours.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <form className="student-request-form" onSubmit={handleRequestSubmit}>
+            <label>
+              <span>Authorized account</span>
+              <Input value={user?.email || 'Authenticated student'} disabled />
+            </label>
+            <label>
+              <span>Reference code or course</span>
+              <Input
+                value={resourceRequest.courseName}
+                onChange={(event) => setResourceRequest((current) => ({ ...current, courseName: event.target.value }))}
+                placeholder="e.g. CS-402"
+                required
+              />
+            </label>
+            <label>
+              <span>Topic or title</span>
+              <Input
+                value={resourceRequest.titleName}
+                onChange={(event) => setResourceRequest((current) => ({ ...current, titleName: event.target.value }))}
+                placeholder="e.g. Memory Management"
+                required
+              />
+            </label>
+            <label>
+              <span>Target format</span>
+              <Input
+                value={resourceRequest.preferredFormat}
+                onChange={(event) => setResourceRequest((current) => ({ ...current, preferredFormat: event.target.value }))}
+                placeholder="PDF, Video, PPTX"
+                required
+              />
+            </label>
+            <label>
+              <span>Specific requirements</span>
+              <Textarea
+                rows={3}
+                value={resourceRequest.details}
+                onChange={(event) => setResourceRequest((current) => ({ ...current, details: event.target.value }))}
+                placeholder="Mention chapters or page ranges"
+              />
+            </label>
+          </form>
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={closeRequestModal}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleRequestSubmit} disabled={requestSubmitting}>
+            {requestSubmitting ? 'Submitting...' : 'Submit request'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   )
 }
