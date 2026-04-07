@@ -49,6 +49,7 @@ export default function PublicHeader({
             <Link
               key={`${action.href}-${action.label}`}
               href={action.href}
+              aria-current={action.current ? 'page' : undefined}
               className={action.variant === 'primary' ? 'button-primary' : 'button-ghost'}
             >
               {action.label}
@@ -99,6 +100,7 @@ export default function PublicHeader({
                 <Link
                   key={`mobile-action-${action.href}-${action.label}`}
                   href={action.href}
+                  aria-current={action.current ? 'page' : undefined}
                   className={action.variant === 'primary' ? 'button-primary button-block' : 'button-secondary button-block'}
                   onClick={closeMenu}
                 >

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
   ArrowRight,
   CheckCircle2,
@@ -16,9 +17,11 @@ import TeamCard from '@/components/TeamCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { getPublicHeaderContent } from '@/lib/public-nav'
 import { TEAM_MEMBERS } from '@/lib/team'
 
 export default function LandingPage() {
+  const pathname = usePathname()
   const [isVisible, setIsVisible] = useState(false)
   const [resourceCount, setResourceCount] = useState(null)
   const [teamSectionActive, setTeamSectionActive] = useState(false)
@@ -100,16 +103,7 @@ export default function LandingPage() {
     setTimeout(() => setTeamSectionActive(false), 900)
   }
 
-  const navLinks = [
-    { href: '#features', label: 'Platform' },
-    { href: '#workflow', label: 'Workflow' },
-    { href: '#team', label: 'Team' },
-  ]
-
-  const navActions = [
-    { href: '/login', label: 'Sign In' },
-    { href: '/register', label: 'Get Access', variant: 'primary' },
-  ]
+  const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)
 
   const featureCards = [
     {

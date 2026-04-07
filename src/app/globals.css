@@ -351,6 +351,20 @@ h6 {
   color: var(--primary);
 }
 
+.public-nav__actions a[aria-current="page"] {
+  box-shadow: inset 0 0 0 1px rgba(182, 160, 255, 0.38);
+}
+
+.public-nav__actions .button-primary[aria-current="page"] {
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+}
+
+.public-nav__actions .button-ghost[aria-current="page"] {
+  color: var(--foreground);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .public-nav__icon {
   display: inline-flex;
   align-items: center;
@@ -4126,6 +4140,8 @@ h6 {
     --student-bg: radial-gradient(circle at top right, rgba(0, 175, 254, 0.12), transparent 45%),
       radial-gradient(circle at top left, rgba(182, 160, 255, 0.1), transparent 35%),
       #090d15;
+    --section-gap-mobile: var(--dashboard-space-4);
+    --section-gap-desktop: 2rem;
     min-height: 100vh;
     display: grid;
     grid-template-columns: 288px minmax(0, 1fr);
@@ -4134,13 +4150,22 @@ h6 {
 
   .student-panel__main {
     min-width: 0;
-    padding: var(--dashboard-space-5);
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: var(--dashboard-space-5) clamp(1.1rem, 2.4vw, 2rem);
   }
 
   .student-panel__content {
     margin-top: var(--dashboard-space-5);
     display: grid;
-    gap: var(--dashboard-space-5);
+    gap: var(--section-gap-desktop);
+  }
+
+  .student-panel__content > .student-section,
+  .student-panel__content > .dashboard-scroll-section,
+  .student-panel__content > .student-notification-panel-wrap {
+    margin-bottom: var(--dashboard-space-2);
   }
 
   .student-sidebar {
@@ -4323,7 +4348,7 @@ h6 {
 
   .student-section {
     display: grid;
-    gap: var(--dashboard-space-4);
+    gap: var(--dashboard-space-5);
   }
 
   .dashboard-scroll-section {
@@ -4374,7 +4399,7 @@ h6 {
 
   .dashboard-scroll-section__body {
     display: grid;
-    gap: var(--dashboard-space-4);
+    gap: var(--dashboard-space-5);
     min-width: 0;
   }
 
@@ -4422,9 +4447,25 @@ h6 {
 
   .student-filter-card__content {
     display: grid;
-    grid-template-columns: auto repeat(2, minmax(0, 14rem)) auto;
+    grid-template-columns: minmax(14rem, 1.5fr) repeat(2, minmax(0, 1fr)) auto auto;
     gap: var(--dashboard-space-4);
     align-items: end;
+  }
+
+  .student-filter-control--search {
+    min-width: 0;
+  }
+
+  .student-filter-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--dashboard-space-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .student-filter-actions .ui-button {
+    min-height: 2.5rem;
   }
 
   .student-filter-label {
@@ -4438,6 +4479,7 @@ h6 {
   .student-filter-control {
     display: grid;
     gap: 0.35rem;
+    min-width: 0;
   }
 
   .student-filter-control span {
@@ -4447,13 +4489,15 @@ h6 {
 
   .student-filter-count {
     justify-self: end;
+    align-self: center;
   }
 
   .student-resource-grid {
     display: grid;
     gap: var(--dashboard-space-4);
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     align-items: stretch;
+    min-width: 0;
   }
 
   .student-resource-card {
@@ -4461,6 +4505,7 @@ h6 {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    min-width: 0;
   }
 
   .student-resource-card,
@@ -4474,6 +4519,7 @@ h6 {
     flex: 1 1 auto;
     display: grid;
     gap: var(--dashboard-space-2);
+    min-width: 0;
   }
 
   .student-resource-card .ui-card__footer {
@@ -4522,6 +4568,14 @@ h6 {
     overflow-wrap: anywhere;
   }
 
+  .student-resource-card__updated {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .student-resource-card__progress {
     display: grid;
     gap: var(--dashboard-space-2);
@@ -4544,6 +4598,10 @@ h6 {
     flex-wrap: wrap;
     margin-left: auto;
     min-width: 0;
+  }
+
+  .student-resource-card .table-action-group .ui-button {
+    min-height: 2.4rem;
   }
 
   .student-status {
@@ -4674,7 +4732,7 @@ h6 {
 
   .student-notification-list {
     display: grid;
-    gap: var(--dashboard-space-3);
+    gap: var(--dashboard-space-4);
     max-height: clamp(18rem, 42vh, 26rem);
     overflow-y: auto;
     padding-right: 0.5rem;
@@ -4761,7 +4819,12 @@ h6 {
     }
 
     .student-filter-card__content {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: stretch;
+    }
+
+    .student-resource-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .student-filter-count {
@@ -4805,8 +4868,32 @@ h6 {
       padding: var(--dashboard-space-4);
     }
 
+    .student-panel__content {
+      gap: var(--section-gap-mobile);
+    }
+
+    .student-panel__content > .student-section,
+    .student-panel__content > .dashboard-scroll-section,
+    .student-panel__content > .student-notification-panel-wrap {
+      margin-bottom: 0;
+    }
+
     .student-metrics,
     .student-filter-card__content {
+      grid-template-columns: 1fr;
+    }
+
+    .student-filter-actions {
+      width: 100%;
+      justify-content: stretch;
+    }
+
+    .student-filter-actions .ui-button {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+
+    .student-resource-grid {
       grid-template-columns: 1fr;
     }
 

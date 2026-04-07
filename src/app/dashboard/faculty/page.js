@@ -622,10 +622,15 @@ export default function FacultyDashboard() {
           >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
-                <div className="student-filter-label">
-                  <FileText size={14} />
-                  <span>Filters</span>
-                </div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search publications"
+                    aria-label="Search publications"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Class</span>
                   <select
@@ -656,6 +661,24 @@ export default function FacultyDashboard() {
                     ))}
                   </select>
                 </label>
+                <div className="student-filter-actions">
+                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                    <FileText size={14} />
+                    Apply
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearchTerm('')
+                      setSelectedClass('All Classes')
+                      setSelectedSubject('All Subjects')
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
                 <Badge variant="outline" className="student-filter-count">
                   {visibleResources.length} result(s)
                 </Badge>

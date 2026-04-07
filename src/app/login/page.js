@@ -14,11 +14,13 @@ import {
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { getRedirectResult } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
+import { getPublicHeaderContent } from '@/lib/public-nav'
 
 const footerLinks = [
   { label: 'Privacy Policy', href: '/register' },
@@ -28,6 +30,7 @@ const footerLinks = [
 ]
 
 export default function Login() {
+  const pathname = usePathname()
   const [loginMode, setLoginMode] = useState('staff') // 'staff' or 'student'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -48,6 +51,7 @@ export default function Login() {
   
   const router = useRouter()
   const redirectCheckStartedRef = useRef(false)
+  const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)
 
   // Redirect if already logged in
   useEffect(() => {
@@ -115,14 +119,8 @@ export default function Login() {
   return (
     <div className="auth-page">
       <PublicHeader
-        links={[
-          { label: 'Explore', href: '/#curriculum' },
-          { label: 'Resources', href: '/#research' },
-          { label: 'Institutions', href: '/#scholarships' },
-          { label: 'About', href: '/#archive' },
-        ]}
-        actions={[{ label: 'Get Access', href: '/register', variant: 'primary' }]}
-        showUtilityIcons
+        links={navLinks}
+        actions={navActions}
       />
 
       <main className="auth-main">

@@ -9,10 +9,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
+import { getPublicHeaderContent } from '@/lib/public-nav'
 
 const footerLinks = [
   { label: 'Privacy Policy', href: '/login' },
@@ -21,9 +22,11 @@ const footerLinks = [
 ]
 
 export default function Register() {
+  const pathname = usePathname()
   const { user, role, loading, isAuthenticating, signInWithGoogleStudent } = useAuth()
   const router = useRouter()
   const [error, setError] = useState('')
+  const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)
 
   useEffect(() => {
     if (!loading && user && role) {
@@ -43,14 +46,8 @@ export default function Register() {
   return (
     <div className="auth-page">
       <PublicHeader
-        links={[
-          { label: 'Explore', href: '/#curriculum' },
-          { label: 'Resources', href: '/#research' },
-          { label: 'Institutions', href: '/#scholarships' },
-          { label: 'About', href: '/#archive' },
-        ]}
-        actions={[{ label: 'Login', href: '/login', variant: 'ghost' }]}
-        showUtilityIcons
+        links={navLinks}
+        actions={navActions}
       />
 
       <main className="auth-main">

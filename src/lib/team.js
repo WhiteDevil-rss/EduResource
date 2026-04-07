@@ -8,7 +8,7 @@ export const TEAM_FALLBACK_IMAGE = rajputShivamSinghImage
 export const TEAM_MEMBERS = [
   {
     name: 'Sumit Singh',
-    role: 'Founder & Lead Developer',
+    role: 'Founder & Developer',
     image: sumitSirImage,
     bio:
       'MCA professional and educator building fast, dependable learning tools that help students study with less friction and more momentum.',

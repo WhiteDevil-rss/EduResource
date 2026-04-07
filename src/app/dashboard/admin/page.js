@@ -602,7 +602,15 @@ export default function AdminDashboard() {
           >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
-                <div className="student-filter-label"><Users size={14} /><span>Filters</span></div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search users by name, email, role"
+                    aria-label="Search users"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Role</span>
                   <select className="ui-input" value={userRoleFilter} onChange={(event) => setUserRoleFilter(event.target.value)}>
@@ -612,6 +620,23 @@ export default function AdminDashboard() {
                     <option value="admin">Admin</option>
                   </select>
                 </label>
+                <div className="student-filter-actions">
+                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                    <Users size={14} />
+                    Apply
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearchTerm('')
+                      setUserRoleFilter('all')
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
                 <Button type="button" variant="outline" onClick={exportUsers}><Download size={14} />Export CSV</Button>
                 <Button type="button" onClick={() => setCreateOpen(true)}><Sparkles size={14} />Create Account</Button>
               </CardContent>
@@ -635,7 +660,7 @@ export default function AdminDashboard() {
                       <p className="student-resource-card__summary">{entry.email}</p>
                       <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
                     </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem' }}>
+                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <Button type="button" variant="outline" onClick={() => setResetModal({ user: entry, password: '', submitting: false })}>
                         <KeyRound size={14} />
                         Reset Password
@@ -665,7 +690,15 @@ export default function AdminDashboard() {
           >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
-                <div className="student-filter-label"><FileText size={14} /><span>Filters</span></div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search resources"
+                    aria-label="Search resources"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Class</span>
                   <select className="ui-input" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
@@ -682,6 +715,24 @@ export default function AdminDashboard() {
                     ))}
                   </select>
                 </label>
+                <div className="student-filter-actions">
+                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                    <FileText size={14} />
+                    Apply
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearchTerm('')
+                      setResourceClassFilter('All Classes')
+                      setResourceSubjectFilter('All Subjects')
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
                 <Badge variant="outline" className="student-filter-count">{filteredResources.length} result(s)</Badge>
               </CardContent>
             </Card>
@@ -717,7 +768,15 @@ export default function AdminDashboard() {
           >
             <Card className="student-filter-card">
               <CardContent className="student-filter-card__content">
-                <div className="student-filter-label"><Library size={14} /><span>Filters</span></div>
+                <label className="student-filter-control student-filter-control--search">
+                  <span>Search</span>
+                  <Input
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    placeholder="Search requests"
+                    aria-label="Search requests"
+                  />
+                </label>
                 <label className="student-filter-control">
                   <span>Status</span>
                   <select className="ui-input" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
@@ -727,6 +786,23 @@ export default function AdminDashboard() {
                     <option value="done">Done</option>
                   </select>
                 </label>
+                <div className="student-filter-actions">
+                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                    <Library size={14} />
+                    Apply
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setSearchInput('')
+                      setSearchTerm('')
+                      setRequestStatusFilter('all')
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
                 <Badge variant="outline" className="student-filter-count">{filteredRequests.length} result(s)</Badge>
               </CardContent>
             </Card>
