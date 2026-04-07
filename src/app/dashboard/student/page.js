@@ -453,7 +453,7 @@ export default function StudentDashboard() {
         <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel w-full max-w-md max-h-[60vh] flex flex-col" role="dialog" aria-label="Notifications center">
+              <Card className="student-notification-panel w-full max-w-md max-h-[50vh] flex flex-col" role="dialog" aria-label="Notifications center">
               <CardHeader className="shrink-0 p-5">
                 <CardTitle>Notifications</CardTitle>
                 <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
@@ -605,6 +605,13 @@ export default function StudentDashboard() {
                   </Badge>
                   <Button
                     type="button"
+                    variant="outline"
+                    onClick={() => setSearchTerm(searchInput)}
+                  >
+                    Apply Filters
+                  </Button>
+                  <Button
+                    type="button"
                     variant="ghost"
                     onClick={() => {
                       setSearchInput('')
@@ -613,7 +620,7 @@ export default function StudentDashboard() {
                       setSelectedSubject('All Subjects')
                     }}
                   >
-                    Clear filters
+                    Reset Filters
                   </Button>
                 </div>
               </div>

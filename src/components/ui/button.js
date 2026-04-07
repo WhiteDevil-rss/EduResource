@@ -7,10 +7,19 @@ const buttonVariants = {
   outline: 'button-outline',
 }
 
-export function Button({ className = '', variant = 'default', asChild = false, children, ...props }) {
+const buttonSizes = {
+  default: '',
+  sm: 'px-3 py-2 text-sm',
+  icon: 'h-10 w-10 p-0',
+}
+
+export function Button({ className = '', variant = 'default', size = 'default', asChild = false, children, ...props }) {
   const Component = asChild ? 'span' : 'button'
   return (
-    <Component className={cn(buttonVariants[variant] || buttonVariants.default, className)} {...props}>
+    <Component
+      className={cn(buttonVariants[variant] || buttonVariants.default, buttonSizes[size] || buttonSizes.default, className)}
+      {...props}
+    >
       {children}
     </Component>
   )

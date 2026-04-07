@@ -70,6 +70,7 @@ function formatCompactNumber(value) {
 export default function FacultyDashboard() {
   const { user, logout } = useAuth()
   const [resources, setResources] = useState([])
+  const [requests, setRequests] = useState([])
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -88,8 +89,11 @@ export default function FacultyDashboard() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [requestSearchInput, setRequestSearchInput] = useState('')
+  const [requestSearchTerm, setRequestSearchTerm] = useState('')
   const [selectedClass, setSelectedClass] = useState('All Classes')
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
+  const [requestStatusFilter, setRequestStatusFilter] = useState('all')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -101,6 +105,11 @@ export default function FacultyDashboard() {
     const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
     return () => window.clearTimeout(timeout)
   }, [searchInput])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setRequestSearchTerm(requestSearchInput), 220)
+    return () => window.clearTimeout(timeout)
+  }, [requestSearchInput])
 
   const loadResources = async ({ background = false } = {}) => {
     if (background) {
@@ -149,6 +158,21 @@ export default function FacultyDashboard() {
     }
   }
 
+  const loadRequests = async () => {
+    try {
+      const response = await fetch('/api/faculty/resource-requests', { cache: 'no-store' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not load faculty requests.')
+      }
+
+      setRequests(Array.isArray(payload?.requests) ? payload.requests : [])
+    } catch (error) {
+      console.error('Faculty requests error:', error)
+      setRequests([])
+    }
+  }
+
   useEffect(() => {
     if (!user?.uid) {
       return
@@ -156,6 +180,7 @@ export default function FacultyDashboard() {
 
     loadResources()
     loadNotifications()
+    loadRequests()
   }, [user?.uid])
 
   useEffect(() => {
@@ -211,6 +236,19 @@ export default function FacultyDashboard() {
   })
 
   const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
+
+  const visibleRequests = requests.filter((entry) => {
+    const term = requestSearchTerm.trim().toLowerCase()
+    const matchesSearch =
+      !term ||
+      [entry.studentName, entry.studentEmail, entry.courseName, entry.titleName, entry.preferredFormat, entry.status]
+        .join(' ')
+        .toLowerCase()
+        .includes(term)
+
+    const matchesStatus = requestStatusFilter === 'all' || entry.status === requestStatusFilter
+    return matchesSearch && matchesStatus
+  })
 
   const openCreateModal = () => {
     setDraft(EMPTY_DRAFT)
@@ -505,6 +543,7 @@ export default function FacultyDashboard() {
         navItems={[
           { id: 'overview', label: 'Dashboard', href: '#faculty-overview', icon: Library },
           { id: 'publications', label: 'Publications', href: '#faculty-publications', icon: FileText },
+          { id: 'requests', label: 'Requests', href: '#faculty-requests', icon: HelpCircle },
           { id: 'uploads', label: 'Uploads', href: '#faculty-uploads', icon: Upload },
           { id: 'profile', label: 'Profile', href: '#faculty-profile', icon: BookOpen },
           { id: 'security', label: 'Security', href: '#faculty-security', icon: Shield },
@@ -530,7 +569,7 @@ export default function FacultyDashboard() {
         <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel w-full max-w-md max-h-[60vh] flex flex-col" role="dialog" aria-label="Notifications">
+              <Card className="student-notification-panel w-full max-w-md max-h-[50vh] flex flex-col" role="dialog" aria-label="Notifications">
                 <CardHeader className="shrink-0 p-5">
                   <CardTitle>Notifications</CardTitle>
                   <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
@@ -678,9 +717,14 @@ export default function FacultyDashboard() {
                   </Badge>
                   <Button
                     type="button"
+                    variant="outline"
+                    onClick={() => setSearchTerm(searchInput)}
+                  >
+                    Apply Filters
+                  </Button>
+                  <Button
+                    type="button"
                     variant="ghost"
-                    size="icon"
-                    title="Clear filters"
                     onClick={() => {
                       setSearchInput('')
                       setSearchTerm('')
@@ -688,7 +732,8 @@ export default function FacultyDashboard() {
                       setSelectedSubject('All Subjects')
                     }}
                   >
-                    <RotateCcw size={16} />
+                    <RotateCcw size={14} className="mr-2" />
+                    Reset Filters
                   </Button>
                 </div>
               </div>
@@ -719,7 +764,7 @@ export default function FacultyDashboard() {
                         </Badge>
                         <DropdownMenu>
                            <DropdownMenuTrigger asChild>
-                             <Button type="button" variant="ghost" size="icon" className="-mr-2 -mb-2"><EllipsisVertical size={16} /></Button>
+                             <Button type="button" variant="ghost" size="icon" className="-mr-2 -mb-2" aria-label={`Open actions for ${entry.title || 'resource'}`}><EllipsisVertical size={16} /></Button>
                            </DropdownMenuTrigger>
                            <DropdownMenuContent align="end">
                              <DropdownMenuItem onSelect={() => toggleResourceStatus(entry)}>
@@ -750,6 +795,100 @@ export default function FacultyDashboard() {
                           {entry.status === 'draft' ? <BookOpen size={14} className="mr-1" /> : <FileText size={14} className="mr-1" />}
                           {entry.status === 'draft' ? 'Publish' : 'Draft'}
                         </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section id="faculty-requests" className="student-section flex flex-col gap-4" aria-label="Faculty requests">
+            <div className="student-section__heading flex justify-between items-end flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Requests</h2>
+                <p className="text-muted-foreground text-sm">Review incoming resource requests and student demand by topic.</p>
+              </div>
+            </div>
+
+            <Card className="p-4 sm:p-5">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden xl:flex">
+                  <HelpCircle size={16} /><span>Filters</span>
+                </div>
+                <div className="flex-1">
+                  <Input
+                    value={requestSearchInput}
+                    onChange={(event) => setRequestSearchInput(event.target.value)}
+                    placeholder="Search by student, title, or course..."
+                    aria-label="Search requests"
+                    className="w-full"
+                  />
+                </div>
+                <div className="w-full lg:w-auto">
+                  <select
+                    className="ui-input w-full lg:w-auto"
+                    value={requestStatusFilter}
+                    onChange={(event) => setRequestStatusFilter(event.target.value)}
+                    aria-label="Filter requests by status"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="underreview">Under Review</option>
+                    <option value="done">Done</option>
+                  </select>
+                </div>
+                <div className="shrink-0 flex items-center justify-between lg:justify-end gap-3 w-full lg:w-auto">
+                  <Badge variant="secondary" className="px-3 py-1 text-sm font-normal">
+                    {visibleRequests.length} requests
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRequestSearchTerm(requestSearchInput)}
+                  >
+                    Apply Filters
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setRequestSearchInput('')
+                      setRequestSearchTerm('')
+                      setRequestStatusFilter('all')
+                    }}
+                  >
+                    <RotateCcw size={14} className="mr-2" />
+                    Reset Filters
+                  </Button>
+                </div>
+              </div>
+            </Card>
+
+            {visibleRequests.length === 0 ? (
+              <Card className="p-10 flex flex-col items-center text-center text-muted-foreground" role="status" aria-live="polite">
+                <Inbox size={40} className="mb-4 opacity-50" />
+                <h3 className="text-lg font-medium text-foreground">No requests found</h3>
+                <p>Try a different search term or status filter.</p>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                {visibleRequests.map((entry) => (
+                  <Card key={entry.id} className="p-5 flex flex-col gap-4">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base line-clamp-1 mb-1" title={entry.titleName || 'Untitled request'}>{entry.titleName || 'Untitled request'}</h3>
+                        <p className="text-sm text-foreground my-1">{entry.studentName || entry.studentEmail || 'Unknown student'}</p>
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <Badge variant="secondary" className="font-normal">{entry.courseName || 'No course'}</Badge>
+                          <Badge variant="outline" className="font-normal">{entry.preferredFormat || 'Any format'}</Badge>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <Badge variant={entry.status === 'done' ? 'default' : entry.status === 'underreview' ? 'secondary' : 'outline'} className="mb-2">
+                          {entry.status === 'underreview' ? 'Under Review' : entry.status === 'done' ? 'Done' : 'Pending'}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground whitespace-nowrap">{formatDisplayDate(entry.createdAt)}</p>
+                      </div>
                     </div>
                   </Card>
                 ))}

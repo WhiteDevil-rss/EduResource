@@ -96,6 +96,10 @@ export default function AdminDashboard() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [resourceSearchInput, setResourceSearchInput] = useState('')
+  const [resourceSearchTerm, setResourceSearchTerm] = useState('')
+  const [requestSearchInput, setRequestSearchInput] = useState('')
+  const [requestSearchTerm, setRequestSearchTerm] = useState('')
   const [userRoleFilter, setUserRoleFilter] = useState('all')
   const [resourceClassFilter, setResourceClassFilter] = useState('All Classes')
   const [resourceSubjectFilter, setResourceSubjectFilter] = useState('All Subjects')
@@ -106,6 +110,16 @@ export default function AdminDashboard() {
     const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
     return () => window.clearTimeout(timeout)
   }, [searchInput])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setResourceSearchTerm(resourceSearchInput), 220)
+    return () => window.clearTimeout(timeout)
+  }, [resourceSearchInput])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setRequestSearchTerm(requestSearchInput), 220)
+    return () => window.clearTimeout(timeout)
+  }, [requestSearchInput])
 
   const loadOverview = async ({ background = false } = {}) => {
     if (background) {
@@ -240,7 +254,7 @@ export default function AdminDashboard() {
   })
 
   const filteredResources = resources.filter((entry) => {
-    const term = searchTerm.trim().toLowerCase()
+    const term = resourceSearchTerm.trim().toLowerCase()
     const matchesSearch =
       !term ||
       [entry.title, entry.class, entry.subject, entry.summary, entry.status]
@@ -257,7 +271,7 @@ export default function AdminDashboard() {
   })
 
   const filteredRequests = requests.filter((entry) => {
-    const term = searchTerm.trim().toLowerCase()
+    const term = requestSearchTerm.trim().toLowerCase()
     const matchesSearch =
       !term ||
       [entry.studentName, entry.studentEmail, entry.courseName, entry.titleName, entry.preferredFormat, entry.status]
@@ -518,7 +532,7 @@ export default function AdminDashboard() {
         <main className="student-panel__content p-4 md:p-6 flex flex-col gap-6 md:gap-8">
           {notificationsOpen ? (
             <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel w-full max-w-md max-h-[60vh] flex flex-col" role="dialog" aria-label="Notifications center">
+              <Card className="student-notification-panel w-full max-w-md max-h-[50vh] flex flex-col" role="dialog" aria-label="Notifications center">
                 <CardHeader className="shrink-0 p-5">
                   <CardTitle>Notifications</CardTitle>
                   <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
@@ -660,16 +674,24 @@ export default function AdminDashboard() {
                   <Button type="button" className="flex-1 md:flex-none" onClick={() => setCreateOpen(true)}><UserPlus size={14} className="mr-2"/>Create</Button>
                   <Button
                     type="button"
+                    variant="outline"
+                    className="flex-1 md:flex-none"
+                    onClick={() => setSearchTerm(searchInput)}
+                  >
+                    Apply Filters
+                  </Button>
+                  <Button
+                    type="button"
                     variant="ghost"
-                    size="icon"
-                    title="Clear filters"
+                    className="flex-1 md:flex-none"
                     onClick={() => {
                       setSearchInput('')
                       setSearchTerm('')
                       setUserRoleFilter('all')
                     }}
                   >
-                    <RotateCcw size={16} />
+                    <RotateCcw size={14} className="mr-2" />
+                    Reset Filters
                   </Button>
                 </div>
               </div>
@@ -696,7 +718,7 @@ export default function AdminDashboard() {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button type="button" variant="ghost" size="icon" className="shrink-0 -mr-2"><EllipsisVertical size={16} /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="shrink-0 -mr-2" aria-label={`Open actions for ${entry.displayName || entry.email}`}><EllipsisVertical size={16} /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onSelect={() => setResetModal({ user: entry, password: '', submitting: false })}>
@@ -742,6 +764,15 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
                   <FileText size={16} /><span>Filters</span>
                 </div>
+                <div className="flex-1">
+                  <Input
+                    value={resourceSearchInput}
+                    onChange={(event) => setResourceSearchInput(event.target.value)}
+                    placeholder="Search resources by title or details..."
+                    aria-label="Search resources"
+                    className="w-full"
+                  />
+                </div>
                 <div className="flex-1 flex gap-4 w-full md:w-auto">
                   <select className="ui-input flex-1" value={resourceClassFilter} onChange={(event) => setResourceClassFilter(event.target.value)}>
                     {resourceClassOptions.map((entryClass) => (
@@ -760,15 +791,23 @@ export default function AdminDashboard() {
                   </Badge>
                   <Button
                     type="button"
+                    variant="outline"
+                    onClick={() => setResourceSearchTerm(resourceSearchInput)}
+                  >
+                    Apply Filters
+                  </Button>
+                  <Button
+                    type="button"
                     variant="ghost"
-                    size="icon"
-                    title="Clear filters"
                     onClick={() => {
+                      setResourceSearchInput('')
+                      setResourceSearchTerm('')
                       setResourceClassFilter('All Classes')
                       setResourceSubjectFilter('All Subjects')
                     }}
                   >
-                    <RotateCcw size={16} />
+                    <RotateCcw size={14} className="mr-2" />
+                    Reset Filters
                   </Button>
                 </div>
               </div>
@@ -810,6 +849,15 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-2 text-muted-foreground shrink-0 hidden lg:flex">
                   <Library size={16} /><span>Filters</span>
                 </div>
+                <div className="flex-1">
+                  <Input
+                    value={requestSearchInput}
+                    onChange={(event) => setRequestSearchInput(event.target.value)}
+                    placeholder="Search requests by student, title, or course..."
+                    aria-label="Search requests"
+                    className="w-full"
+                  />
+                </div>
                 <div className="flex-1 w-full md:w-auto">
                   <select className="ui-input w-full md:w-auto" value={requestStatusFilter} onChange={(event) => setRequestStatusFilter(event.target.value)}>
                     <option value="all">All Statuses</option>
@@ -824,12 +872,22 @@ export default function AdminDashboard() {
                   </Badge>
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    title="Clear filters"
-                    onClick={() => setRequestStatusFilter('all')}
+                    variant="outline"
+                    onClick={() => setRequestSearchTerm(requestSearchInput)}
                   >
-                    <RotateCcw size={16} />
+                    Apply Filters
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setRequestSearchInput('')
+                      setRequestSearchTerm('')
+                      setRequestStatusFilter('all')
+                    }}
+                  >
+                    <RotateCcw size={14} className="mr-2" />
+                    Reset Filters
                   </Button>
                 </div>
               </div>

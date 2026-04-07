@@ -30,6 +30,7 @@ export const FACULTY_ROUTES = {
   // Resource Management
   'POST /api/faculty/resources': ['faculty', 'admin'],
   'GET /api/faculty/resources': ['faculty', 'admin'],
+  'GET /api/faculty/resource-requests': ['faculty', 'admin'],
   'GET /api/faculty/resources/:resourceId': ['faculty', 'admin'],
   'PATCH /api/faculty/resources/:resourceId': ['faculty', 'admin'],
   'DELETE /api/faculty/resources/:resourceId': ['faculty', 'admin'],
