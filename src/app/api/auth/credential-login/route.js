@@ -4,6 +4,7 @@ import { assertRequestNotBlocked, assertSameOrigin, withNoStore } from '@/lib/ap
 import { logAction } from '@/lib/audit-log'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
+import { RequestTimer } from '@/lib/timing-instrumentation'
 import {
   clearFailedLoginAttempts,
   createTwoFactorChallenge,
@@ -76,9 +77,11 @@ function isConfigurationError(message = '') {
 }
 
 export async function POST(request) {
+  const timer = new RequestTimer('credential-login')
   try {
     assertSameOrigin(request)
     await assertRequestNotBlocked(request)
+    timer.markPhase('request-validation')
 
     const body = await request.json()
     const loginIdentifier = String(body?.email || '').trim().toLowerCase()
@@ -108,8 +111,10 @@ export async function POST(request) {
     const alertsEnabled = Boolean(securityControls?.enableAlerts)
     const twoFactorEnabled = Boolean(securityControls?.enable2FA)
     const twoFactorMethod = String(securityControls?.twoFAMethod || 'email')
+    timer.markPhase('security-controls')
 
     const lockCheck = await isLoginLocked(loginIdentifier)
+    timer.markPhase('lock-check')
     if (lockCheck.locked) {
       await logSuspiciousActivity({
         user: { email: loginIdentifier },
@@ -152,6 +157,7 @@ export async function POST(request) {
       recordByEmailInput = null
       recordByLoginIdInput = null
     }
+    timer.markPhase('profile-lookup')
 
     const resolvedRecord = recordByEmailInput || recordByLoginIdInput
 
@@ -310,23 +316,19 @@ export async function POST(request) {
         NextResponse.json({ error: 'Credential sign-in is temporarily unavailable.' }, { status: 503 })
       )
     }
+    timer.markPhase('password-verification')
 
-    let recordByUid = null
-    let recordByResolvedEmail = null
-    try {
-      recordByUid = await getUserRecordById(result.uid)
-      recordByResolvedEmail = await findUserRecordByEmail(accountEmail)
-    } catch {
-      // Keep login flow alive if profile directory lookup fails.
-      recordByUid = null
-      recordByResolvedEmail = null
-    }
+    const [recordByUid, recordByResolvedEmail] = await Promise.all([
+      getUserRecordById(result.uid).catch(() => null),
+      findUserRecordByEmail(accountEmail).catch(() => null),
+    ])
 
     const resolvedUser =
       recordByUid ||
       recordByResolvedEmail?.user ||
       resolvedRecord?.user ||
       null
+    timer.markPhase('user-record-resolution')
 
     if (resolvedUser?.isBlocked) {
       return withNoStore(
@@ -398,7 +400,7 @@ export async function POST(request) {
       )
     }
 
-    await clearFailedLoginAttempts(accountEmail || loginIdentifier).catch(() => null)
+    void clearFailedLoginAttempts(accountEmail || loginIdentifier).catch(() => null)
 
     if (twoFactorEnabled) {
       const challenge = await createTwoFactorChallenge({
@@ -459,15 +461,17 @@ export async function POST(request) {
         expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
       })
       sessionRegistryCreated = true
-      await touchUserLogin(result.uid)
-      await createAuditRecord({
-        actorUid: result.uid,
-        actorRole: effectiveUser.role,
-        action: 'auth.credentials.login',
-        targetId: result.uid,
-        targetRole: effectiveUser.role,
-        message: `${effectiveUser.role} login granted for ${effectiveUser.email}.`,
-      })
+      await Promise.allSettled([
+        touchUserLogin(result.uid),
+        createAuditRecord({
+          actorUid: result.uid,
+          actorRole: effectiveUser.role,
+          action: 'auth.credentials.login',
+          targetId: result.uid,
+          targetRole: effectiveUser.role,
+          message: `${effectiveUser.role} login granted for ${effectiveUser.email}.`,
+        }),
+      ])
     } catch (error) {
       const message = String(error?.message || '')
       if (message.includes('You can only be signed in on 2 devices at a time')) {
@@ -485,15 +489,7 @@ export async function POST(request) {
       // Do not block successful credential auth when profile/audit persistence is unavailable.
       console.warn(`Post-login persistence failed: ${message || error}`)
     }
-
-    await detectNewDeviceAndAlert({
-      user: {
-        uid: result.uid,
-        email: effectiveUser.email,
-      },
-      request,
-      alertsEnabled,
-    }).catch(() => null)
+    timer.markPhase('session-creation')
 
     const sessionCookie = await createSessionCookie({
       ...(sessionRegistryCreated ? { sid: sessionId } : {}),
@@ -505,6 +501,7 @@ export async function POST(request) {
       name: effectiveUser.displayName || null,
       exp: Date.now() + SESSION_MAX_AGE_MS,
     })
+    timer.markPhase('cookie-creation')
 
     const response = withNoStore(
       NextResponse.json({
@@ -523,7 +520,16 @@ export async function POST(request) {
       path: '/',
     })
 
-    await logAction({
+    void detectNewDeviceAndAlert({
+      user: {
+        uid: result.uid,
+        email: effectiveUser.email,
+      },
+      request,
+      alertsEnabled,
+    }).catch(() => null)
+
+    void logAction({
       user: {
         uid: result.uid,
         name: effectiveUser.displayName || null,
@@ -539,6 +545,9 @@ export async function POST(request) {
       targetRole: effectiveUser.role,
     }).catch(() => {})
 
+    timer.markPhase('response-complete')
+    response.headers.set('X-Request-Timing-Ms', String(timer.getTotalDuration()))
+    timer.logReport()
     return response
   } catch (error) {
     const message = String(error?.message || '')

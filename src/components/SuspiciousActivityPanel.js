@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
+import { isAbortError, useCancelableFetch } from '@/hooks/useCancelableFetch'
 import { AlertTriangle, Download, RefreshCcw, ShieldAlert } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,8 +46,11 @@ export function SuspiciousActivityPanel() {
     from: '',
     to: '',
   })
+  const { execute, cancel } = useCancelableFetch()
+  const debouncedSearch = useDebouncedSearch(filters.search, 400)
+  const debouncedUser = useDebouncedSearch(filters.user, 400)
 
-  const loadActivities = useCallback(async (nextPage = pagination.page) => {
+  const loadActivities = useCallback(async (nextPage = 1) => {
     setLoading(true)
     try {
       const params = new URLSearchParams({
@@ -53,13 +58,13 @@ export function SuspiciousActivityPanel() {
         limit: String(pagination.limit),
       })
 
-      if (filters.search.trim()) params.set('search', filters.search.trim())
-      if (filters.user.trim()) params.set('user', filters.user.trim())
+      if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim())
+      if (debouncedUser.trim()) params.set('user', debouncedUser.trim())
       if (filters.severity) params.set('severity', filters.severity)
       if (filters.from) params.set('from', filters.from)
       if (filters.to) params.set('to', filters.to)
 
-      const response = await fetch(`/api/admin/suspicious-activities?${params.toString()}`, {
+      const response = await execute(`/api/admin/suspicious-activities?${params.toString()}`, {
         cache: 'no-store',
       })
 
@@ -71,17 +76,22 @@ export function SuspiciousActivityPanel() {
       setActivities(Array.isArray(payload?.activities) ? payload.activities : [])
       setPagination(payload?.pagination || { page: 1, limit: 20, total: 0, pages: 1 })
     } catch (error) {
+      if (isAbortError(error)) {
+        return
+      }
+
       toast.error(error.message || 'Could not load suspicious activity logs.')
       setActivities([])
       setPagination({ page: 1, limit: 20, total: 0, pages: 1 })
     } finally {
       setLoading(false)
     }
-  }, [filters.from, filters.search, filters.severity, filters.to, filters.user, pagination.limit, pagination.page])
+  }, [debouncedSearch, debouncedUser, execute, filters.from, filters.severity, filters.to, pagination.limit])
 
   useEffect(() => {
     loadActivities(1)
-  }, [loadActivities])
+    return () => cancel()
+  }, [cancel, loadActivities])
 
   const highCount = useMemo(
     () => activities.filter((entry) => String(entry?.severity || '').toUpperCase() === 'HIGH').length,
@@ -166,6 +176,8 @@ export function SuspiciousActivityPanel() {
     }
   }
 
+  const isFiltering = loading && (debouncedSearch.trim() || debouncedUser.trim() || filters.severity || filters.from || filters.to)
+
   return (
     <Card>
       <CardHeader>
@@ -246,7 +258,7 @@ export function SuspiciousActivityPanel() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8}>Loading suspicious activity logs...</td>
+                  <td colSpan={8}>{isFiltering ? 'Updating filtered suspicious activity logs...' : 'Loading suspicious activity logs...'}</td>
                 </tr>
               ) : null}
 

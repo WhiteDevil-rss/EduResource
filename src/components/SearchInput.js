@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
+import { isAbortError, useCancelableFetch } from '@/hooks/useCancelableFetch'
 
 export function SearchInput({
   value = '',
@@ -15,25 +17,26 @@ export function SearchInput({
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const debounceRef = useRef(null)
+  const debouncedQuery = useDebouncedSearch(value, debounceMs)
+  const { execute, cancel } = useCancelableFetch()
 
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current)
-    }
-
-    if (!value.trim()) {
+    if (!debouncedQuery.trim()) {
+      cancel()
+      setLoading(false)
       onSuggestionsChange?.([])
       setError('')
       return
     }
 
-    setLoading(true)
-    setError('')
+    let mounted = true
 
-    debounceRef.current = setTimeout(async () => {
+    const run = async () => {
+      setLoading(true)
+      setError('')
+
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(value)}&type=${encodeURIComponent(type)}&limit=5`, {
+        const response = await execute(`/api/search?q=${encodeURIComponent(debouncedQuery)}&type=${encodeURIComponent(type)}&limit=5`, {
           cache: 'no-store',
         })
 
@@ -43,21 +46,31 @@ export function SearchInput({
           throw new Error(payload?.error || 'Could not fetch suggestions.')
         }
 
+        if (!mounted) {
+          return
+        }
+
         onSuggestionsChange?.(Array.isArray(payload?.suggestions) ? payload.suggestions : [])
       } catch (err) {
+        if (!mounted || isAbortError(err)) {
+          return
+        }
+
         setError(err.message || 'Could not fetch suggestions.')
         onSuggestionsChange?.([])
       } finally {
-        setLoading(false)
-      }
-    }, debounceMs)
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
-  }, [value, debounceMs, type, onSuggestionsChange])
+
+    run()
+
+    return () => {
+      mounted = false
+    }
+  }, [cancel, debouncedQuery, execute, onSuggestionsChange, type])
 
   return (
     <div className={`search-input-wrapper ${className}`}>

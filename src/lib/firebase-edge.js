@@ -378,9 +378,9 @@ export const firestore = {
   runQuery: async (collectionPath, filter) => {
     const token = await getGoogleAccessToken()
     const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`
-    
-    const [field, op, value] = filter // Simplified [field, op, value]
-    
+
+    const [field, op, value] = filter
+
     const query = {
       structuredQuery: {
         from: [{ collectionId: collectionPath }],
@@ -410,14 +410,60 @@ export const firestore = {
     }
 
     const results = await response.json()
-    // runQuery returns an array of { document: ... }
-    const first = (results || []).find(r => r.document)
+    const first = (results || []).find((entry) => entry.document)
     if (!first) return null
-    
-    return { 
-      id: first.document.name.split('/').pop(), 
-      ...fromFirestore(first.document.fields) 
+
+    return {
+      id: first.document.name.split('/').pop(),
+      ...fromFirestore(first.document.fields)
     }
+  },
+
+  /**
+   * Runs a structured query and returns up to `limit` matches.
+   */
+  runQueryMany: async (collectionPath, filter, limit = 10) => {
+    const token = await getGoogleAccessToken()
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`
+
+    const [field, op, value] = filter
+    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10))
+
+    const query = {
+      structuredQuery: {
+        from: [{ collectionId: collectionPath }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: field },
+            op: op === '==' ? 'EQUAL' : op,
+            value: toFirestore({ v: value }).v
+          }
+        },
+        limit: safeLimit
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(query)
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Firestore Query Error: ${error.error?.message || response.statusText}`)
+    }
+
+    const results = await response.json()
+    return (results || [])
+      .filter((entry) => entry?.document)
+      .map((entry) => ({
+        id: entry.document.name.split('/').pop(),
+        ...fromFirestore(entry.document.fields)
+      }))
   },
 
   /**

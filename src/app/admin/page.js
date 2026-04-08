@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
-export default function LegacyAdminRoute() {
+export default function AdminIndexPage() {
   redirect('/admin/security-settings')
 }

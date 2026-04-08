@@ -259,8 +259,6 @@ export function AuthProvider({ children }) {
     try {
       setIsAuthenticating(true);
 
-      await signOut(auth).catch(() => {});
-
       const response = await fetch("/api/auth/credential-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -17,6 +17,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
@@ -81,6 +82,7 @@ export default function FacultyDashboard() {
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedClass, setSelectedClass] = useState('All Classes')
+  const debouncedSearchInput = useDebouncedSearch(searchInput, 350)
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -90,9 +92,8 @@ export default function FacultyDashboard() {
   const uploadLockRef = useRef(false)
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
-    return () => window.clearTimeout(timeout)
-  }, [searchInput])
+    setSearchTerm(debouncedSearchInput)
+  }, [debouncedSearchInput])
 
   const loadResources = async ({ background = false } = {}) => {
     if (background) {

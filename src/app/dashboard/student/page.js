@@ -14,6 +14,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { StudentDashboardSkeleton } from '@/components/LoadingStates'
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
 import { StudentResourceCard } from '@/components/student/StudentResourceCard'
@@ -122,18 +123,13 @@ export default function StudentDashboard() {
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedClass, setSelectedClass] = useState('All Classes')
+  const debouncedSearchInput = useDebouncedSearch(searchInput, 350)
   const [selectedSubject, setSelectedSubject] = useState('All Subjects')
   const notificationsPanelRef = useRef(null)
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setSearchTerm(searchInput)
-    }, 220)
-
-    return () => {
-      window.clearTimeout(timeout)
-    }
-  }, [searchInput])
+    setSearchTerm(debouncedSearchInput)
+  }, [debouncedSearchInput])
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

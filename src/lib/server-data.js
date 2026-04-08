@@ -1101,8 +1101,22 @@ export async function listActiveSessionRecordsByUser(uid) {
     return []
   }
 
-  const records = await listSessionRecords()
-  return records.filter((record) => String(record.uid || '').trim() === normalizedUid)
+  try {
+    const records = await firestore.runQueryMany(SESSIONS_COLLECTION, ['uid', '==', normalizedUid], 5)
+    const sanitized = records.map((entry) => sanitizeSessionData(entry.id, entry))
+
+    const staleRecords = sanitized.filter((record) => !isActiveSessionRecord(record))
+    await Promise.all(
+      staleRecords.map((record) =>
+        firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
+      )
+    )
+
+    return sanitized.filter(isActiveSessionRecord)
+  } catch {
+    const records = await listSessionRecords()
+    return records.filter((record) => String(record.uid || '').trim() === normalizedUid)
+  }
 }
 
 export async function createSessionRecord({
@@ -1120,11 +1134,6 @@ export async function createSessionRecord({
 
   if (!normalizedSessionId || !normalizedUid) {
     throw new Error('Session registration failed.')
-  }
-
-  const existing = await getSessionRecordById(normalizedSessionId)
-  if (existing) {
-    return existing
   }
 
   const activeSessions = await listActiveSessionRecordsByUser(normalizedUid)
