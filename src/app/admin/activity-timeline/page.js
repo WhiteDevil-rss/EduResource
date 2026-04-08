@@ -1,15 +1,26 @@
-'use client'
-
 import { ActivityTimeline } from '@/components/ActivityTimeline'
-import { AdminPageWrapper } from '@/components/admin/AdminPageWrapper'
+import { PageContainer, ContentSection } from '@/components/layout'
+import { History } from 'lucide-react'
 
 export default function ActivityTimelinePage() {
   return (
-    <AdminPageWrapper
-      title="Activity Timeline"
-      description="Track user activities, logins, resource operations, and administrative actions."
-    >
-      <ActivityTimeline />
-    </AdminPageWrapper>
+    <div className="space-y-8">
+      <ContentSection 
+        title="Activity Timeline" 
+        subtitle="Review and track platform activity, user interactions, and system events"
+        noPaddingBottom
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider">
+            <History size={12} />
+            Live Feed
+          </div>
+        </div>
+      </ContentSection>
+
+      <PageContainer>
+        <ActivityTimeline />
+      </PageContainer>
+    </div>
   )
 }

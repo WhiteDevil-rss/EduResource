@@ -75,43 +75,62 @@ export function ResourceCommentsPanel({ resourceId }) {
       setComments((current) => [payload.comment, ...current])
       setComment('')
     } catch {
-      // Keep the component quiet on failure; the caller can retry.
+      // No-op
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>Threaded notes and Q&A</CardDescription>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare size={18} />
-          Collaboration
+    <Card className="border border-border/40 bg-card rounded-xl shadow-sm">
+      <CardHeader className="p-5 border-b border-border/10">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <MessageSquare size={16} className="text-primary" />
+          Collaboration Thread
         </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground mt-1">Discuss this resource or ask questions.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="student-support-card" style={{ gap: 12 }}>
-          <Input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a question or note" />
-          <Button type="button" onClick={handlePostComment} disabled={saving || !comment.trim()}>
-            <Plus size={14} />
+      <CardContent className="p-5 space-y-5">
+        <div className="flex gap-2">
+          <Input 
+            value={comment} 
+            onChange={(event) => setComment(event.target.value)} 
+            placeholder="Add a question or note..." 
+            className="h-9 text-xs rounded-lg border-border/40 bg-muted/20"
+          />
+          <Button 
+            type="button" 
+            size="sm"
+            onClick={handlePostComment} 
+            disabled={saving || !comment.trim()}
+            className="h-9 px-4 rounded-lg text-xs font-semibold"
+          >
+            <Plus size={14} className="mr-1.5" />
             Post
           </Button>
         </div>
-        {loading ? (
-          <p>Loading collaboration thread...</p>
-        ) : comments.length > 0 ? (
-          comments.map((entry) => (
-            <div key={entry.id} className="student-download-item">
-              <div>
-                <strong>{entry.authorName || entry.authorEmail || 'Anonymous'}</strong>
-                <p>{entry.body}</p>
-              </div>
+
+        <div className="space-y-0 divide-y divide-border/10 overflow-hidden rounded-lg border border-border/10">
+          {loading ? (
+            <div className="p-4 text-center">
+              <p className="text-xs text-muted-foreground animate-pulse">Retrieving messages...</p>
             </div>
-          ))
-        ) : (
-          <p>No comments yet.</p>
-        )}
+          ) : comments.length > 0 ? (
+            comments.map((entry) => (
+              <div key={entry.id} className="p-3 bg-muted/5 transition-colors hover:bg-muted/10">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-semibold text-foreground">{entry.authorName || entry.authorEmail || 'Anonymous'}</p>
+                  <p className="text-[10px] text-muted-foreground">Just now</p>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">{entry.body}</p>
+              </div>
+            ))
+          ) : (
+            <div className="p-6 text-center">
+              <p className="text-xs text-muted-foreground">No discussions yet. Be the first to start!</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

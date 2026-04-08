@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import { Globe, Instagram, Linkedin, Mail } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const COMPANY_SOCIALS = [
   {
@@ -30,50 +33,88 @@ const COMPANY_SOCIALS = [
 
 export default function PublicFooter({
   links = [],
-  tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM | Zembaa Solution`,
+  tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM. Zembaa Solution.`,
   compact = false,
 }) {
   return (
-    <footer className={`public-footer-shell ${compact ? 'public-footer-shell--compact' : ''}`}>
-      <div className="public-footer">
-        <div className="public-footer__brand">
-          <span className="public-footer__logo">SPS EDUCATIONAM</span>
-          <p className="public-footer__tagline">{tagline}</p>
-          <p className="public-footer__powered">
-            Powered by{' '}
-            <a href="https://www.zembaa.com" target="_blank" rel="noopener noreferrer">
-              Zembaa Solution
-            </a>
-          </p>
-        </div>
-        <div className="public-footer__meta">
-          <div className="public-footer__links">
-            {links.map((link) => (
-              <Link key={`${link.href}-${link.label}`} href={link.href} className="public-footer__link">
-                {link.label}
-              </Link>
-            ))}
+    <footer className="w-full bg-card border-t border-border/40">
+      <div className="max-w-[1400px] mx-auto px-4 py-12 md:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+          {/* Brand Section */}
+          <div className="lg:col-span-2 space-y-6">
+            <Link href="/" className="text-xl font-black tracking-tighter text-primary">
+              SPS EDUCATIONAM
+            </Link>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+              Empowering academic communities through high-fidelity resource management and governance.
+            </p>
+            <div className="flex items-center gap-2">
+              {COMPANY_SOCIALS.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Button
+                    key={item.label}
+                    variant="ghost"
+                    size="icon"
+                    asChild
+                    className="w-9 h-9 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <a
+                      href={item.href}
+                      aria-label={item.label}
+                      title={item.label}
+                      target={item.external ? '_blank' : undefined}
+                      rel={item.external ? 'noopener noreferrer' : undefined}
+                    >
+                      <Icon size={18} />
+                    </a>
+                  </Button>
+                )
+              })}
+            </div>
           </div>
 
-          <div className="public-footer__socials" aria-label="Company Socials">
-            {COMPANY_SOCIALS.map((item) => {
-              const Icon = item.icon
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="public-footer__social"
-                  aria-label={item.label}
-                  title={item.label}
-                  target={item.external ? '_blank' : undefined}
-                  rel={item.external ? 'noopener noreferrer' : undefined}
+          {/* Quick Links */}
+          <div className="space-y-6">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/70">Platform</h4>
+            <nav className="flex flex-col gap-3">
+              {links.map((link) => (
+                <Link
+                  key={`${link.href}-${link.label}`}
+                  href={link.href}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  <Icon size={14} />
-                  <span className="sr-only">{item.label}</span>
-                </a>
-              )
-            })}
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
+
+          {/* Legal / Meta */}
+          <div className="space-y-6">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/70">Partnership</h4>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Zembaa Solution Private Limited
+              </p>
+              <a
+                href="mailto:info@zembaa.com"
+                className="text-sm text-primary font-medium hover:underline"
+              >
+                info@zembaa.com
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="mt-12 md:mt-16 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-xs text-muted-foreground font-medium">
+            {tagline}
+          </p>
+          <p className="text-xs text-muted-foreground/60">
+            Precision engineered for faster learning outcomes.
+          </p>
         </div>
       </div>
     </footer>

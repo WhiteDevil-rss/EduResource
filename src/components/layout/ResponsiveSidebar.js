@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { LogOut, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
@@ -7,58 +8,73 @@ import { filterNavItemsByRole } from '@/lib/feature-access'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 
 /**
- * SidebarContent - Shared sidebar navigation content
+ * SidebarContent - Logic and rendering for navigation links
  */
 function SidebarContent({ role, title, subtitle, navItems, onLogout }) {
   const visibleNavItems = filterNavItemsByRole({ role }, navItems)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 bg-background/95 py-5">
-      <div className="px-4 md:px-6">
-        <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/80 p-3 shadow-sm">
-          <RoleAvatar role={role} label={`${role} workspace`} />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
-            <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+    <div className="flex h-full flex-col bg-background/95 backdrop-blur-sm lg:bg-background lg:backdrop-blur-none">
+      {/* Sidebar Header */}
+      <div className="border-b border-border/40 px-6 py-6">
+        <div className="flex items-center gap-3">
+          <RoleAvatar role={role} className="h-10 w-10 shadow-sm" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
+            <p className="truncate text-[10px] font-medium text-muted-strong uppercase tracking-wider">{subtitle}</p>
           </div>
         </div>
       </div>
 
-      <nav className="custom-scrollbar flex-1 min-h-0 overflow-y-auto px-3 md:px-4" aria-label={`${role} navigation`}>
-        <div className="space-y-2 pb-2">
+      {/* Navigation Links */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide" aria-label="Main Navigation">
+        <ul className="space-y-1" role="list">
           {visibleNavItems.map((item) => {
             const Icon = item.icon
             const isActive = item.active || false
 
             return (
-              <a
-                key={item.id}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary/10 text-primary shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                )}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                <Icon size={18} className="flex-shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </a>
+              <li key={item.id}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground active:scale-[0.98]'
+                  )}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon 
+                    size={18} 
+                    className={cn(
+                      'shrink-0 transition-transform duration-200 group-hover:scale-110',
+                      isActive ? 'text-primary' : 'text-muted-foreground/60'
+                    )} 
+                  />
+                  <span className="truncate">{item.label}</span>
+                  {isActive && (
+                    <span 
+                      className="ml-auto h-1 w-1 rounded-full bg-primary animate-in fade-in zoom-in duration-300" 
+                      aria-hidden="true" 
+                    />
+                  )}
+                </Link>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </nav>
 
-      <div className="border-t border-border px-3 pt-4 md:px-4">
+      {/* Sidebar Footer */}
+      <div className="border-t border-border/40 p-4">
         <Button
-          variant="outline"
-          size="sm"
-          className="h-11 w-full justify-start rounded-xl text-sm"
+          variant="ghost"
+          className="h-11 w-full justify-start gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/5 hover:text-destructive active:scale-[0.98] transition-all"
           onClick={onLogout}
         >
-          <LogOut size={16} className="flex-shrink-0" />
-          Sign out
+          <LogOut size={18} className="shrink-0" />
+          <span>Sign Out</span>
         </Button>
       </div>
     </div>
@@ -66,9 +82,8 @@ function SidebarContent({ role, title, subtitle, navItems, onLogout }) {
 }
 
 /**
- * ResponsiveSidebar - Mobile drawer + desktop fixed sidebar
- * Mobile: Hidden by default, slides in from left when open
- * Desktop: Fixed left sidebar
+ * ResponsiveSidebar - The architected Sidebar system
+ * Handles both mobile drawer state and desktop persistent view.
  */
 export function ResponsiveSidebar({
   role,
@@ -81,40 +96,31 @@ export function ResponsiveSidebar({
 }) {
   return (
     <>
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] md:hidden"
-          onClick={() => onMobileOpenChange(false)}
-          role="presentation"
-        />
-      )}
+      {/* Mobile Backdrop Overlay */}
+      <div
+        className={cn(
+          'fixed inset-0 z-[60] bg-black/60 backdrop-blur-[2px] transition-all duration-300 md:hidden',
+          mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={() => onMobileOpenChange(false)}
+        aria-hidden="true"
+      />
 
+      {/* Mobile Drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[86vw] max-w-sm border-r border-border bg-background shadow-2xl transition-transform md:hidden',
+          'fixed inset-y-0 left-0 z-[70] w-full max-w-[300px] bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
-          <button
-            onClick={() => onMobileOpenChange(false)}
-            className="absolute right-3 top-3 rounded-xl p-2 transition-colors hover:bg-muted/60"
-            aria-label="Close sidebar"
-          >
-            <X size={20} />
-          </button>
+        <button
+          onClick={() => onMobileOpenChange(false)}
+          className="absolute right-4 top-4 z-[80] flex h-10 w-10 items-center justify-center rounded-full bg-muted/30 text-foreground transition-colors hover:bg-muted/50"
+          aria-label="Close sidebar"
+        >
+          <X size={20} />
+        </button>
 
-          <SidebarContent
-            role={role}
-            title={title}
-            subtitle={subtitle}
-            navItems={navItems}
-            onLogout={onLogout}
-          />
-        </div>
-      </aside>
-
-      <aside className="hidden md:flex md:w-72 md:flex-none md:flex-col md:fixed md:inset-y-0 md:left-0 md:border-r md:border-border md:bg-background md:shadow-sm">
         <SidebarContent
           role={role}
           title={title}
@@ -124,6 +130,18 @@ export function ResponsiveSidebar({
         />
       </aside>
 
+      {/* Desktop Persistent Sidebar */}
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:w-72 md:flex-col md:border-r md:border-border/50 md:bg-background">
+        <SidebarContent
+          role={role}
+          title={title}
+          subtitle={subtitle}
+          navItems={navItems}
+          onLogout={onLogout}
+        />
+      </aside>
+
+      {/* Desktop Sidebar Spacer */}
       <div className="hidden md:block md:w-72 md:flex-none" />
     </>
   )

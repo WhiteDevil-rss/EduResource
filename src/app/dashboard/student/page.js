@@ -1,13 +1,12 @@
 'use client'
 
 import {
-  AlertCircle,
   BookOpen,
   Bookmark,
-  Download,
-  HelpCircle,
   Library,
   Star,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -17,11 +16,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useBookmark } from '@/hooks/useBookmark'
 import { formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogBody,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -33,7 +30,6 @@ import {
   PageContainer,
   ContentSection,
   GridContainer,
-  ScrollableContainer,
   StatCard,
   ResponsiveFilterBar,
   ResponsiveNotificationPanel,
@@ -52,13 +48,10 @@ const DOWNLOADS_STORAGE_KEY = 'sps.educationam.downloads.v1'
 function inferResourceFormat(fileUrl) {
   const value = String(fileUrl || '').toLowerCase()
   if (value.endsWith('.mp4') || value.endsWith('.mov')) {
-    return { format: 'Video', size: '45m', isPlayable: true }
+    return { format: 'Video', size: '45MB', isPlayable: true }
   }
   if (value.endsWith('.zip')) {
     return { format: 'ZIP', size: '256MB', isPlayable: false }
-  }
-  if (value.includes('pdf')) {
-    return { format: 'PDF', size: '12MB', isPlayable: false }
   }
   return { format: 'PDF', size: '12MB', isPlayable: false }
 }
@@ -69,23 +62,19 @@ function normalizeStudentResource(entry) {
   const safeProgress = Number(entry?.uploadProgress)
   const uploadStatus = ['uploading', 'failed', 'completed'].includes(incomingStatus)
     ? incomingStatus
-    : safeProgress > 0 && safeProgress < 100? 'uploading': 'completed'
+    : safeProgress > 0 && safeProgress < 100 ? 'uploading' : 'completed'
   const uploadProgress = Number.isFinite(safeProgress)
     ? Math.max(0, Math.min(100, safeProgress))
-    : uploadStatus === 'uploading'
-      ? 45
-      : uploadStatus === 'failed'
-        ? 0
-        : 100
+    : uploadStatus === 'uploading' ? 45 : uploadStatus === 'failed' ? 0 : 100
 
   return {
     id: entry?.id,
     title: entry?.title || 'Untitled Resource',
     subject: entry?.subject || 'General',
     class: entry?.class || 'CORE 101',
-    summary: entry?.summary || 'No description available yet.',
+    summary: entry?.summary || 'No description available.',
     fileUrl: entry?.fileUrl || '',
-    facultyName: entry?.facultyName || entry?.facultyEmail || 'Faculty member',
+    facultyName: entry?.facultyName || entry?.facultyEmail || 'Faculty',
     facultyEmail: entry?.facultyEmail || '',
     createdAt: entry?.createdAt || null,
     updatedAt: entry?.updatedAt || null,
@@ -100,8 +89,7 @@ function normalizeStudentResource(entry) {
 function loadDownloadsFromStorage() {
   try {
     const raw = typeof window !== 'undefined' ? window.localStorage.getItem(DOWNLOADS_STORAGE_KEY) : null
-    const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
+    return raw ? JSON.parse(raw) : []
   } catch {
     return []
   }
@@ -112,8 +100,8 @@ function persistDownloads(downloads) {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(downloads))
     }
-  } catch (error) {
-    console.error('Error persisting downloads:', error)
+  } catch (err) {
+    console.error('Persistence error:', err)
   }
 }
 
@@ -123,10 +111,9 @@ export default function StudentDashboard() {
 
   // State
   const [resources, setResources] = useState([])
-  const [downloads, setDownloads] = useState(loadDownloadsFromStorage())
+  const [downloads, setDownloads] = useState([])
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
-  const [, setNotificationsSaving] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestSubmitting, setRequestSubmitting] = useState(false)
@@ -137,7 +124,6 @@ export default function StudentDashboard() {
     details: '',
   })
   const [loading, setLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [selectedClass, setSelectedClass] = useState('all')
   const [selectedSubject, setSelectedSubject] = useState('all')
@@ -145,191 +131,155 @@ export default function StudentDashboard() {
   const [resourceViewerOpen, setResourceViewerOpen] = useState(false)
   const [collections, setCollections] = useState([])
   const [analyticsSummary, setAnalyticsSummary] = useState(null)
-  const [, setCollectionsLoading] = useState(false)
-  const [, setAnalyticsLoading] = useState(false)
   const [reviewTarget, setReviewTarget] = useState(null)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
 
   const debouncedSearchInput = useDebouncedSearch(searchInput, 500)
 
-  // Load initial downloads
+  // Initial Sync
   useEffect(() => {
     setDownloads(loadDownloadsFromStorage())
   }, [])
 
-  // Load resources
+  // Resource Loading
   useEffect(() => {
     if (!user?.uid) return
-    const controller = new globalThis.AbortController()
     let isActive = true
+    const controller = new AbortController()
 
-    const loadResources = async () => {
+    const load = async () => {
       setLoading(true)
       try {
-        const response = await fetch('/api/student/resources', {
-          cache: 'no-store',
-          signal: controller.signal,
-        })
+        const response = await fetch('/api/student/resources', { cache: 'no-store', signal: controller.signal })
         const payload = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          throw new Error(payload?.error || 'Could not load resources.')
-        }
+        if (!response.ok) throw new Error(payload?.error || 'Failed to load resources.')
         if (isActive) {
           const normalized = (payload?.resources || []).map(normalizeStudentResource)
           setResources(normalized)
-          setErrorMessage('')
         }
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        if (isActive) {
-          console.error('Student resources error:', error)
-          setResources([])
-          setErrorMessage(error.message || 'Could not load resources.')
-        }
+      } catch (err) {
+        if (err.name !== 'AbortError') toast.error(err.message)
       } finally {
         if (isActive) setLoading(false)
       }
     }
-
-    loadResources()
-    return () => {
-      isActive = false
-      controller.abort()
-    }
+    load()
+    return () => { isActive = false; controller.abort() }
   }, [user?.uid])
 
-  // Load notifications
+  // Engagement Sync
   useEffect(() => {
     if (!user?.uid) return
-    const controller = new globalThis.AbortController()
     let isActive = true
+    const controller = new AbortController()
 
-    const loadNotifications = async () => {
-      setNotificationsLoading(true)
+    const loadExtra = async () => {
       try {
-        const response = await fetch('/api/student/notifications', {
-          cache: 'no-store',
-          signal: controller.signal,
-        })
-        const payload = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          throw new Error(payload?.error || 'Could not load notifications.')
-        }
-        if (isActive) {
-          setNotifications(Array.isArray(payload?.notifications) ? payload?.notifications : [])
-        }
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        if (isActive) {
-          console.error('Student notifications error:', error)
-          setNotifications([])
-        }
-      } finally {
-        if (isActive) setNotificationsLoading(false)
-      }
-    }
-
-    loadNotifications()
-    return () => {
-      isActive = false
-      controller.abort()
-    }
-  }, [user?.uid])
-
-  // Load collections and analytics
-  useEffect(() => {
-    if (!user?.uid) return
-    const controller = new globalThis.AbortController()
-    let isActive = true
-
-    const loadCollectionsAndAnalytics = async () => {
-      try {
-        const [collectionsRes, analyticsRes] = await Promise.all([
+        const [notifRes, collRes, statsRes] = await Promise.all([
+          fetch('/api/student/notifications', { cache: 'no-store', signal: controller.signal }),
           fetch('/api/collections', { cache: 'no-store', signal: controller.signal }),
           fetch('/api/analytics/summary', { cache: 'no-store', signal: controller.signal }),
         ])
 
-        if (isActive && collectionsRes.ok) {
-          const payload = await collectionsRes.json().catch(() => ({}))
+        if (isActive && notifRes.ok) {
+          const payload = await notifRes.json().catch(() => ({}))
+          setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+        }
+        if (isActive && collRes.ok) {
+          const payload = await collRes.json().catch(() => ({}))
           setCollections(Array.isArray(payload?.collections) ? payload.collections : [])
         }
-
-        if (isActive && analyticsRes.ok) {
-          const payload = await analyticsRes.json().catch(() => ({}))
+        if (isActive && statsRes.ok) {
+          const payload = await statsRes.json().catch(() => ({}))
           setAnalyticsSummary(payload?.summary || null)
         }
-      } catch (error) {
-        if (error.name === 'AbortError') return
-        console.error('Load error:', error)
-      } finally {
-        if (isActive) {
-          setCollectionsLoading(false)
-          setAnalyticsLoading(false)
-        }
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Engagement sync error:', err)
       }
     }
-
-    loadCollectionsAndAnalytics()
-    return () => {
-      isActive = false
-      controller.abort()
-    }
+    loadExtra()
+    return () => { isActive = false; controller.abort() }
   }, [user?.uid])
 
-  // Event Handlers
+  // Handlers
   const handleResourceAction = useCallback((entry) => {
     if (entry.uploadStatus === 'uploading') {
-      toast.error('This resource is still uploading.')
+      toast.error('This resource is currently being processed.')
       return
     }
 
     setDownloads((current) => {
-      const nextDownloads = [
+      const next = [
         {
           id: entry.id,
           title: entry.title,
           subject: entry.subject,
           fileUrl: entry.fileUrl,
-          fileType: entry.fileType || entry.type || '',
-          fileSize: entry.fileSize || entry.size || 0,
           fileFormat: entry.format || 'File',
           downloadedAt: new Date().toISOString(),
         },
         ...current.filter((d) => d.id !== entry.id),
-      ].slice(0, 6)
-      persistDownloads(nextDownloads)
-      return nextDownloads
+      ].slice(0, 10)
+      persistDownloads(next)
+      return next
     })
-    toast.success(`${entry.title} added to your downloads.`)
 
+    toast.success('Resource added to your library')
     if (typeof window !== 'undefined') {
-      window.open(
-        `/api/student/resources/${entry.id}/download`,
-        '_blank',
-        'noopener,noreferrer'
-      )
+      window.open(`/api/student/resources/${entry.id}/download`, '_blank', 'noopener,noreferrer')
     }
   }, [])
 
   const handlePreviewResource = useCallback((entry) => {
-    if (!entry?.id) {
-      toast.error('Resource is missing a valid ID.')
-      return
-    }
     setPreviewResource(entry)
     setResourceViewerOpen(true)
   }, [])
 
-  const handleOpenReview = useCallback((entry) => {
-    if (!entry?.id) {
-      toast.error('Resource is missing a valid ID.')
+  const handleToggleBookmark = useCallback(async (entry) => {
+    if (!entry?.id) return
+    await toggleBookmark(entry.id)
+  }, [toggleBookmark])
+
+  const readAllNotifications = useCallback(async () => {
+    try {
+      const response = await fetch('/api/student/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'read-all' }),
+      })
+      if (response.ok) {
+        const payload = await response.json()
+        setNotifications(payload.notifications || [])
+        toast.success('Notifications cleared')
+      }
+    } catch {
+      toast.error('Failed to clear notifications')
+    }
+  }, [])
+
+  const handleRequestSubmit = async () => {
+    if (!resourceRequest.titleName || !resourceRequest.courseName) {
+      toast.error('Please enter both title and course code.')
       return
     }
-    setReviewTarget(entry)
-    setReviewRating(5)
-    setReviewComment('')
-  }, [])
+    setRequestSubmitting(true)
+    try {
+      const response = await fetch('/api/student/resource-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(resourceRequest),
+      })
+      if (!response.ok) throw new Error('Failed to submit request')
+      toast.success('Your request has been sent to faculty members.')
+      setRequestModalOpen(false)
+      setResourceRequest({ courseName: '', titleName: '', preferredFormat: 'pdf', details: '' })
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setRequestSubmitting(false)
+    }
+  }
 
   const handleSubmitReview = async () => {
     if (!reviewTarget?.id) return
@@ -339,422 +289,177 @@ export default function StudentDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
       })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not submit review.')
-      }
-      toast.success('Review submitted.')
-      setReviewComment('')
-      setReviewRating(5)
+      if (!response.ok) throw new Error('Failed to submit review')
+      toast.success('Your review has been submitted. Thank you!')
       setReviewTarget(null)
-    } catch (error) {
-      toast.error(error.message || 'Could not submit review.')
+    } catch (err) {
+      toast.error(err.message)
     }
   }
 
-  const handleToggleCollectionSave = async (collection) => {
-    if (!collection?.id) return
-    try {
-      const response = await fetch(`/api/collections/${collection.id}/save`, {
-        method: 'POST',
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update saved collection.')
-      }
-      toast.success(payload?.saved ? 'Collection saved.' : 'Collection removed.')
-      setCollections((current) =>
-        current.map((item) =>
-          item.id === collection.id ? { ...item, saved: payload.saved } : item
-        )
-      )
-    } catch (error) {
-      toast.error(error.message || 'Could not update saved collection.')
-    }
-  }
-
-  const handleToggleBookmark = useCallback(async (entry) => {
-    if (!entry?.id) {
-      toast.error('Resource is missing a valid ID.')
-      return
-    }
-    await toggleBookmark(entry.id)
-  }, [toggleBookmark])
-
-  const markNotificationRead = useCallback(async (notificationId) => {
-    setNotificationsSaving(true)
-    try {
-      const response = await fetch('/api/student/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId }),
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update notifications.')
-      }
-      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-    } catch (error) {
-      toast.error(error.message || 'Could not update notifications.')
-    } finally {
-      setNotificationsSaving(false)
-    }
-  }, [])
-
-  const readAllNotifications = useCallback(async () => {
-    setNotificationsSaving(true)
-    try {
-      const response = await fetch('/api/student/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'read-all' }),
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not clear notifications.')
-      }
-      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-      toast.success('All notifications marked as read.')
-    } catch (error) {
-      toast.error(error.message || 'Could not clear notifications.')
-    } finally {
-      setNotificationsSaving(false)
-    }
-  }, [])
-
-  const handleRequestSubmit = async () => {
-    if (!resourceRequest.titleName || !resourceRequest.courseName) {
-      toast.error('Please fill in all required fields.')
-      return
-    }
-
-    setRequestSubmitting(true)
-    try {
-      const response = await fetch('/api/student/resource-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(resourceRequest),
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not submit the request.')
-      }
-      toast.success('Resource request sent.')
-      setRequestModalOpen(false)
-      setResourceRequest({ courseName: '', titleName: '', preferredFormat: 'pdf', details: '' })
-    } catch (error) {
-      toast.error(error.message || 'Could not submit the request.')
-    } finally {
-      setRequestSubmitting(false)
-    }
-  }
-
-  // Derived values
-  const completedCount = useMemo(
-    () => resources.filter((e) => e.uploadStatus === 'completed').length,
-    [resources]
-  )
-  const uploadingCount = useMemo(
-    () => resources.filter((e) => e.uploadStatus === 'uploading').length,
-    [resources]
-  )
-  const failedCount = useMemo(
-    () => resources.filter((e) => e.uploadStatus === 'failed').length,
-    [resources]
-  )
-  const unreadNotificationCount = useMemo(
-    () => notifications.filter((n) => !n.isRead).length,
-    [notifications]
-  )
-
-  const classOptions = useMemo(
-    () => ['all', ...new Set(resources.map((r) => r.class).filter(Boolean))],
-    [resources]
-  )
-  const subjectOptions = useMemo(
-    () => ['all', ...new Set(resources.map((r) => r.subject).filter(Boolean))],
-    [resources]
-  )
+  // Derived Stats
+  const stats = useMemo(() => ([
+    { label: 'Total Resources', value: resources.length, icon: Library, color: 'primary' },
+    { label: 'Processing', value: resources.filter(r => r.uploadStatus === 'uploading').length, icon: Clock, color: 'warning' },
+    { label: 'Bookmarked', value: resources.filter(r => r.isBookmarked).length, icon: Bookmark, color: 'info' },
+    { label: 'Ready for Download', value: resources.filter(r => r.uploadStatus === 'completed').length, icon: CheckCircle2, color: 'success' },
+  ]), [resources])
 
   const filteredResources = useMemo(() => {
-    const normalizedQuery = debouncedSearchInput.toLowerCase()
+    const q = debouncedSearchInput.toLowerCase()
     return resources.filter((r) => {
-      const matchesSearch = normalizedQuery
-        ? r.title.toLowerCase().includes(normalizedQuery) ||
-          r.class.toLowerCase().includes(normalizedQuery) ||
-          r.subject.toLowerCase().includes(normalizedQuery)
-        : true
+      const matchesSearch = !q || r.title.toLowerCase().includes(q) || r.class.toLowerCase().includes(q)
       const matchesClass = selectedClass === 'all' || r.class === selectedClass
       const matchesSubject = selectedSubject === 'all' || r.subject === selectedSubject
       return matchesSearch && matchesClass && matchesSubject
     })
   }, [resources, debouncedSearchInput, selectedClass, selectedSubject])
 
-  const classFilterOptions = useMemo(
-    () => classOptions.map((c) => ({
-      label: c === 'all' ? 'All Classes' : c,
-      value: c,
-    })),
-    [classOptions]
-  )
-  const subjectFilterOptions = useMemo(
-    () => subjectOptions.map((s) => ({
-      label: s === 'all' ? 'All Subjects' : s,
-      value: s,
-    })),
-    [subjectOptions]
-  )
-  const filterConfig = useMemo(
-    () => [
-      {
-        id: 'search',
-        type: 'search',
-        label: 'Search',
-        placeholder: 'Search by title, class, or subject',
-        value: searchInput,
-      },
-      {
-        id: 'class',
-        type: 'select',
-        label: 'Class',
-        value: selectedClass,
-        options: classFilterOptions,
-      },
-      {
-        id: 'subject',
-        type: 'select',
-        label: 'Subject',
-        value: selectedSubject,
-        options: subjectFilterOptions,
-      },
-    ],
-    [searchInput, selectedClass, selectedSubject, classFilterOptions, subjectFilterOptions]
-  )
-  const handleFilterChange = useCallback((id, value) => {
-    if (id === 'search') setSearchInput(value)
-    if (id === 'class') setSelectedClass(value)
-    if (id === 'subject') setSelectedSubject(value)
-  }, [])
-  const handleFilterReset = useCallback(() => {
-    setSearchInput('')
-    setSelectedClass('all')
-    setSelectedSubject('all')
-  }, [])
-  const handleOpenNotifications = useCallback(() => setNotificationsOpen(true), [])
-  const handleCloseNotifications = useCallback(() => setNotificationsOpen(false), [])
+  const filterConfig = useMemo(() => [
+    { id: 'search', type: 'search', label: 'Search Resources', placeholder: 'Find resources...', value: searchInput },
+    {
+      id: 'class',
+      type: 'select',
+      label: 'Class',
+      value: selectedClass,
+      options: [{ label: 'All Classes', value: 'all' }, ...[...new Set(resources.map(r => r.class))].map(c => ({ label: c, value: c }))]
+    },
+    {
+      id: 'subject',
+      type: 'select',
+      label: 'Subject',
+      value: selectedSubject,
+      options: [{ label: 'All Subjects', value: 'all' }, ...[...new Set(resources.map(r => r.subject))].map(s => ({ label: s, value: s }))]
+    },
+  ], [searchInput, selectedClass, selectedSubject, resources])
 
-  const downloadRows = useMemo(
-    () => downloads.map((d) => (
-      <div key={d.id} className="p-4 hover:bg-muted/50 transition-colors">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">{d.title}</p>
-            <p className="text-xs text-muted-foreground truncate">{d.subject}</p>
-          </div>
-          <Badge variant="outline" className="flex-shrink-0">
-            {d.fileFormat}
-          </Badge>
-        </div>
-      </div>
-    )),
-    [downloads]
-  )
-
-  const notificationItems = useMemo(
-    () => notifications.map((n) => (
-      <NotificationItem
-        key={n.id}
-        title={n.title}
-        description={n.message}
-        timestamp={n.createdAt}
-        isUnread={!n.isRead}
-        onDismiss={() => markNotificationRead(n.id)}
-      />
-    )),
-    [notifications, markNotificationRead]
-  )
-
-  const navItems = useMemo(
-    () => [
-      { id: 'overview', label: 'Dashboard', href: '#overview', icon: Library },
-      { id: 'resources', label: 'Resources', href: '#resources', icon: BookOpen },
-      { id: 'saved', label: 'Saved', href: '#personalization', icon: Bookmark },
-      { id: 'downloads', label: 'Downloads', href: '#downloads', icon: Download },
-      { id: 'help', label: 'Help & Support', href: '#help', icon: HelpCircle },
-    ],
-    []
-  )
-
-  if (loading) {
-    return <StudentDashboardSkeleton />
-  }
+  if (loading) return <StudentDashboardSkeleton />
 
   return (
     <AppLayout
       role="student"
       userLabel={getDisplayName(user?.email, 'Student')}
-      sidebarTitle="Student Workspace"
-      sidebarSubtitle="Resource Hub"
-      navItems={navItems}
-      topbarTitle="Student Dashboard"
-      topbarSubtitle="Find, track, and access your learning resources"
-      searchValue={searchInput}
-      onSearchChange={setSearchInput}
-      onOpenNotifications={handleOpenNotifications}
-      unreadCount={unreadNotificationCount}
+      sidebarTitle="EDUCATIONAM"
+      sidebarSubtitle="Student Workspace"
+      navItems={[
+        { id: 'overview', label: 'Overview', href: '#overview', icon: Library },
+        { id: 'resources', label: 'Library', href: '#resources', icon: BookOpen },
+        { id: 'insights', label: 'Insights', href: '#insights', icon: Star },
+        { id: 'personal', label: 'Personal', href: '#personal', icon: Bookmark },
+      ]}
+      topbarTitle="Student Console"
+      topbarSubtitle="Manage and sync your academic assets"
+      unreadCount={notifications.filter(n => !n.isRead).length}
+      onOpenNotifications={() => setNotificationsOpen(true)}
       onLogout={logout}
     >
       <PageContainer>
-        {/* Error Banner */}
-        {errorMessage && (
-          <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
-            <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800">{errorMessage}</p>
-          </div>
-        )}
-
-        {/* Dashboard Overview */}
-        <ContentSection
-          id="overview"
-          title="Dashboard Overview"
-          subtitle="Quick stats about your resources"
-          noPaddingBottom
-        >
+        {/* Statistics Grid */}
+        <ContentSection id="overview" title="Workspace Status" subtitle="Overview of your available academic resources" noPaddingBottom>
           <GridContainer columns={4}>
-            <StatCard
-              label="Total Resources"
-              value={resources.length}
-              trend={completedCount > uploadingCount ? 'up' : undefined}
-              trendLabel={completedCount > 0 ? `${completedCount} ready` : undefined}
-            />
-            <StatCard
-              label="Ready to View"
-              value={completedCount}
-              trend="up"
-              trendLabel="All good"
-            />
-            <StatCard
-              label="Uploading"
-              value={uploadingCount}
-              trend={uploadingCount === 0 ? undefined : undefined}
-              trendLabel={uploadingCount === 0 ? undefined : 'In progress'}
-            />
-            <StatCard
-              label="Needs Attention"
-              value={failedCount}
-              trend={failedCount === 0 ? undefined : undefined}
-              trendLabel={failedCount === 0 ? undefined : 'Check status'}
-            />
+            {stats.map((stat, i) => (
+              <StatCard key={i} label={stat.label} value={stat.value} icon={stat.icon} color={stat.color} />
+            ))}
           </GridContainer>
         </ContentSection>
 
-        {/* Resources Section */}
-        <ContentSection
-          id="resources"
-          title="Resource Library"
-          subtitle="Filter and search your learning materials"
-        >
-          {/* Filter Bar */}
+        {/* Main Discovery */}
+        <ContentSection id="resources" title="Resource Library" subtitle="Browse and download approved course materials">
           <ResponsiveFilterBar
             filters={filterConfig}
-            onFilterChange={handleFilterChange}
-            onReset={handleFilterReset}
+            onFilterChange={(id, val) => {
+              if (id === 'search') setSearchInput(val)
+              else if (id === 'class') setSelectedClass(val)
+              else if (id === 'subject') setSelectedSubject(val)
+            }}
+            onReset={() => {
+              setSearchInput('')
+              setSelectedClass('all')
+              setSelectedSubject('all')
+            }}
           />
 
-          {/* Resources Grid */}
-          {filteredResources.length === 0 ? (
-            <div className="py-12 text-center">
-              <BookOpen size={48} className="mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground mb-2">No resources found</p>
-              <p className="text-xs text-muted-foreground">Try adjusting your filters or search terms</p>
-            </div>
-          ) : (
-            <GridContainer columns={3}>
-              {filteredResources.map((resource) => (
-                <StudentResourceCard
-                  key={resource.id}
-                  resource={resource}
-                  bookmarked={Boolean(resource.isBookmarked)}
-                  onPreview={handlePreviewResource}
-                  onDownload={handleResourceAction}
-                  onBookmark={handleToggleBookmark}
-                  onReview={handleOpenReview}
-                />
-              ))}
-            </GridContainer>
-          )}
+          <div className="mt-8">
+            {filteredResources.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-32 text-center rounded-2xl border border-dashed border-border/40 bg-muted/5">
+                <div className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center mb-6">
+                  <BookOpen size={32} className="text-muted-foreground/30" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">No resources found</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Adjust your filters to see more results.</p>
+              </div>
+            ) : (
+              <GridContainer columns={3}>
+                {filteredResources.map((resource) => (
+                  <StudentResourceCard
+                    key={resource.id}
+                    resource={resource}
+                    bookmarked={resource.isBookmarked}
+                    onPreview={handlePreviewResource}
+                    onDownload={handleResourceAction}
+                    onBookmark={handleToggleBookmark}
+                    onReview={(r) => setReviewTarget(r)}
+                  />
+                ))}
+              </GridContainer>
+            )}
+          </div>
         </ContentSection>
 
-        {/* Collections Section */}
-        {collections.length > 0 && (
-          <ContentSection
-            title="Collections"
-            subtitle="Organized resource groups"
-          >
-            <CollectionManager
-              collections={collections}
-              onToggleSave={handleToggleCollectionSave}
-            />
+        {/* Insights & Collections */}
+        {(analyticsSummary || collections.length > 0) && (
+          <ContentSection id="insights" title="Learning Insights" subtitle="Visual overview of your platform engagement">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+              {analyticsSummary && <AnalyticsDashboard summary={analyticsSummary} />}
+              {collections.length > 0 && <CollectionManager collections={collections} onToggleSave={() => { }} />}
+            </div>
           </ContentSection>
         )}
 
-        {/* Analytics Section */}
-        {analyticsSummary && (
-          <ContentSection
-            title="Your Learning Insights"
-            subtitle="Analytics and activity summary"
-          >
-            <AnalyticsDashboard summary={analyticsSummary} />
-          </ContentSection>
-        )}
-
-        {/* Personalization Section */}
-        <ContentSection
-          id="personalization"
-          title="Personalization"
-          subtitle="Recommendations, saved searches, and notification settings"
-        >
+        {/* Personalization */}
+        <ContentSection id="personal" title="Workspace Management" subtitle="Customize and manage your academic workspace">
           <GridContainer columns={3}>
             <RecommendationPanel />
             <SavedSearchPanel />
-            <NotificationPreferencesPanel />
+            <div className="flex flex-col gap-6">
+              <NotificationPreferencesPanel />
+              <div className="mt-auto overflow-hidden rounded-xl border border-primary/10 bg-primary/5 p-6">
+                <h4 className="text-xs font-semibold text-primary">Need a specific resource?</h4>
+                <p className="mt-2 text-[11px] leading-relaxed text-primary/70">
+                  Request specialized content or materials directly from your instructors.
+                </p>
+                <Button
+                  className="mt-6 w-full h-10 rounded-lg bg-primary font-semibold text-xs shadow-sm shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95"
+                  onClick={() => setRequestModalOpen(true)}
+                >
+                  Create Request
+                </Button>
+              </div>
+            </div>
           </GridContainer>
-        </ContentSection>
-
-        {/* Downloads Section */}
-        {downloads.length > 0 && (
-          <ContentSection
-            id="downloads"
-            title="Recent Downloads"
-            subtitle="Your download history"
-          >
-            <ScrollableContainer maxHeight="max-h-[50vh] md:max-h-[60vh]">
-              <div className="divide-y divide-border">{downloadRows}</div>
-            </ScrollableContainer>
-          </ContentSection>
-        )}
-
-        {/* Help & Support Section */}
-        <ContentSection
-          id="help"
-          title="Help & Support"
-          subtitle="Request additional resources or get help"
-        >
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={() => setRequestModalOpen(true)}
-              className="flex-1"
-            >
-              Request Resource
-            </Button>
-            <Button variant="outline" className="flex-1">
-              Email Support
-            </Button>
-          </div>
         </ContentSection>
       </PageContainer>
 
-      {/* Resource Viewer Modal */}
+      {/* Global Modals */}
+      <ResponsiveNotificationPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        notificationCount={notifications.length}
+        unreadCount={notifications.filter(n => !n.isRead).length}
+        onMarkAllRead={readAllNotifications}
+        isLoading={notificationsLoading}
+      >
+        {notifications.map((n) => (
+          <NotificationItem
+            key={n.id}
+            title={n.title}
+            description={n.message}
+            timestamp={n.createdAt}
+            isUnread={!n.isRead}
+          />
+        ))}
+      </ResponsiveNotificationPanel>
+
       {resourceViewerOpen && (
         <ResourceViewer
           resource={previewResource}
@@ -762,125 +467,83 @@ export default function StudentDashboard() {
         />
       )}
 
-      {/* Request Resource Dialog */}
+      {/* Resource Request Dialog */}
       <Dialog open={requestModalOpen} onOpenChange={setRequestModalOpen}>
-        <DialogHeader>
-          <DialogTitle>Request a Resource</DialogTitle>
-          <DialogDescription>
-            Let us know what resource you need and we'll try to find it for you.
-          </DialogDescription>
+        <DialogHeader className="p-6 pb-4 border-b border-border/10">
+          <DialogTitle className="text-sm font-semibold">Request Resource</DialogTitle>
         </DialogHeader>
-
-        <DialogBody className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Course/Class *</label>
-            <Input
-              value={resourceRequest.courseName}
-              onChange={(e) => setResourceRequest({ ...resourceRequest, courseName: e.target.value })}
-              placeholder="e.g., Mathematics 101"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Resource Title *</label>
-            <Input
-              value={resourceRequest.titleName}
-              onChange={(e) => setResourceRequest({ ...resourceRequest, titleName: e.target.value })}
-              placeholder="e.g., Calculus Workbook"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Preferred Format</label>
-            <select
-              value={resourceRequest.preferredFormat}
-              onChange={(e) => setResourceRequest({ ...resourceRequest, preferredFormat: e.target.value })}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
-            >
-              <option value="pdf">PDF</option>
-              <option value="video">Video</option>
-              <option value="document">Document</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Additional Details</label>
-            <Textarea
-              value={resourceRequest.details}
-              onChange={(e) => setResourceRequest({ ...resourceRequest, details: e.target.value })}
-              placeholder="Any additional information..."
-              rows={3}
-            />
+        <DialogBody className="p-6 py-6 space-y-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Title</label>
+              <Input
+                value={resourceRequest.titleName}
+                onChange={(e) => setResourceRequest({ ...resourceRequest, titleName: e.target.value })}
+                placeholder="e.g. Advanced Calculus Notes"
+                className="h-10 rounded-lg border-border/40 bg-muted/20 text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Course Code</label>
+              <Input
+                value={resourceRequest.courseName}
+                onChange={(e) => setResourceRequest({ ...resourceRequest, courseName: e.target.value })}
+                placeholder="e.g. MATH301"
+                className="h-10 rounded-lg border-border/40 bg-muted/20 text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Additional Details</label>
+              <Textarea
+                value={resourceRequest.details}
+                onChange={(e) => setResourceRequest({ ...resourceRequest, details: e.target.value })}
+                placeholder="Briefly describe what you need..."
+                rows={4}
+                className="rounded-lg border-border/40 bg-muted/20 text-xs"
+              />
+            </div>
           </div>
         </DialogBody>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setRequestModalOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleRequestSubmit} disabled={requestSubmitting}>
-            {requestSubmitting ? 'Sending...' : 'Send Request'}
+        <DialogFooter className="p-6 pt-4 border-t border-border/10 flex gap-3">
+          <Button variant="ghost" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setRequestModalOpen(false)}>Cancel</Button>
+          <Button className="flex-[2] rounded-lg font-semibold text-xs h-10" onClick={handleRequestSubmit} disabled={requestSubmitting}>
+            {requestSubmitting ? 'Submitting...' : 'Submit Request'}
           </Button>
         </DialogFooter>
       </Dialog>
 
-      {/* Review Dialog */}
-      <Dialog open={!!reviewTarget} onOpenChange={() => setReviewTarget(null)}>
-        <DialogHeader>
-          <DialogTitle>Review: {reviewTarget?.title}</DialogTitle>
-          <DialogDescription>Share your feedback on this resource</DialogDescription>
+      {/* Resource Review Dialog */}
+      <Dialog open={Boolean(reviewTarget)} onOpenChange={(open) => !open && setReviewTarget(null)}>
+        <DialogHeader className="p-6 pb-4 border-b border-border/10">
+          <DialogTitle className="text-sm font-semibold">Review: {reviewTarget?.title}</DialogTitle>
         </DialogHeader>
-
-        <DialogBody className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Rating (1-5 stars)</label>
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={reviewRating}
-              onChange={(e) => setReviewRating(Number(e.target.value))}
-              className="w-full"
-              aria-label="Rating slider"
-            />
-            <div className="flex gap-1 mt-2 justify-center">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                  key={i}
-                  size={24}
-                  className={i <= reviewRating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
-                />
+        <DialogBody className="p-6 py-6 space-y-8">
+          <div className="space-y-4">
+            <label className="text-[11px] font-medium text-muted-foreground text-center block">Rating: {reviewRating}/5</label>
+            <div className="flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map(i => (
+                <button key={i} onClick={() => setReviewRating(i)} className="transition-transform active:scale-90">
+                  <Star size={28} className={cn(i <= reviewRating ? "fill-primary text-primary" : "text-muted-foreground/20")} strokeWidth={2} />
+                </button>
               ))}
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Your Comment</label>
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Your Review</label>
             <Textarea
               value={reviewComment}
               onChange={(e) => setReviewComment(e.target.value)}
-              placeholder="Share your thoughts about this resource..."
+              placeholder="Share your thoughts on this resource..."
               rows={4}
+              className="rounded-lg border-border/40 bg-muted/20 text-xs"
             />
           </div>
         </DialogBody>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setReviewTarget(null)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmitReview}>Submit Review</Button>
+        <DialogFooter className="p-6 pt-4 border-t border-border/10 flex gap-3">
+          <Button variant="ghost" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setReviewTarget(null)}>Cancel</Button>
+          <Button className="flex-[2] rounded-lg font-semibold text-xs h-10" onClick={handleSubmitReview}>Submit Review</Button>
         </DialogFooter>
       </Dialog>
-
-      {/* Notifications Panel */}
-      <ResponsiveNotificationPanel
-        isOpen={notificationsOpen}
-        onClose={handleCloseNotifications}
-        onMarkAllRead={readAllNotifications}
-        notificationCount={notifications.length}
-        unreadCount={unreadNotificationCount}
-        isLoading={notificationsLoading}
-      >
-        {notificationItems}
-      </ResponsiveNotificationPanel>
     </AppLayout>
   )
 }

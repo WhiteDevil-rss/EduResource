@@ -2,8 +2,9 @@
 
 import Image from 'next/image'
 import { useMemo, useState, useEffect } from 'react'
-import { Github, Globe, Instagram, Linkedin, Mail, MessageCircle, Youtube } from 'lucide-react'
+import { Github, Globe, Instagram, Linkedin, Mail, MessageCircle, Youtube, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 import { TEAM_FALLBACK_IMAGE } from '@/lib/team'
 
@@ -52,22 +53,18 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
   )
 
   const handleMouseEnter = () => {
-    if (canHover) {
-      setFlipped(true)
-    }
+    if (canHover) setFlipped(true)
   }
 
   const handleMouseLeave = () => {
-    if (canHover) {
-      setFlipped(false)
-    }
+    if (canHover) setFlipped(false)
   }
 
   return (
-    <Card className="team-card">
-      <CardContent className="team-card__content">
+    <Card className="group relative h-full bg-card border-border/40 overflow-hidden rounded-[2rem] hover:shadow-2xl hover:shadow-primary/10 transition-shadow">
+      <CardContent className="p-0 h-full flex flex-col">
         <div
-          className="team-card__flip-shell"
+          className="relative h-[380px] w-full [perspective:1000px] cursor-pointer"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={() => {
@@ -85,14 +82,28 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
             }
           }}
         >
-          <div className={cn('team-card__flip-inner', flipped && 'team-card__flip-inner--flipped')}>
-            <article className="team-card__face team-card__face--front">
-              <div className="team-card__media">
-                {!isLoaded ? <div className="team-card__image-skeleton" aria-hidden="true" /> : null}
+          {/* Flip Container */}
+          <div 
+            className={cn(
+              "relative w-full h-full transition-all duration-700 [transform-style:preserve-3d]",
+              flipped && "[transform:rotateY(180deg)]"
+            )}
+          >
+            {/* Front Face */}
+            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden]">
+              <div className="relative w-full h-full overflow-hidden">
+                {!isLoaded && (
+                  <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                )}
                 <Image
                   src={imageSrc}
                   alt={name}
-                  className={`team-card__image ${isLoaded ? 'team-card__image--visible' : ''}`}
+                  className={cn(
+                    "object-cover transition-all duration-500 scale-100 group-hover:scale-105",
+                    isLoaded ? "opacity-100" : "opacity-0"
+                  )}
                   fill
                   sizes="(max-width: 900px) 100vw, 25vw"
                   onLoad={() => setIsLoaded(true)}
@@ -101,42 +112,56 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
                     setIsLoaded(true)
                   }}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent" />
+                
+                <div className="absolute bottom-0 left-0 right-0 p-6 space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">Core Team</p>
+                  <h3 className="text-xl font-bold tracking-tight text-foreground">{name}</h3>
+                  <p className="text-sm text-muted-foreground font-medium">{role}</p>
+                </div>
               </div>
+            </div>
 
-              <div className="team-card__body">
-                <p className="team-card__eyebrow">Core Team</p>
-                <h3 className="team-card__name">{name}</h3>
-                <p className="team-card__role">{role}</p>
+            {/* Back Face */}
+            <div className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] bg-muted/30">
+              <div className="p-8 h-full flex flex-col justify-center space-y-4">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">About</p>
+                  <h3 className="text-xl font-bold tracking-tight text-foreground">{name}</h3>
+                  <p className="text-sm text-muted-foreground font-medium">{role}</p>
+                </div>
+                <div className="h-px w-12 bg-primary/30" />
+                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-8">
+                  {bio}
+                </p>
               </div>
-            </article>
-
-            <article className="team-card__face team-card__face--back">
-              <div className="team-card__back-content">
-                <p className="team-card__eyebrow">About</p>
-                <h3 className="team-card__name">{name}</h3>
-                <p className="team-card__role">{role}</p>
-                <p className="team-card__bio team-card__bio--full">{bio}</p>
-              </div>
-            </article>
+            </div>
           </div>
         </div>
 
-        <div className="team-card__extension" aria-label={`${name} social links`}>
-          <div className="team-card__socials team-card__socials--fixed">
+        {/* Social Bar (Always visible at bottom) */}
+        <div className="p-4 border-t border-border/20 bg-muted/20 mt-auto">
+          <div className="flex flex-wrap justify-center gap-2">
             {socialLinks.map((entry) => {
               const Icon = entry.icon
               return (
-                <a
+                <Button
                   key={entry.key}
-                  href={entry.href}
-                  target={entry.isMail ? undefined : '_blank'}
-                  rel={entry.isMail ? undefined : 'noopener noreferrer'}
-                  aria-label={entry.label}
-                  title={entry.label}
-                  className="team-card__social-link"
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                  className="w-8 h-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
                 >
-                  <Icon size={16} />
-                </a>
+                  <a
+                    href={entry.href}
+                    target={entry.isMail ? undefined : '_blank'}
+                    rel={entry.isMail ? undefined : 'noopener noreferrer'}
+                    aria-label={entry.label}
+                    title={entry.label}
+                  >
+                    <Icon size={14} />
+                  </a>
+                </Button>
               )
             })}
           </div>

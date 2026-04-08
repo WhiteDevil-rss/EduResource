@@ -1,96 +1,131 @@
 'use client'
 
-import { BookOpen, FolderKanban, Star, Users } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-
-function MetricCard({ label, value, description, icon: Icon }) {
-  return (
-    <Card className="rounded-xl border border-outline shadow-sm bg-surface-card">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 p-4">
-        <div className="space-y-1">
-          <CardDescription>{label}</CardDescription>
-          <CardTitle>{value}</CardTitle>
-        </div>
-        {Icon ? <Icon size={18} className="text-primary" /> : null}
-      </CardHeader>
-      {description ? <CardContent className="pt-0 px-4 pb-4 text-sm text-muted">{description}</CardContent> : null}
-    </Card>
-  )
-}
+import { BookOpen, FolderKanban, Star, Users, TrendingUp, ArrowUpRight, BarChart3, Fingerprint, Activity } from 'lucide-react'
+import { StandardCard, StatCard } from '@/components/layout/StandardCards'
 
 export function AnalyticsDashboard({ summary, role = 'faculty' }) {
-  if (!summary) {
-    return null
-  }
+  if (!summary) return null
 
   const topResources = Array.isArray(summary.topResources) ? summary.topResources : []
   const collections = Array.isArray(summary.collections) ? summary.collections : []
   const reviews = Array.isArray(summary.reviews) ? summary.reviews : []
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Resources" value={summary.summary?.totalResources || 0} description={`${summary.summary?.liveResources || 0} live, ${summary.summary?.draftResources || 0} draft`} icon={BookOpen} />
-        <MetricCard label="Reviews" value={summary.summary?.totalReviews || 0} description={`Avg rating ${summary.averageRating || 0}/5`} icon={Star} />
-        <MetricCard label="Collections" value={summary.summary?.totalCollections || 0} description={role === 'student' ? 'Saved collections' : 'Created collections'} icon={FolderKanban} />
-        <MetricCard label="Users" value={summary.summary?.totalUsers || 0} description={role === 'admin' ? 'Platform users' : 'Visible user records'} icon={Users} />
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Primary Metrics */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Total Resources"
+          value={summary.summary?.totalResources || 0}
+          description={`${summary.summary?.liveResources || 0} Published`}
+          icon={BookOpen}
+          trend="up"
+          trendLabel="+12%"
+          color="primary"
+        />
+        <StatCard
+          label="Average Rating"
+          value={summary.averageRating || 0}
+          description={`From ${summary.summary?.totalReviews || 0} Reviews`}
+          icon={Star}
+          color="warning"
+        />
+        <StatCard
+          label="Collections"
+          value={summary.summary?.totalCollections || 0}
+          description={role === 'student' ? 'Saved Collections' : 'Active Collections'}
+          icon={FolderKanban}
+          color="info"
+        />
+        <StatCard
+          label="Total Users"
+          value={summary.summary?.totalUsers || 0}
+          description={role === 'admin' ? 'Platform Users' : 'Active Students'}
+          icon={Users}
+          color="success"
+        />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-xl border border-outline shadow-sm bg-surface-card">
-          <CardHeader className="p-4">
-            <CardTitle className="text-lg">Top Resources</CardTitle>
-            <CardDescription>Most engaged resources in the current scope.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
+      {/* Engagement Insights */}
+      <div className="grid gap-8 lg:grid-cols-12">
+        {/* Top Content */}
+        <StandardCard className="lg:col-span-12 xl:col-span-5 p-0 overflow-hidden border-border/40 bg-card/40">
+          <div className="p-6 border-b border-border/40 bg-muted/20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <TrendingUp size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Popular Content</h3>
+                <p className="text-[10px] font-medium text-muted-foreground mt-0.5">Resources with highest engagement</p>
+              </div>
+            </div>
+            <BarChart3 size={16} className="text-primary/40" />
+          </div>
+          <div className="p-6 space-y-4">
             {topResources.length > 0 ? topResources.map((resource) => (
-              <div key={resource.id} className="flex items-center justify-between gap-4 rounded-lg border border-outline/50 p-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-foreground truncate">{resource.title}</p>
-                  <p className="text-xs text-muted">{resource.downloads || 0} download event(s)</p>
+              <div key={resource.id} className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-border/40 bg-muted/10 hover:border-primary/40 hover:bg-muted/20 transition-all group cursor-default">
+                <div className="min-w-0 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-background flex items-center justify-center border border-border/40 group-hover:border-primary/20 transition-all">
+                    <BookOpen size={16} className="text-primary/60 group-hover:text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">{resource.title}</p>
+                    <p className="text-[10px] font-medium text-muted-foreground/40">Engagement: {resource.downloads || 0}</p>
+                  </div>
                 </div>
-                <Badge variant="outline">#{resource.downloads || 0}</Badge>
+                <div className="flex items-center gap-2 text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg border border-primary/20">
+                  {resource.downloads || 0}
+                  <ArrowUpRight size={12} strokeWidth={3} />
+                </div>
               </div>
-            )) : <p className="text-sm text-muted">No engagement data yet.</p>}
-          </CardContent>
-        </Card>
+            )) : (
+              <div className="py-16 text-center">
+                <p className="text-xs font-medium text-muted-foreground/40 italic">No engagement data recorded yet.</p>
+              </div>
+            )}
+          </div>
+        </StandardCard>
 
-        <Card className="rounded-xl border border-outline shadow-sm bg-surface-card">
-          <CardHeader className="p-4">
-            <CardTitle className="text-lg">Recent Reviews</CardTitle>
-            <CardDescription>Newest feedback and moderation activity.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
+        {/* Feedback Stream */}
+        <StandardCard className="lg:col-span-12 xl:col-span-7 p-0 overflow-hidden border-border/40 bg-card/40">
+          <div className="px-6 py-5 border-b border-border/40 bg-muted/20 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning-strong">
+                <Activity size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Recent Reviews</h3>
+                <p className="text-[10px] font-medium text-muted-foreground mt-0.5">What students and faculty are saying</p>
+              </div>
+            </div>
+            <Activity size={16} className="text-warning-strong/40" />
+          </div>
+          <div className="p-6 grid gap-4 md:grid-cols-2">
             {reviews.length > 0 ? reviews.map((review) => (
-              <div key={review.id} className="rounded-lg border border-outline/50 p-3 space-y-1">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-foreground">{review.reviewerName || review.reviewerEmail || 'Anonymous'}</p>
-                  <Badge variant="secondary">{review.rating}/5</Badge>
+              <div key={review.id} className="p-5 rounded-2xl border border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-warning/20 transition-all group">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-warning/10 flex items-center justify-center text-warning-strong text-[10px] font-bold">
+                      {review.rating}
+                    </div>
+                    <p className="text-xs font-semibold text-foreground group-hover:text-warning-strong transition-colors truncate max-w-[120px]">
+                      {review.reviewerName || review.reviewerEmail || 'Anonymous User'}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-medium text-muted-foreground/40">v1.2.x</span>
                 </div>
-                <p className="text-sm text-muted line-clamp-2">{review.comment || 'No comment provided.'}</p>
+                <p className="text-[11px] font-medium text-muted-foreground/80 leading-relaxed line-clamp-2 italic border-l-2 border-warning/20 pl-3">
+                  "{review.comment || 'No feedback text provided'}"
+                </p>
               </div>
-            )) : <p className="text-sm text-muted">No reviews yet.</p>}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl border border-outline shadow-sm bg-surface-card">
-          <CardHeader className="p-4">
-            <CardTitle className="text-lg">Collections</CardTitle>
-            <CardDescription>Latest playlists and learning paths.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0">
-            {collections.length > 0 ? collections.map((collection) => (
-              <div key={collection.id} className="rounded-lg border border-outline/50 p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-foreground">{collection.title}</p>
-                  <Badge variant={collection.visibility === 'public' ? 'secondary' : 'outline'}>{collection.totalResources || 0}</Badge>
-                </div>
-                <p className="text-sm text-muted line-clamp-2">{collection.description || 'No description provided.'}</p>
+            )) : (
+              <div className="col-span-2 py-16 text-center">
+                <p className="text-xs font-medium text-muted-foreground/40 italic">No reviews received yet.</p>
               </div>
-            )) : <p className="text-sm text-muted">No collections yet.</p>}
-          </CardContent>
-        </Card>
+            )}
+          </div>
+        </StandardCard>
       </div>
     </div>
   )

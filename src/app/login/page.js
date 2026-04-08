@@ -12,6 +12,7 @@ import {
   Shield,
   UserCircle,
   GraduationCap,
+  ArrowRight,
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -22,6 +23,10 @@ import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { getPublicHeaderContent } from '@/lib/public-nav'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/cn'
 
 const footerLinks = [
   { label: 'Privacy Policy', href: '/#features' },
@@ -202,274 +207,251 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <PublicHeader
         links={navLinks}
         actions={navActions}
       />
 
-      <main className="auth-main">
-        <div className="auth-card">
-          <div className="auth-card__stack">
-          <div className="auth-mode-selector">
-            <button
-              type="button"
-              className={`auth-mode-btn ${loginMode === 'staff' ? 'active' : ''}`}
-              onClick={() => {
-                setLoginMode('staff')
-                setTwoFactorChallenge(null)
-                setOtpCode('')
-                setFormError('')
-                setFormSuccess('')
-              }}
-            >
-              <UserCircle size={20} />
-              <span>Faculty & Admin</span>
-            </button>
-            <button
-              type="button"
-              className={`auth-mode-btn ${loginMode === 'student' ? 'active' : ''}`}
-              onClick={() => {
-                setLoginMode('student')
-                setTwoFactorChallenge(null)
-                setOtpCode('')
-                setFormError('')
-                setFormSuccess('')
-              }}
-            >
-              <GraduationCap size={20} />
-              <span>Student Portal</span>
-            </button>
-          </div>
-
-          <div className="auth-header auth-header--centered auth-header--compact">
-            <p className="auth-kicker">Secure Sign In</p>
-            <h1>{loginMode === 'staff' ? 'Institutional workspace access' : 'Student portal access'}</h1>
-            <p>
-              {loginMode === 'staff'
-                ? 'Use your issued credentials to reach faculty and admin tools with session protection and optional 2FA.'
-                : 'Students sign in with Google and land directly in the verified learning workspace.'}
-            </p>
-          </div>
-
-          {unauthorized && (
-            <div className="auth-alert auth-alert--error">
-              <AlertCircle size={18} color="var(--tertiary)" />
-              <span>Your account does not have permission to access that area.</span>
-            </div>
-          )}
-
-          {sessionExpired && (
-            <div className="auth-alert auth-alert--error">
-              <AlertCircle size={18} color="var(--tertiary)" />
-              <span>Session expired. Please login again.</span>
-            </div>
-          )}
-
-          {formError && (
-            <div className="auth-alert auth-alert--error">
-              <AlertCircle size={18} color="var(--tertiary)" />
-              <span>{formError}</span>
-            </div>
-          )}
-
-          {formSuccess && (
-            <div className="auth-alert auth-alert--success">
-              <Shield size={18} color="var(--primary)" />
-              <span>{formSuccess}</span>
-            </div>
-          )}
-
-          {loginMode === 'staff' ? twoFactorChallenge ? (
-            <form className="auth-form" onSubmit={handleVerifyOtp}>
-              <div className="auth-note auth-note--subtle">
-                <Shield size={18} color="var(--secondary)" />
-                <span>
-                  Two-factor verification required ({twoFactorChallenge.method}).
-                </span>
+      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
+        <div className="w-full max-w-xl">
+          <Card className="border-border/40 bg-card shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <div className="p-1">
+              <div className="bg-muted/50 rounded-[2.25rem] p-1 flex">
+                <button
+                  type="button"
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-[2rem] text-sm font-semibold transition-all",
+                    loginMode === 'staff' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => {
+                    setLoginMode('staff')
+                    setTwoFactorChallenge(null)
+                    setOtpCode('')
+                    setFormError('')
+                    setFormSuccess('')
+                  }}
+                >
+                  <UserCircle size={18} />
+                  <span>Faculty & Admin</span>
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-[2rem] text-sm font-semibold transition-all",
+                    loginMode === 'student' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => {
+                    setLoginMode('student')
+                    setTwoFactorChallenge(null)
+                    setOtpCode('')
+                    setFormError('')
+                    setFormSuccess('')
+                  }}
+                >
+                  <GraduationCap size={18} />
+                  <span>Student Portal</span>
+                </button>
               </div>
+            </div>
 
-              <div className="auth-field">
-                <label htmlFor="otp">Verification Code</label>
-                <div className="auth-input">
-                  <span className="auth-input__icon">
-                    <Lock size={18} />
-                  </span>
-                  <input
-                    id="otp"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    placeholder="Enter 6-digit OTP"
-                    value={otpCode}
-                    onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                    required
-                  />
+            <CardHeader className="pt-8 pb-4 text-center px-8">
+              <Badge variant="outline" className="w-fit mx-auto mb-4 bg-primary/5 text-primary border-primary/20">
+                Secure Authentication
+              </Badge>
+              <CardTitle className="text-3xl font-extrabold tracking-tight">
+                {loginMode === 'staff' ? 'Workspace Access' : 'Student Entry'}
+              </CardTitle>
+              <CardDescription className="text-base pt-2">
+                {loginMode === 'staff'
+                  ? 'Access faculty and admin tools with enterprise protection.'
+                  : 'Direct access to the verified student learning ecosystem.'}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="px-8 pb-8 space-y-6">
+              {/* Notifications / Alerts */}
+              {(unauthorized || sessionExpired || formError) && (
+                <div className="p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive flex gap-3 text-sm">
+                  <AlertCircle size={18} className="shrink-0" />
+                  <p className="font-medium">
+                    {unauthorized ? 'Access denied. Account lacks required permissions.' : 
+                     sessionExpired ? 'Session expired. Please sign in again.' : formError}
+                  </p>
                 </div>
-              </div>
+              )}
 
-              <div className="auth-note auth-note--outline">
-                <Clock size={18} color="var(--secondary)" />
-                <span className="auth-note__countdown">
-                  Code expires in {Math.floor(otpTimeLeft / 60)}:{String(otpTimeLeft % 60).padStart(2, '0')}
-                </span>
-              </div>
-
-              {twoFactorChallenge?.otpPreview ? (
-                <div className="auth-alert">
-                  <AlertCircle size={18} color="var(--tertiary)" />
-                  <span className="auth-preview-chip">
-                    Dev OTP preview:
-                    <strong className="auth-preview-code">{twoFactorChallenge.otpPreview}</strong>
-                  </span>
+              {formSuccess && (
+                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex gap-3 text-sm">
+                  <Shield size={18} className="shrink-0" />
+                  <p className="font-medium">{formSuccess}</p>
                 </div>
-              ) : null}
+              )}
 
-              <button
-                type="submit"
-                className="button-primary button-block auth-submit"
-                disabled={isAuthenticating || otpTimeLeft <= 0}
-              >
-                {isAuthenticating ? (
-                  <Loader2 size={18} className="icon-spin" />
-                ) : (
-                  <Shield size={18} />
-                )}
-                {isAuthenticating ? 'Verifying...' : 'Verify & Sign In'}
-              </button>
+              {loginMode === 'staff' ? twoFactorChallenge ? (
+                /* 2FA Form */
+                <form className="space-y-6" onSubmit={handleVerifyOtp}>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-3 rounded-xl border border-border/20">
+                    <Shield size={16} className="text-primary" />
+                    <span>2FA required via {twoFactorChallenge.method}</span>
+                  </div>
 
-              <button
-                type="button"
-                className="button-secondary button-block"
-                onClick={handleResendOtp}
-                disabled={isAuthenticating}
-              >
-                Resend OTP
-              </button>
+                  <div className="space-y-2">
+                    <label htmlFor="otp" className="text-sm font-bold ml-1">Verification Code</label>
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within:text-primary transition-colors" />
+                      <input
+                        id="otp"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="000 000"
+                        className="w-full h-12 pl-12 pr-4 bg-muted/50 border-input border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-lg tracking-[0.2em] font-mono"
+                        value={otpCode}
+                        onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                className="button-secondary button-block"
-                onClick={() => {
-                  setTwoFactorChallenge(null)
-                  setOtpCode('')
-                  setFormError('')
-                  setFormSuccess('')
-                }}
-                disabled={isAuthenticating}
-              >
-                Cancel
-              </button>
-            </form>
-          ) : (
-            <form className="auth-form" onSubmit={handleStaffSubmit}>
-              <div className="auth-field">
-                <label htmlFor="email">Email or Login ID</label>
-                <div className="auth-input">
-                  <span className="auth-input__icon">
-                    <UserCircle size={18} />
-                  </span>
-                  <input
-                    id="email"
-                    type="text"
-                    placeholder="Enter your email or ID"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
+                  <div className="flex items-center justify-between text-xs px-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock size={14} />
+                      <span>Expires in {Math.floor(otpTimeLeft / 60)}:{String(otpTimeLeft % 60).padStart(2, '0')}</span>
+                    </div>
+                    <button type="button" onClick={handleResendOtp} className="text-primary font-bold hover:underline">Resend Code</button>
+                  </div>
 
-              <div className="auth-field">
-                <label htmlFor="password">Password</label>
-                <div className="auth-input">
-                  <span className="auth-input__icon">
-                    <Lock size={18} />
-                  </span>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="auth-input__toggle"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  {twoFactorChallenge?.otpPreview && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 text-amber-600 p-3 rounded-xl text-xs flex items-center justify-between">
+                      <span className="font-medium">Dev Preview:</span>
+                      <code className="bg-white px-2 py-0.5 rounded font-black tracking-widest">{twoFactorChallenge.otpPreview}</code>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-2xl text-base font-bold"
+                    disabled={isAuthenticating || otpTimeLeft <= 0}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                    {isAuthenticating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Shield className="w-5 h-5 mr-2" />}
+                    Verify & Sign In
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full h-12 rounded-2xl text-muted-foreground font-semibold"
+                    onClick={() => {
+                      setTwoFactorChallenge(null)
+                      setOtpCode('')
+                      setFormError('')
+                      setFormSuccess('')
+                    }}
+                    disabled={isAuthenticating}
+                  >
+                    Use different account
+                  </Button>
+                </form>
+              ) : (
+                /* Primary Login Form */
+                <form className="space-y-6" onSubmit={handleStaffSubmit}>
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-bold ml-1">Email or ID</label>
+                    <div className="relative group">
+                      <UserCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within:text-primary transition-colors" />
+                      <input
+                        id="email"
+                        type="text"
+                        placeholder="john@educationam.com"
+                        className="w-full h-12 pl-12 pr-4 bg-muted/50 border-input border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between ml-1">
+                      <label htmlFor="password" title="Password" className="text-sm font-bold">Password</label>
+                    </div>
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5 group-focus-within:text-primary transition-colors" />
+                      <input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        className="w-full h-12 pl-12 pr-12 bg-muted/50 border-input border rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 rounded-2xl text-base font-bold shadow-lg shadow-primary/20"
+                    disabled={isAuthenticating}
+                  >
+                    {isAuthenticating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <LogIn className="w-5 h-5 mr-2" />}
+                    Sign in to Dashboard
+                  </Button>
+                </form>
+              ) : (
+                /* Student Social Login */
+                <div className="space-y-8 py-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/20 space-y-2">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <GraduationCap size={20} />
+                      </div>
+                      <h4 className="font-bold text-sm">Direct Entry</h4>
+                      <p className="text-xs text-muted-foreground leading-tight">Verified students are routed directly to resources.</p>
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-2xl border border-border/20 space-y-2">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                        <Shield size={20} />
+                      </div>
+                      <h4 className="font-bold text-sm">Secure SSO</h4>
+                      <p className="text-xs text-muted-foreground leading-tight">Google authentication keeps your session protected.</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-14 rounded-2xl text-lg font-bold border-input border-2 hover:bg-muted transition-all flex gap-3"
+                    onClick={handleStudentLogin}
+                    disabled={isAuthenticating}
+                  >
+                    {isAuthenticating ? <Loader2 size={24} className="animate-spin" /> : <Chrome size={24} />}
+                    Continue with Google
+                  </Button>
+
+                  <p className="text-center text-xs text-muted-foreground leading-relaxed">
+                    By continuing, you agree to the SPS EDUCATIONAM verified academic workspace guidelines.
+                  </p>
                 </div>
-              </div>
-
-              <button
-                type="submit"
-                className="button-primary button-block auth-submit"
-                disabled={isAuthenticating}
-              >
-                {isAuthenticating ? (
-                  <Loader2 size={18} className="icon-spin" />
-                ) : (
-                  <LogIn size={18} />
-                )}
-                {isAuthenticating ? 'Signing In...' : 'Sign In'}
-              </button>
-            </form>
-          ) : (
-            <div className="auth-student-flow auth-panel">
-              <div className="auth-note auth-note--subtle">
-                <Chrome size={18} color="var(--secondary)" />
-                <span>Single Sign-On is required for all students.</span>
-              </div>
-
-              <div className="auth-highlight-grid">
-                <div className="auth-highlight">
-                  <div className="auth-highlight__icon">
-                    <GraduationCap size={18} />
-                  </div>
-                  <div>
-                    <h4>Verified student entry</h4>
-                    <p>New students are registered on first sign-in and routed into the correct workspace automatically.</p>
-                  </div>
-                </div>
-                <div className="auth-highlight">
-                  <div className="auth-highlight__icon">
-                    <Shield size={18} />
-                  </div>
-                  <div>
-                    <h4>Low-friction secure access</h4>
-                    <p>Google authentication keeps onboarding fast while preserving role-based protection and session controls.</p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="button-primary button-block auth-submit auth-submit--tall"
-                onClick={handleStudentLogin}
-                disabled={isAuthenticating}
-              >
-                {isAuthenticating ? (
-                  <Loader2 size={18} className="icon-spin" />
-                ) : (
-                  <Chrome size={20} />
-                )}
-                {isAuthenticating ? 'Authenticating...' : 'Sign in with Google'}
-              </button>
-
-              <p className="auth-footer-note">
-                New students will be automatically registered on their first login.
-              </p>
-            </div>
-          )}
+              )}
+            </CardContent>
+          </Card>
+          
+          <div className="mt-8 flex justify-center items-center gap-6">
+            <span className="w-8 h-px bg-border/40" />
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Authenticated Education Platform</span>
+            <span className="w-8 h-px bg-border/40" />
           </div>
         </div>
-
-        <div className="auth-footer__trust">Authenticated Ecosystem</div>
       </main>
 
       <PublicFooter

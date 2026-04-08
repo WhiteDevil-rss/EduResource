@@ -4,15 +4,35 @@ import ToastProvider from '@/components/ToastProvider'
 import Script from 'next/script'
 
 export const metadata = {
-  title: 'SPS EDUCATIONAM | Academic Resource Platform',
+  title: {
+    default: 'EDUCATIONAM | Intelligent Academic Resource Platform',
+    template: '%s | EDUCATIONAM',
+  },
   description:
-    'A role-based academic resource platform for admins, faculty, and students.',
+    'A high-performance, role-based academic resource platform. Empowering students and faculty with seamless resource management and secure collaboration.',
+  keywords: ['education', 'academic resources', 'student platform', 'faculty workspace', 'SaaS'],
+  authors: [{ name: 'EDUCATIONAM Team' }],
+  creator: 'EDUCATIONAM',
+  metadataBase: new URL('https://edu-resource.vercel.app'), // Placeholder URL
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://edu-resource.vercel.app',
+    title: 'EDUCATIONAM | Intelligent Academic Resource Platform',
+    description: 'Empowering students and faculty with seamless resource management and secure collaboration.',
+    siteName: 'EDUCATIONAM',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'EDUCATIONAM | Intelligent Academic Resource Platform',
+    description: 'Empowering students and faculty with seamless resource management and secure collaboration.',
+  },
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
       { url: '/favicon.ico' },
     ],
-    apple: '/apple-touch-icon.svg',
+    apple: '/apple-touch-icon.png',
     shortcut: '/favicon.svg',
   },
 }

@@ -1,113 +1,120 @@
 'use client'
 
 import { memo } from 'react'
-import { AlertCircle, Bookmark, CheckCircle2, Download, Eye, LoaderCircle, MessageSquare } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { AlertCircle, Bookmark, CheckCircle2, Download, Eye, LoaderCircle, MessageSquare, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/cn'
+import { ResourceCard } from '@/components/layout/StandardCards'
 
 const statusMap = {
-  uploading: { label: 'Uploading', icon: LoaderCircle, tone: 'student-status--uploading' },
-  completed: { label: 'Completed', icon: CheckCircle2, tone: 'student-status--completed' },
-  failed: { label: 'Failed', icon: AlertCircle, tone: 'student-status--failed' },
+  uploading: {
+    label: 'Processing',
+    icon: LoaderCircle,
+    variant: 'info'
+  },
+  completed: {
+    label: 'Ready',
+    icon: CheckCircle2,
+    variant: 'success'
+  },
+  failed: {
+    label: 'Failed',
+    icon: AlertCircle,
+    variant: 'error'
+  },
 }
 
 export const StudentResourceCard = memo(function StudentResourceCard({
-  entry: legacyEntry,
   resource,
   onPreview,
   onReview,
   onDownload,
-  onToggleBookmark,
   onBookmark,
   bookmarked = false,
-  bookmarkDisabled = false,
   allowDownload = true,
 }) {
-  const entry = legacyEntry || resource
-  if (!entry) {
-    return null
-  }
+  if (!resource) return null
 
-  const status = statusMap[entry.uploadStatus] || statusMap.completed
-  const StatusIcon = status.icon
-  const showProgress = entry.uploadStatus === 'uploading' || entry.uploadStatus === 'failed'
+  const status = statusMap[resource.uploadStatus] || statusMap.completed
+  const showProgress = resource.uploadStatus === 'uploading' || resource.uploadStatus === 'failed'
 
   return (
-    <Card className="flex flex-col gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5">
-      <CardHeader className="space-y-3 p-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge>{entry.subject}</Badge>
-          <Badge variant="outline">{entry.class}</Badge>
-        </div>
-        <span className={cn('inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium', status.tone)}>
-          <StatusIcon size={14} className={entry.uploadStatus === 'uploading' ? 'animate-spin' : ''} />
-          {status.label}
-        </span>
-      </CardHeader>
-
-      <CardContent className="space-y-3 p-0">
-        <CardTitle className="text-lg font-semibold text-foreground">{entry.title}</CardTitle>
-        <p className="text-sm leading-6 text-muted-foreground">{entry.summary}</p>
-        {showProgress ? (
-          <div className="flex items-center gap-3">
-            <Progress value={entry.uploadProgress} aria-label={`${entry.title} upload progress`} />
-            <span className="text-xs font-medium text-muted-foreground">{entry.uploadProgress}%</span>
-          </div>
-        ) : null}
-      </CardContent>
-
-      <CardFooter className="flex flex-col items-start gap-3 border-t border-border p-0 pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-xs text-muted-foreground">{entry.updatedLabel}</span>
-        <div className="flex flex-wrap gap-2">
+    <ResourceCard
+      title={resource.title}
+      subtitle={resource.summary}
+      icon={resource.icon || Clock}
+      status={{
+        label: status.label,
+        variant: status.variant
+      }}
+      metadata={{
+        'Subject': resource.subject,
+        'Class': resource.class,
+        'Updated': resource.updatedLabel || 'Just now',
+        'Faculty': resource.facultyName || 'Staff'
+      }}
+      actions={
+        <div className="flex w-full flex-wrap gap-2 py-1">
           <Button
-            type="button"
-            variant="secondary"
-            className="h-10 rounded-xl"
-            onClick={() => onPreview?.(entry)}
-            aria-label={`Preview ${entry.title}`}
+            size="sm"
+            variant="ghost"
+            className="flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-all"
+            onClick={() => onPreview?.(resource)}
           >
-            <Eye size={14} />
+            <Eye size={16} />
             Preview
           </Button>
+
           <Button
-            type="button"
-            variant="outline"
-            className="h-10 rounded-xl"
-            onClick={() => onReview?.(entry)}
-            aria-label={`Review ${entry.title}`}
+            size="sm"
+            variant="ghost"
+            className="flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-all"
+            onClick={() => onReview?.(resource)}
           >
-            <MessageSquare size={14} />
+            <MessageSquare size={16} />
             Review
           </Button>
+
           <Button
-            type="button"
-            variant={bookmarked ? 'default' : 'outline'}
-            className="h-10 rounded-xl"
-            onClick={() => (onToggleBookmark || onBookmark)?.(entry)}
-            disabled={bookmarkDisabled}
-            aria-label={`${bookmarked ? 'Remove bookmark for' : 'Save'} ${entry.title}`}
+            size="sm"
+            variant={bookmarked ? 'secondary' : 'ghost'}
+            className={cn(
+              "flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold transition-all",
+              bookmarked ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20" : "hover:bg-amber-500/10 hover:text-amber-600"
+            )}
+            onClick={() => onBookmark?.(resource)}
           >
-            <Bookmark size={14} className={bookmarked ? 'fill-current' : ''} />
+            <Bookmark size={16} className={bookmarked ? 'fill-current' : ''} />
             {bookmarked ? 'Saved' : 'Save'}
           </Button>
-          {allowDownload ? (
+
+          {allowDownload && (
             <Button
-              type="button"
-              variant="outline"
-              className="h-10 rounded-xl"
-              onClick={() => onDownload?.(entry)}
-              disabled={entry.uploadStatus === 'uploading'}
-              aria-label={`Download ${entry.title}`}
+              size="sm"
+              variant="ghost"
+              className="flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold hover:bg-emerald-500/10 hover:text-emerald-500 transition-all"
+              onClick={() => onDownload?.(resource)}
+              disabled={resource.uploadStatus === 'uploading'}
             >
-              <Download size={14} />
+              <Download size={15} />
               Download
             </Button>
-          ) : null}
+          )}
+
+          {showProgress && (
+            <div className="w-full mt-3 p-3 rounded-xl bg-muted/30 border border-border/20">
+              <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <span className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/70">
+                  {resource.uploadStatus === 'uploading' ? 'Processing...' : 'Issue Detected'}
+                </span>
+                <span className="text-[10px] font-bold text-foreground">{resource.uploadProgress}%</span>
+              </div>
+              <Progress value={resource.uploadProgress} className="h-1.5" />
+            </div>
+          )}
         </div>
-      </CardFooter>
-    </Card>
+      }
+    />
   )
 })

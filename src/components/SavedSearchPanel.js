@@ -5,7 +5,6 @@ import { Plus, Search, Trash2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 export function SavedSearchPanel() {
   const [savedSearches, setSavedSearches] = useState([])
@@ -71,7 +70,7 @@ export function SavedSearchPanel() {
       setSavedSearches((current) => [payload.savedSearch, ...current])
       setQuery('')
     } catch {
-      // No-op: the dashboard already surfaces failures through the surrounding UI.
+      // No-op
     } finally {
       setSaving(false)
     }
@@ -90,48 +89,73 @@ export function SavedSearchPanel() {
       }
       setSavedSearches((current) => current.filter((entry) => entry.id !== searchId))
     } catch {
-      // Ignore local errors here; the server state remains authoritative.
+      // No-op
     }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardDescription>Searches you want to revisit</CardDescription>
-        <CardTitle className="flex items-center gap-2">
-          <Search size={18} />
-          Saved Searches
+    <Card className="border border-border/40 bg-card rounded-xl shadow-sm">
+      <CardHeader className="p-5 border-b border-border/10">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <Search size={16} className="text-primary" />
+          Saved Queries
         </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground mt-1">Revisit your frequent searches quickly.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="student-support-card" style={{ gap: 12 }}>
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Save a search query" />
-          <Button type="button" onClick={handleSaveSearch} disabled={saving || !query.trim()}>
-            <Plus size={14} />
+      <CardContent className="p-5 space-y-4">
+        <div className="flex gap-2">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="E.g. Quantum Physics..."
+            className="h-9 text-xs rounded-lg border-border/40 bg-muted/20"
+          />
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSaveSearch}
+            disabled={saving || !query.trim()}
+            className="h-9 px-4 rounded-lg text-xs font-semibold"
+          >
+            <Plus size={14} className="mr-1.5" />
             Save
           </Button>
         </div>
 
-        {loading ? (
-          <p>Loading saved searches...</p>
-        ) : savedSearches.length > 0 ? (
-          savedSearches.map((entry) => (
-            <div key={entry.id} className="student-download-item">
-              <div>
-                <strong>{entry.query}</strong>
-                <p>{entry.subject || 'Any subject'} {entry.classFilter ? `• ${entry.classFilter}` : ''}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={entry.alertsEnabled ? 'secondary' : 'outline'}>{entry.alertsEnabled ? 'Alerts on' : 'Alerts off'}</Badge>
-                <Button type="button" variant="outline" onClick={() => handleDeleteSearch(entry.id)} aria-label={`Delete ${entry.query}`}>
-                  <Trash2 size={14} />
-                </Button>
-              </div>
+        <div className="space-y-0 divide-y divide-border/10 overflow-hidden rounded-lg border border-border/10">
+          {loading ? (
+            <div className="p-4 text-center">
+              <p className="text-xs text-muted-foreground animate-pulse">Syncing search history...</p>
             </div>
-          ))
-        ) : (
-          <p>No saved searches yet.</p>
-        )}
+          ) : savedSearches.length > 0 ? (
+            savedSearches.map((entry) => (
+              <div key={entry.id} className="p-3 flex items-center justify-between gap-4 transition-colors hover:bg-muted/5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{entry.query}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {entry.subject || 'All Subjects'} {entry.classFilter ? `• ${entry.classFilter}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteSearch(entry.id)}
+                    aria-label={`Delete ${entry.query}`}
+                    className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-4 text-center">
+              <p className="text-xs text-muted-foreground">Your search library is empty.</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

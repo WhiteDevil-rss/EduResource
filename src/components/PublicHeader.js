@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { Menu, Moon, Globe, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { cn } from '@/lib/cn'
+import { Button } from '@/components/ui/button'
 
 export default function PublicHeader({
   brand = 'SPS EDUCATIONAM',
@@ -11,8 +13,17 @@ export default function PublicHeader({
   showUtilityIcons = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   const closeMenu = () => setMenuOpen(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     const handleEscape = (event) => {
@@ -39,20 +50,24 @@ export default function PublicHeader({
   }, [menuOpen])
 
   return (
-    <nav
-      className={menuOpen ? 'public-nav public-nav--menu-open' : 'public-nav'}
-      aria-label="Primary navigation"
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full transition-all duration-300 border-b",
+        scrolled ? "bg-background/80 backdrop-blur-md border-border/40 py-3" : "bg-transparent border-transparent py-5"
+      )}
     >
-      <div className="public-nav__inner">
-        <Link href="/" className="public-nav__brand" onClick={closeMenu}>
+      <nav className="max-w-[1400px] mx-auto px-4 flex items-center justify-between" aria-label="Primary navigation">
+        <Link href="/" className="text-xl font-black tracking-tighter text-primary" onClick={closeMenu}>
           {brand}
         </Link>
 
-        <div className="public-nav__links">
+        {/* Desktop Links */}
+        <div className="hidden md:flex items-center gap-8">
           {links.map((link) => (
             <Link
               key={`${link.href}-${link.label}`}
               href={link.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
               aria-current={link.current ? 'page' : undefined}
             >
               {link.label}
@@ -60,84 +75,85 @@ export default function PublicHeader({
           ))}
         </div>
 
-        <div className="public-nav__actions">
-          {showUtilityIcons ? (
-            <>
-              <span className="public-nav__icon" aria-hidden="true">
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-4">
+          {showUtilityIcons && (
+            <div className="flex items-center gap-2 mr-4 border-r border-border/40 pr-4">
+              <Button variant="ghost" size="icon" className="w-9 h-9 text-muted-foreground">
                 <Moon size={18} />
-              </span>
-              <span className="public-nav__icon" aria-hidden="true">
+              </Button>
+              <Button variant="ghost" size="icon" className="w-9 h-9 text-muted-foreground">
                 <Globe size={18} />
-              </span>
-            </>
-          ) : null}
+              </Button>
+            </div>
+          )}
 
           {actions.map((action) => (
-            <Link
+            <Button
               key={`${action.href}-${action.label}`}
-              href={action.href}
-              aria-current={action.current ? 'page' : undefined}
-              className={action.variant === 'primary' ? 'button-primary' : 'button-ghost'}
+              asChild
+              variant={action.variant === 'primary' ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                "font-semibold",
+                action.variant === 'primary' ? "rounded-full px-6" : "text-muted-foreground"
+              )}
             >
-              {action.label}
-            </Link>
+              <Link href={action.href} aria-current={action.current ? 'page' : undefined}>
+                {action.label}
+              </Link>
+            </Button>
           ))}
         </div>
 
-        <button
-          type="button"
-          className="public-nav__menu-button"
+        {/* Mobile Toggle */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           onClick={() => setMenuOpen((open) => !open)}
         >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
+          {menuOpen ? <X size={24} /> : <Menu size={24} />}
+        </Button>
+      </nav>
 
-      {menuOpen ? (
-        <div className="public-nav__mobile-panel" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
-          <div className="public-nav__mobile-links">
-            {links.map((link) => (
-              <Link
-                key={`mobile-${link.href}-${link.label}`}
-                href={link.href}
-                aria-current={link.current ? 'page' : undefined}
-                onClick={closeMenu}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {showUtilityIcons ? (
-            <div className="public-nav__mobile-meta">
-              <span className="public-nav__icon" aria-hidden="true">
-                <Moon size={18} />
-              </span>
-              <span className="public-nav__icon" aria-hidden="true">
-                <Globe size={18} />
-              </span>
-            </div>
-          ) : null}
-
-          {actions.length > 0 ? (
-            <div className="public-nav__mobile-actions">
-              {actions.map((action) => (
-                <Link
-                  key={`mobile-action-${action.href}-${action.label}`}
-                  href={action.href}
-                  aria-current={action.current ? 'page' : undefined}
-                  className={action.variant === 'primary' ? 'button-primary button-block' : 'button-secondary button-block'}
-                  onClick={closeMenu}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
+      {/* Mobile Menu */}
+      <div className={cn(
+        "fixed inset-0 top-[60px] z-40 bg-background md:hidden transition-all duration-300 ease-in-out px-4 py-8 flex flex-col gap-8",
+        menuOpen ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full pointer-events-none"
+      )}>
+        <div className="flex flex-col gap-6">
+          {links.map((link) => (
+            <Link
+              key={`mobile-${link.href}-${link.label}`}
+              href={link.href}
+              className="text-2xl font-bold tracking-tight hover:text-primary transition-colors"
+              onClick={closeMenu}
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
-      ) : null}
-    </nav>
+
+        <div className="mt-auto space-y-4 pt-8 border-t border-border/40">
+          {actions.map((action) => (
+            <Button
+              key={`mobile-action-${action.href}-${action.label}`}
+              asChild
+              variant={action.variant === 'primary' ? 'default' : 'secondary'}
+              size="lg"
+              className="w-full text-lg h-14 rounded-2xl"
+              onClick={closeMenu}
+            >
+              <Link href={action.href}>
+                {action.label}
+              </Link>
+            </Button>
+          ))}
+        </div>
+      </div>
+    </header>
   )
 }

@@ -56,17 +56,17 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3 text-sm text-muted">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-strong">Author</p>
-            <p className="text-foreground font-medium">{resource?.facultyName || resource?.facultyEmail || 'Faculty member'}</p>
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">Author</p>
+            <p className="text-sm font-medium text-foreground">{resource?.facultyName || resource?.facultyEmail || 'Faculty member'}</p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-strong">Updated</p>
-            <p className="text-foreground font-medium">{formatDisplayDate(resource?.updatedAt || resource?.createdAt, 'N/A')}</p>
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">Updated</p>
+            <p className="text-sm font-medium text-foreground">{formatDisplayDate(resource?.updatedAt || resource?.createdAt, 'N/A')}</p>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-strong">File type</p>
-            <p className="text-foreground font-medium">{resource?.fileFormat || resource?.fileType || 'Unknown'}</p>
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">File type</p>
+            <p className="text-sm font-medium text-foreground uppercase">{resource?.fileFormat || resource?.fileType || 'Unknown'}</p>
           </div>
         </div>
 
@@ -107,8 +107,8 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
             </Button>
           ) : null}
           {role !== 'student' ? (
-            <Button type="button" variant="secondary" onClick={() => openResource(resource?.fileUrl || previewUrl)}>
-              <ExternalLink size={14} />
+            <Button type="button" variant="secondary" className="h-9 rounded-lg px-4 text-xs font-semibold" onClick={() => openResource(resource?.fileUrl || previewUrl)}>
+              <ExternalLink size={14} className="mr-2" />
               Open Source
             </Button>
           ) : null}

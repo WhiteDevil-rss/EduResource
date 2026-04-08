@@ -1,13 +1,12 @@
 'use client'
 
-import { X, Trash2, CheckCircle2 } from 'lucide-react'
+import { X, Trash2, CheckCircle2, Bell, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 
 /**
- * ResponsiveNotificationPanel - Fixed header with scrollable content
- * Mobile: Full-screen modal overlay
- * Desktop: Can be used as slide-out panel
+ * ResponsiveNotificationPanel - The architected communication hub
+ * Features: Fixed header/footer, independent scrollable content, responsive slide-over.
  */
 export function ResponsiveNotificationPanel({
   isOpen,
@@ -21,105 +20,107 @@ export function ResponsiveNotificationPanel({
   title = 'Notifications',
   className = '',
 }) {
-  if (!isOpen) return null
-
   return (
     <>
-      <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-[2px] md:hidden"
-        onClick={onClose}
-        role="presentation"
-      />
-
+      {/* Overlay Backdrop */}
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden border-l border-border bg-background shadow-2xl md:w-[26rem]',
-          'md:rounded-l-2xl',
+          'fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] transition-all duration-300',
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Main Slide-over Panel */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 right-0 z-[110] flex w-full flex-col bg-background/95 shadow-2xl transition-transform duration-500 ease-out backdrop-blur-xl md:w-[28rem]',
+          isOpen ? 'translate-x-0' : 'translate-x-full',
+          'border-l border-border/40',
           className
         )}
       >
-        <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-4 backdrop-blur-xl md:px-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-lg font-semibold text-foreground">{title}</p>
-              {notificationCount > 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {notificationCount} notification{notificationCount !== 1 ? 's' : ''} ({unreadCount} unread)
-                </p>
-              ) : null}
+        {/* Fixed Header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-border/40 px-6 py-6 md:h-20">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-black tracking-tighter text-foreground uppercase">{title}</h2>
+              {unreadCount > 0 && (
+                <span className="flex h-5 w-10 items-center justify-center rounded-lg bg-primary/10 text-[10px] font-black text-primary ring-1 ring-primary/20 animate-pulse">
+                  {unreadCount} NEW
+                </span>
+              )}
             </div>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              aria-label="Close notifications"
-              className="h-10 w-10 rounded-xl"
-            >
-              <X size={18} />
-            </Button>
+            <p className="mt-1 text-xs font-medium text-muted-foreground">
+              {notificationCount > 0 
+                ? `${notificationCount} activities recorded in your feed`
+                : 'Your activity stream is currently empty'}
+            </p>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div
-            className={cn(
-              'min-h-full',
-              !isLoading && notificationCount === 0 && 'flex items-center justify-center'
-            )}
+          <button
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/40 text-muted-foreground hover:bg-muted/60 transition-colors"
+            aria-label="Close notification panel"
           >
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center px-4 py-10">
-                <div className="text-center">
-                  <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary" />
-                  <p className="text-sm text-muted-foreground">Loading...</p>
-                </div>
-              </div>
-            ) : notificationCount === 0 ? (
-              <div className="px-4 py-12 text-center">
-                <p className="text-sm text-muted-foreground">No notifications</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {children}
-              </div>
-            )}
-          </div>
+            <X size={20} />
+          </button>
         </div>
 
+        {/* Scrollable Content Section */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide py-2">
+          {isLoading ? (
+            <div className="flex h-full flex-col items-center justify-center p-8">
+              <div className="relative mb-4 flex h-16 w-16 items-center justify-center">
+                <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
+              </div>
+              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground animate-pulse">Syncing Feed...</p>
+            </div>
+          ) : notificationCount === 0 ? (
+            <EmptyNotifications />
+          ) : (
+            <div className="divide-y divide-border/30">
+              {children}
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Footer with Actions */}
         {notificationCount > 0 && (
-          <div className="flex gap-2 border-t border-border bg-background p-3 md:p-4">
+          <div className="flex shrink-0 gap-3 border-t border-border/40 bg-muted/5 p-6">
             <Button
               variant="outline"
               size="sm"
               onClick={onMarkAllRead}
-              className="h-11 flex-1 rounded-xl text-xs md:text-sm"
+              className="h-12 flex-1 gap-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-primary hover:text-white"
               disabled={isLoading}
             >
               <CheckCircle2 size={16} />
-              Mark all read
+              Read All
             </Button>
-            {onClearAll ? (
+            {onClearAll && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onClearAll}
-                className="h-11 flex-1 rounded-xl text-xs md:text-sm"
+                className="h-12 flex-1 gap-2 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-red-500 hover:text-white"
                 disabled={isLoading}
               >
                 <Trash2 size={16} />
                 Clear
               </Button>
-            ) : null}
+            )}
           </div>
         )}
-      </div>
+      </aside>
     </>
   )
 }
 
 /**
- * NotificationItem - Individual notification in the panel
+ * NotificationItem - Architected item for the feed
  */
 export function NotificationItem({
   title,
@@ -127,72 +128,87 @@ export function NotificationItem({
   timestamp,
   isUnread = false,
   action,
+  icon: Icon = Bell,
   onDismiss,
 }) {
   return (
     <div
       className={cn(
-        'p-4 transition-colors hover:bg-muted/60 md:p-5',
+        'group relative p-5 transition-all duration-300 hover:bg-muted/40',
         isUnread && 'bg-primary/5'
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      {isUnread && (
+        <div className="absolute left-0 top-0 h-full w-[3px] bg-primary rounded-r-full" />
+      )}
+
+      <div className="flex items-start gap-4">
+        <div className={cn(
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-all group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary',
+          isUnread && 'bg-primary/20 text-primary'
+        )}>
+          <Icon size={20} />
+        </div>
+
         <div className="flex-1 min-w-0">
-          <div className="mb-1 flex items-center gap-2">
-            <p className="truncate text-sm font-medium text-foreground">{title}</p>
-            {isUnread && (
-              <span className="h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
+          <div className="flex items-center justify-between gap-2">
+            <h4 className={cn('truncate text-[13px] font-bold tracking-tight', isUnread ? 'text-foreground' : 'text-muted-foreground')}>
+              {title}
+            </h4>
+            {timestamp && (
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/60 transition-opacity group-hover:opacity-100">
+                {timestamp}
+              </span>
             )}
           </div>
 
-          {description && (
-            <p className="line-clamp-2 text-sm text-muted-foreground">{description}</p>
-          )}
+          <p className="mt-1 line-clamp-2 text-[13px] font-medium leading-relaxed text-muted-foreground/80">
+            {description}
+          </p>
 
-          {timestamp && (
-            <p className="mt-1 text-xs text-muted-foreground">{timestamp}</p>
-          )}
+          <div className="mt-3 flex items-center justify-between gap-2">
+            {action ? (
+              <button
+                onClick={action.onClick}
+                className="text-xs font-black uppercase tracking-wider text-primary hover:underline"
+              >
+                {action.label}
+              </button>
+            ) : <div />}
 
-          {action && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-3 h-9 rounded-xl text-xs"
-              onClick={action.onClick}
-            >
-              {action.label}
-            </Button>
-          )}
+            {onDismiss && (
+              <button
+                onClick={onDismiss}
+                className="opacity-0 group-hover:opacity-100 transition-opacity flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+                aria-label="Dismiss notification"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
-
-        {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="flex-shrink-0 rounded-lg p-1.5 transition-colors hover:bg-muted/60"
-            aria-label="Dismiss notification"
-          >
-            <X size={16} className="text-muted-foreground" />
-          </button>
-        )}
       </div>
     </div>
   )
 }
 
 /**
- * EmptyNotifications - Placeholder when no notifications
+ * EmptyNotifications - Refined empty state
  */
 export function EmptyNotifications({
-  title = 'All caught up!',
-  description = 'You have no new notifications',
+  title = 'Your Feed is Clear',
+  description = 'You have no new notifications to review right now.',
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4">
-      <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-        <CheckCircle2 size={24} className="text-muted-foreground" />
+    <div className="flex h-[60vh] flex-col items-center justify-center px-10 text-center">
+      <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
+        <div className="absolute inset-0 animate-pulse rounded-full bg-primary/5" />
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-muted/30 text-muted-foreground/20">
+          <Sparkles size={40} />
+        </div>
       </div>
-      <p className="text-sm font-medium text-foreground mb-1">{title}</p>
-      <p className="text-xs text-muted-foreground text-center">{description}</p>
+      <h3 className="text-base font-black uppercase tracking-widest text-foreground">{title}</h3>
+      <p className="mt-3 text-sm font-medium text-muted-foreground/70">{description}</p>
     </div>
   )
 }
