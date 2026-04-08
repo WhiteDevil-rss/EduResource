@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 import {
   PageContainer,
   ContentSection,
@@ -50,6 +53,8 @@ function parseForm(formState) {
 }
 
 export default function AdminSecuritySettingsPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -57,6 +62,18 @@ export default function AdminSecuritySettingsPage() {
   const [formState, setFormState] = useState(buildForm(SESSION_SETTINGS_DEFAULTS))
 
   useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
+  useEffect(() => {
+    if (authLoading || !user || role !== 'admin' || !isSuperAdmin(user)) return
     let mounted = true
     const load = async () => {
       try {
@@ -75,7 +92,7 @@ export default function AdminSecuritySettingsPage() {
     }
     load()
     return () => { mounted = false }
-  }, [])
+  }, [authLoading, user, role])
 
   const parsed = useMemo(() => parseForm(formState), [formState])
 

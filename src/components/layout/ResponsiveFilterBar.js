@@ -10,7 +10,7 @@ import { cn } from '@/lib/cn'
  * Features: Adaptive layout (stacked on mobile, inline on desktop), consistent touch targets.
  */
 export function ResponsiveFilterBar({
-  filters,
+  filters = [],
   onFilterChange,
   onReset,
   className = '',
@@ -170,7 +170,7 @@ export function FilterChip({
  * ActiveFiltersDisplay - Container for all active chips
  */
 export function ActiveFiltersDisplay({
-  filters,
+  filters = [],
   onRemoveFilter,
   className = '',
 }) {

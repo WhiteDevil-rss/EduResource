@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   PageContainer,
   ContentSection,
@@ -8,13 +9,29 @@ import {
 import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { BarChart3, RefreshCcw, Activity } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 
 export default function AdminAnalyticsPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
+  useEffect(() => {
+    if (authLoading || !user || role !== 'admin' || !isSuperAdmin(user)) return
     let isActive = true
     const load = async () => {
       setLoading(true)
@@ -35,7 +52,7 @@ export default function AdminAnalyticsPage() {
     }
     load()
     return () => { isActive = false }
-  }, [])
+  }, [authLoading, user, role])
 
   return (
     <div className="space-y-6">

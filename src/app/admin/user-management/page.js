@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Download, Inbox, ShieldCheck, Users, RefreshCw, Key, UserPlus, UserCheck, Settings2, Copy, History, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,7 @@ import {
 import { StandardCard, UserCard, StatCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { useAuth } from '@/hooks/useAuth'
-import { getUserManagementActionPolicy } from '@/lib/admin-protection'
+import { isSuperAdmin, getUserManagementActionPolicy } from '@/lib/admin-protection'
 import { formatDisplayDate } from '@/lib/demo-content'
 import { cn } from '@/lib/cn'
 
@@ -27,7 +28,8 @@ const EMPTY_CREATE_FORM = {
 }
 
 export default function UserManagementPage() {
-  const { user } = useAuth()
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [users, setUsers] = useState([])
@@ -40,7 +42,19 @@ export default function UserManagementPage() {
   const [statusTarget, setStatusTarget] = useState(null)
   const [resetModal, setResetModal] = useState(null)
 
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
   const loadUsers = useCallback(async ({ silent = false } = {}) => {
+    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
     if (!silent) setLoading(true)
     try {
       const response = await fetch('/api/admin/users?page=1&limit=500', { cache: 'no-store' })
@@ -53,11 +67,12 @@ export default function UserManagementPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [])
+  }, [user, role])
 
   useEffect(() => {
+    if (authLoading) return
     loadUsers()
-  }, [loadUsers])
+  }, [authLoading, loadUsers])
 
   const filteredUsers = useMemo(() => {
     const term = search.trim().toLowerCase()

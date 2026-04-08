@@ -34,6 +34,10 @@ describe('api/auth/change-password route', () => {
     const mod = await import('@/app/api/auth/change-password/route')
     const authApi = await import('@/lib/firebase-rest-auth')
 
+    // Suppress console output for expected error
+    const originalError = console.error
+    console.error = vi.fn()
+
     const request = new Request('http://localhost/api/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -42,6 +46,9 @@ describe('api/auth/change-password route', () => {
 
     const response = await mod.POST(request)
     const payload = await response.json()
+
+    // Restore console
+    console.error = originalError
 
     expect(response.status).toBe(400)
     expect(payload.error).toContain('Password must include uppercase, lowercase, number, and special character')

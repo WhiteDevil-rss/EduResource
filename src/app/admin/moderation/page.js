@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   PageContainer,
   ContentSection,
@@ -18,9 +19,13 @@ import {
 } from '@/components/ui/dialog'
 import { CheckCircle2, XCircle, Eye, ShieldCheck, MessageSquare, Flag, Send, Trash, Clock, ShieldAlert } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 import { cn } from '@/lib/cn'
 
 export default function AdminModerationPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedReview, setSelectedReview] = useState(null)
@@ -28,7 +33,19 @@ export default function AdminModerationPage() {
   const [actionType, setActionType] = useState('publish')
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
   const loadData = useCallback(async (signal) => {
+    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
     try {
       setLoading(true)
       const response = await fetch('/api/admin/moderation', { cache: 'no-store', signal })
@@ -41,13 +58,14 @@ export default function AdminModerationPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, role])
 
   useEffect(() => {
+    if (authLoading) return
     const controller = new globalThis.AbortController()
     loadData(controller.signal)
     return () => controller.abort()
-  }, [loadData])
+  }, [authLoading, loadData])
 
   const handleModerateReview = async () => {
     if (!actionTarget?.id || saving) return

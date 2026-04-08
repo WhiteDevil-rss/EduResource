@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   PageContainer,
   ContentSection,
@@ -10,8 +11,12 @@ import {
 import { ResourceCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { BookOpen, Database } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 
 export default function AdminResourcesPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [resources, setResources] = useState([])
   const [search, setSearch] = useState('')
@@ -19,6 +24,18 @@ export default function AdminResourcesPage() {
   const [subjectFilter, setSubjectFilter] = useState('all')
 
   useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
+  useEffect(() => {
+    if (authLoading || !user || role !== 'admin' || !isSuperAdmin(user)) return
     let mounted = true
     const load = async () => {
       try {
@@ -36,7 +53,7 @@ export default function AdminResourcesPage() {
     }
     load()
     return () => { mounted = false }
-  }, [])
+  }, [authLoading, user, role])
 
   const classOptions = useMemo(() => [
     { label: 'All Classes', value: 'all' },

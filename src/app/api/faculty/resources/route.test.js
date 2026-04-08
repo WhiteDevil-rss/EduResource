@@ -40,6 +40,10 @@ describe('api/faculty/resources POST route', () => {
     const drive = await import('@/lib/google-drive')
     const serverData = await import('@/lib/server-data')
 
+    // Suppress console output for expected error
+    const originalError = console.error
+    console.error = vi.fn()
+
     const formDataEntries = {
       title: 'My Resource',
       subject: 'Math',
@@ -59,6 +63,9 @@ describe('api/faculty/resources POST route', () => {
     const response = await mod.POST(request)
     const payload = await response.json()
 
+    // Restore console
+    console.error = originalError
+
     expect(response.status).toBe(400)
     expect(payload.error).toContain('Unsupported file type')
     expect(drive.uploadToDrive).not.toHaveBeenCalled()
@@ -69,6 +76,10 @@ describe('api/faculty/resources POST route', () => {
     const mod = await import('@/app/api/faculty/resources/route')
     const drive = await import('@/lib/google-drive')
     const serverData = await import('@/lib/server-data')
+
+    // Suppress console output for expected error
+    const originalError = console.error
+    console.error = vi.fn()
 
     const formDataEntries = {
       title: 'My Resource',
@@ -88,6 +99,9 @@ describe('api/faculty/resources POST route', () => {
 
     const response = await mod.POST(request)
     const payload = await response.json()
+
+    // Restore console
+    console.error = originalError
 
     expect(response.status).toBe(400)
     expect(payload.error).toContain('Invalid file name')

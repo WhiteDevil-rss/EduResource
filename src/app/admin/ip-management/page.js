@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   PageContainer,
   ContentSection,
@@ -8,13 +9,29 @@ import {
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { SecurityBlockManagement } from '@/components/SecurityBlockManagement'
 import { Terminal, RefreshCcw, Shield } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 
 export default function AdminIpManagementPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const loadPageData = async () => {
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
+  const loadPageData = useCallback(async () => {
+    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
     setLoading(true)
     setError('')
     try {
@@ -27,11 +44,12 @@ export default function AdminIpManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, role])
 
   useEffect(() => {
+    if (authLoading) return
     loadPageData()
-  }, [])
+  }, [authLoading, user, role, loadPageData])
 
   return (
     <div className="space-y-8">

@@ -1,8 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/cn'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 import {
   PageContainer,
   ContentSection,
@@ -21,13 +24,27 @@ function requestStatusConfig(status) {
 }
 
 export default function ResourceRequestsPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [processingId, setProcessingId] = useState(null)
 
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
   const load = useCallback(async () => {
+    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
     try {
       setLoading(true)
       const response = await fetch('/api/admin/resource-requests', { cache: 'no-store' })
@@ -40,9 +57,12 @@ export default function ResourceRequestsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, role])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (authLoading) return
+    load()
+  }, [authLoading, load])
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()

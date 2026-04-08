@@ -1,6 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { isSuperAdmin } from '@/lib/admin-protection'
 import {
   PageContainer,
   ContentSection,
@@ -15,13 +18,27 @@ import { AlertCircle, Terminal, Search, Calendar, ShieldCheck, FilterX } from 'l
 const INITIAL_FILTERS = { search: '', action: '', status: '', fromDate: '', toDate: '' }
 
 export default function AdminAuditLogsPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [logs, setLogs] = useState([])
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 })
   const [filters, setFilters] = useState(INITIAL_FILTERS)
 
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (role !== 'admin' || !isSuperAdmin(user)) {
+      router.replace('/dashboard/admin')
+    }
+  }, [authLoading, user, role, router])
+
   const load = useCallback(async (page = 1, nextFilters = INITIAL_FILTERS) => {
+    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
     try {
       setLoading(true)
       setError('')
@@ -47,11 +64,12 @@ export default function AdminAuditLogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, role])
 
   useEffect(() => {
+    if (authLoading) return
     load(1, INITIAL_FILTERS)
-  }, [load])
+  }, [authLoading, load])
 
   const handleApplyFilters = () => load(1, filters)
   const handleResetFilters = () => {
