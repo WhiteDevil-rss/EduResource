@@ -30,44 +30,52 @@ export function AdminPageWrapper({ title, description, filters, children, action
   const breadcrumbs = buildBreadcrumbs(pathname)
 
   return (
-    <section className="admin-v2-page">
+    <section className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6">
       {breadcrumbs.length > 0 ? (
-        <nav className="admin-v2-breadcrumbs" aria-label="Breadcrumb">
+        <nav className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" aria-label="Breadcrumb">
           {breadcrumbs.map((crumb, index) => (
-            <span key={crumb.href} className="admin-v2-breadcrumbs__item">
-              {index < breadcrumbs.length - 1 ? <Link href={crumb.href}>{crumb.label}</Link> : <span aria-current="page">{crumb.label}</span>}
-              {index < breadcrumbs.length - 1 ? <span className="admin-v2-breadcrumbs__sep">/</span> : null}
+            <span key={crumb.href} className="flex items-center gap-2">
+              {index < breadcrumbs.length - 1 ? (
+                <Link className="transition-colors hover:text-foreground" href={crumb.href}>
+                  {crumb.label}
+                </Link>
+              ) : (
+                <span aria-current="page" className="font-medium text-foreground">
+                  {crumb.label}
+                </span>
+              )}
+              {index < breadcrumbs.length - 1 ? <span className="text-muted-foreground">/</span> : null}
             </span>
           ))}
         </nav>
       ) : null}
 
-      <header className="admin-v2-page__header glass-panel">
-        <div>
-          <h1>{title}</h1>
-          {description ? <p>{description}</p> : null}
+      <header className="flex flex-col gap-4 rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-foreground md:text-xl">{title}</h1>
+          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
         </div>
-        {actions ? <div className="admin-v2-page__actions">{actions}</div> : null}
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </header>
 
-      {filters ? <div className="admin-v2-page__filters glass-panel">{filters}</div> : null}
+      {filters ? <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5">{filters}</div> : null}
 
-      <div className="admin-v2-page__scroll custom-scrollbar">{children}</div>
+      <div className="min-h-0 w-full">{children}</div>
     </section>
   )
 }
 
 export function SectionCard({ title, description, children, actions }) {
   return (
-    <Card className="admin-v2-card">
+    <Card className="rounded-xl border border-border/70 bg-card shadow-sm">
       {(title || description || actions) ? (
-        <CardHeader>
-          {title ? <CardTitle>{title}</CardTitle> : null}
+        <CardHeader className="space-y-2 p-4 pb-0 md:p-5 md:pb-0">
+          {title ? <CardTitle className="text-lg">{title}</CardTitle> : null}
           {description ? <CardDescription>{description}</CardDescription> : null}
-          {actions ? <div className="admin-v2-card__actions">{actions}</div> : null}
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </CardHeader>
       ) : null}
-      <CardContent>{children}</CardContent>
+      <CardContent className="p-4 md:p-5">{children}</CardContent>
     </Card>
   )
 }

@@ -16,6 +16,7 @@ import {
 } from '@/lib/auth-security'
 import { logSuspiciousActivity } from '@/lib/suspicious-activity'
 import { isSuperAdminEmail } from '@/lib/admin-protection'
+import { sanitizePlainText } from '@/lib/request-validation'
 import {
   createAuditRecord,
   createSessionRecord,
@@ -83,8 +84,11 @@ export async function POST(request) {
     await assertRequestNotBlocked(request)
     timer.markPhase('request-validation')
 
-    const body = await request.json()
-    const loginIdentifier = String(body?.email || '').trim().toLowerCase()
+    const body = await request.json().catch(() => ({}))
+    const loginIdentifier = sanitizePlainText(body?.email, {
+      maxLength: 254,
+      collapseWhitespace: true,
+    }).toLowerCase()
     const password = String(body?.password || '')
     const isEmailIdentifier = loginIdentifier.includes('@')
 
@@ -100,6 +104,24 @@ export async function POST(request) {
       return withNoStore(
         NextResponse.json(
           { error: 'Email/login ID and password are required.' },
+          { status: 400 }
+        )
+      )
+    }
+
+    if (loginIdentifier.length > 254) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'Email/login ID is too long.' },
+          { status: 400 }
+        )
+      )
+    }
+
+    if (password.length < 1 || password.length > 256) {
+      return withNoStore(
+        NextResponse.json(
+          { error: 'Password is invalid.' },
           { status: 400 }
         )
       )

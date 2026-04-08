@@ -62,4 +62,22 @@ describe('api/admin/users/[userId] route', () => {
     expect(response.status).toBe(200)
     expect(payload.success).toBe(true)
   })
+
+  it('rejects weak password when resetting credentials', async () => {
+    const mod = await import('@/app/api/admin/users/[userId]/route')
+    const serverData = await import('@/lib/server-data')
+
+    const request = new Request('http://localhost/api/admin/users/u-3', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'resetCredentials', password: 'weak' }),
+    })
+
+    const response = await mod.PATCH(request, { params: { userId: 'u-3' } })
+    const payload = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(payload.error).toContain('Password')
+    expect(serverData.resetManagedCredentials).not.toHaveBeenCalled()
+  })
 })

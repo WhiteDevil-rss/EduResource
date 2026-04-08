@@ -16,6 +16,7 @@ vi.mock('@/lib/request-validation', () => ({
   validateRole: vi.fn((value) => value),
   validateDisplayName: vi.fn((value) => value || ''),
   validatePagination: vi.fn(() => ({ page: 1, limit: 10 })),
+  sanitizePlainText: vi.fn((value) => String(value || '').trim()),
 }))
 
 vi.mock('@/lib/audit-log', () => ({

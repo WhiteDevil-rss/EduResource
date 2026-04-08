@@ -6,15 +6,16 @@ import { Download, Inbox, KeyRound, MoreVertical, Plus, UserCheck, UserX, Trash2
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { AdminPageWrapper } from '@/components/admin/AdminPageWrapper'
+import { AdminPageWrapper, SectionCard } from '@/components/admin/AdminPageWrapper'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserManagementActionPolicy } from '@/lib/admin-protection'
 import { formatDisplayDate } from '@/lib/demo-content'
+import { EmptyState, FilterBar, FilterLabel } from '@/components/ui/layout'
 
 const EMPTY_CREATE_FORM = {
   role: 'faculty',
@@ -239,26 +240,25 @@ export default function UserManagementPage() {
   }
 
   const filters = (
-    <>
-      <label className="student-filter-control student-filter-control--search">
-        <span>Search</span>
+    <FilterBar>
+      <FilterLabel label="Search">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search users by email, name, role"
           aria-label="Search users"
+          className="w-full sm:w-80"
         />
-      </label>
-      <label className="student-filter-control">
-        <span>Role</span>
-        <select className="ui-input" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+      </FilterLabel>
+      <FilterLabel label="Role">
+        <select className="ui-input w-full sm:w-44" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
           <option value="all">All Roles</option>
           <option value="student">Student</option>
           <option value="faculty">Faculty</option>
           <option value="admin">Admin</option>
         </select>
-      </label>
-      <div className="student-filter-actions">
+      </FilterLabel>
+      <div className="flex flex-wrap gap-2 sm:ml-auto">
         <Button type="button" variant="outline" onClick={exportUsersCsv} disabled={processing}>
           <Download size={14} />
           Export CSV
@@ -268,8 +268,8 @@ export default function UserManagementPage() {
           Create Account
         </Button>
       </div>
-      <Badge variant="outline" className="student-filter-count">{filteredUsersCount} result(s)</Badge>
-    </>
+      <Badge variant="outline" className="ml-auto">{filteredUsersCount} result(s)</Badge>
+    </FilterBar>
   )
 
   return (
@@ -281,35 +281,35 @@ export default function UserManagementPage() {
       >
       <SkeletonWrapper name="admin-user-management-list" loading={loading}>
         {filteredUsers.length === 0 ? (
-          <Card className="student-empty-state">
-            <CardContent>
-              <Inbox size={30} />
-              <h3>No users found</h3>
-              <p>Try a different search term or role filter.</p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Inbox}
+            title="No users found"
+            description="Try a different search term or role filter."
+          />
         ) : (
-          <div className="student-resource-grid">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredUsers.map((entry) => {
               const actionPolicy = getUserManagementActionPolicy(user, entry)
 
               return (
-                <Card key={entry.id} className="student-resource-card">
-                  <CardHeader className="student-resource-card__header">
-                    <div className="student-resource-card__meta">
-                      <Badge>{entry.role}</Badge>
-                      <Badge variant={entry.status === 'disabled' ? 'outline' : 'secondary'}>
-                        {entry.status || 'active'}
-                      </Badge>
+                <SectionCard key={entry.id}>
+                  <CardHeader className="p-4 pb-0 md:p-5 md:pb-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge>{entry.role}</Badge>
+                        <Badge variant={entry.status === 'disabled' ? 'outline' : 'secondary'}>
+                          {entry.status || 'active'}
+                        </Badge>
+                      </div>
+                      <Badge variant="outline">{entry.authProvider || 'credentials'}</Badge>
                     </div>
-                    <Badge variant="outline">{entry.authProvider || 'credentials'}</Badge>
                   </CardHeader>
-                  <CardContent>
-                    <CardTitle className="student-resource-card__title">{entry.displayName || entry.email}</CardTitle>
-                    <p className="student-resource-card__summary">{entry.email}</p>
-                    <p className="student-resource-card__updated">Last updated: {formatDisplayDate(entry.updatedAt || entry.createdAt, 'N/A')}</p>
+                  <CardContent className="space-y-3 p-4 md:p-5">
+                    <CardTitle className="text-lg">{entry.displayName || entry.email}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{entry.email}</p>
+                    <p className="text-xs text-muted-foreground">Last updated: {formatDisplayDate(entry.updatedAt || entry.createdAt, 'N/A')}</p>
                   </CardContent>
-                  <CardContent className="student-resource-card__actions">
+                  <CardContent className="p-4 pt-0 md:p-5 md:pt-0">
                     {actionPolicy.showMenu ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -360,7 +360,7 @@ export default function UserManagementPage() {
                       <span className="student-muted-text" title="This user cannot be modified.">Protected user</span>
                     )}
                   </CardContent>
-                </Card>
+                </SectionCard>
               )
             })}
           </div>
@@ -369,8 +369,8 @@ export default function UserManagementPage() {
       </AdminPageWrapper>
 
       {pendingCredentials ? (
-        <section className="admin-v2-page">
-          <Card className="admin-v2-card">
+        <section className="mx-auto w-full max-w-[1400px] px-4 pb-4 md:px-6 md:pb-6">
+          <SectionCard>
             <CardHeader>
               <CardTitle>One-Time Credentials</CardTitle>
             </CardHeader>
@@ -416,7 +416,7 @@ export default function UserManagementPage() {
                 </div>
               ) : null}
             </CardContent>
-          </Card>
+          </SectionCard>
         </section>
       ) : null}
 

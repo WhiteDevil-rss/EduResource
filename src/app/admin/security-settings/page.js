@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AdminPageWrapper, SectionCard } from '@/components/admin/AdminPageWrapper'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
+import { FilterLabel } from '@/components/ui/layout'
 import { minutesToMs, msToMinutes, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
 function buildForm(settings) {
@@ -133,34 +134,31 @@ export default function AdminSecuritySettingsPage() {
     >
       <SkeletonWrapper name="admin-security-settings" loading={loading}>
         <SectionCard title="Session Timeouts" description="Changes apply to future and refreshed sessions.">
-          <div className="admin-v2-form-grid">
-            <label className="student-filter-control">
-              <span>Inactivity Timeout (minutes)</span>
+          <div className="grid gap-4 md:grid-cols-3">
+            <FilterLabel label="Inactivity Timeout (minutes)">
               <Input
                 type="number"
                 min="2"
                 value={formState.inactivityMinutes}
                 onChange={(event) => setFormState((current) => ({ ...current, inactivityMinutes: event.target.value }))}
               />
-            </label>
-            <label className="student-filter-control">
-              <span>Warning Before Logout (minutes)</span>
+            </FilterLabel>
+            <FilterLabel label="Warning Before Logout (minutes)">
               <Input
                 type="number"
                 min="2"
                 value={formState.warningMinutes}
                 onChange={(event) => setFormState((current) => ({ ...current, warningMinutes: event.target.value }))}
               />
-            </label>
-            <label className="student-filter-control">
-              <span>Max Session Duration (minutes)</span>
+            </FilterLabel>
+            <FilterLabel label="Max Session Duration (minutes)">
               <Input
                 type="number"
                 min="2"
                 value={formState.maxSessionMinutes}
                 onChange={(event) => setFormState((current) => ({ ...current, maxSessionMinutes: event.target.value }))}
               />
-            </label>
+            </FilterLabel>
           </div>
 
           {parsed.error ? (

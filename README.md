@@ -2,6 +2,10 @@
 
 SPS EDUCATIONAM is a role-based academic resource platform built with Next.js and Firebase. Students can browse curated learning materials, faculty can manage resource uploads, and admins can oversee users and access rules.
 
+## Build Status
+
+[![CI](https://github.com/WhiteDevil-rss/EduResource/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WhiteDevil-rss/EduResource/actions/workflows/ci.yml)
+
 ## Features
 
 - Email/password authentication with Firebase Auth

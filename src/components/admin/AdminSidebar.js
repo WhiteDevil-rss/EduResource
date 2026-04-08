@@ -41,7 +41,7 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
   }
 
   const onNavKeyDown = (event) => {
-    const interactiveSelector = '.admin-v2-sidebar__group-toggle, .admin-v2-sidebar__group-links a'
+    const interactiveSelector = '[data-sidebar-group-toggle="true"], [data-sidebar-group-link="true"]'
     const navNode = navRef.current
     if (!navNode) {
       return
@@ -69,7 +69,7 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
       key: event.key,
       currentIndex,
       totalItems: items.length,
-      isGroupToggle: target.classList.contains('admin-v2-sidebar__group-toggle'),
+      isGroupToggle: target.hasAttribute('data-sidebar-group-toggle'),
       groupLabel,
       isGroupCollapsed: Boolean(groupLabel ? collapsedGroups[groupLabel] : false),
     })
@@ -88,8 +88,8 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
 
     if (action.type === 'focus-first-group-link') {
       const firstLink = target
-        .closest('.admin-v2-sidebar__group')
-        ?.querySelector('.admin-v2-sidebar__group-links a')
+        .closest('[data-sidebar-group]')
+        ?.querySelector('[data-sidebar-group-link="true"]')
 
       if (firstLink && typeof firstLink.focus === 'function') {
         event.preventDefault()
@@ -99,39 +99,46 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
   }
 
   return (
-    <div className="admin-v2-sidebar__inner">
-      <div className="admin-v2-sidebar__header">
-        <div className="student-sidebar__brand">
+    <div className="flex h-full min-h-0 flex-col bg-background/95">
+      <div className="border-b border-border px-4 py-5 md:px-6">
+        <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/80 p-3 shadow-sm">
           <RoleAvatar role={role} label="super admin workspace" />
-          <div>
-            <p className="student-sidebar__title">Super Admin</p>
-            <p className="student-sidebar__subtitle">Operations Console</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">Super Admin</p>
+            <p className="truncate text-xs text-muted-foreground">Operations Console</p>
           </div>
         </div>
       </div>
 
       <nav
         ref={navRef}
-        className="admin-v2-sidebar__nav custom-scrollbar"
+        className="custom-scrollbar flex-1 min-h-0 overflow-y-auto px-3 py-4 md:px-4"
         aria-label="Super admin navigation"
         onKeyDown={onNavKeyDown}
       >
-        {sections.map((section) => (
-          <div className="admin-v2-sidebar__group" key={section.label}>
+        <div className="space-y-4">
+          {sections.map((section) => (
+          <div className="space-y-2" key={section.label} data-sidebar-group>
             <button
               type="button"
-              className="admin-v2-sidebar__group-toggle"
+              data-sidebar-group-toggle="true"
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/60 bg-muted/30 px-3 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               data-group-label={section.label}
               onClick={() => toggleGroup(section.label)}
               aria-expanded={!collapsedGroups[section.label]}
               aria-controls={`admin-group-${section.label.replace(/\s+/g, '-').toLowerCase()}`}
             >
-              <p className="admin-v2-sidebar__group-label">{section.label}</p>
-              <ChevronDown size={14} className={cn('admin-v2-sidebar__chevron', collapsedGroups[section.label] && 'admin-v2-sidebar__chevron--collapsed')} />
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {section.label}
+              </p>
+              <ChevronDown
+                size={14}
+                className={cn('transition-transform', collapsedGroups[section.label] && 'rotate-180')}
+              />
             </button>
             <div
               id={`admin-group-${section.label.replace(/\s+/g, '-').toLowerCase()}`}
-              className={cn('admin-v2-sidebar__group-links', collapsedGroups[section.label] && 'admin-v2-sidebar__group-links--collapsed')}
+              className={cn('space-y-1', collapsedGroups[section.label] && 'hidden')}
             >
               {section.items.map((item) => {
                 const Icon = item.icon
@@ -141,7 +148,13 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={cn('student-sidebar__link', active && 'student-sidebar__link--active')}
+                    data-sidebar-group-link="true"
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
+                      active
+                        ? 'bg-primary/10 text-primary shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    )}
                     title={item.label}
                     aria-current={active ? 'page' : undefined}
                   >
@@ -152,11 +165,12 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
               })}
             </div>
           </div>
-        ))}
+          ))}
+        </div>
       </nav>
 
-      <div className="admin-v2-sidebar__footer">
-        <Button type="button" variant="outline" className="student-sidebar__logout" onClick={onLogout}>
+      <div className="border-t border-border px-3 py-4 md:px-4">
+        <Button type="button" variant="outline" className="h-11 w-full justify-start rounded-xl" onClick={onLogout}>
           <LogOut size={16} />
           Sign out
         </Button>
@@ -168,20 +182,20 @@ function SidebarContent({ sections, onNavigate, onLogout, role = 'admin' }) {
 export function AdminSidebar({ sections, mobileOpen, onMobileOpenChange, onLogout }) {
   return (
     <>
-      <aside className="admin-v2-sidebar admin-v2-sidebar--desktop">
+      <aside className="hidden md:flex md:h-dvh md:w-80 md:flex-none md:flex-col md:border-r md:border-border md:bg-background md:shadow-sm">
         <SidebarContent sections={sections} onNavigate={() => {}} onLogout={onLogout} />
       </aside>
 
       <Dialog
         open={mobileOpen}
         onOpenChange={onMobileOpenChange}
-        className="student-mobile-nav"
+        className="md:hidden"
         labelledBy="super-admin-mobile-nav-title"
       >
         <h2 id="super-admin-mobile-nav-title" className="sr-only">
           Super admin navigation
         </h2>
-        <aside className="admin-v2-sidebar admin-v2-sidebar--mobile">
+        <aside className="flex h-[100dvh] w-[88vw] max-w-sm flex-col overflow-hidden border-r border-border bg-background shadow-2xl md:hidden">
           <SidebarContent
             sections={sections}
             onNavigate={() => onMobileOpenChange(false)}

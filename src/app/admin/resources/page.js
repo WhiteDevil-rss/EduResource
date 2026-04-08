@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AdminPageWrapper } from '@/components/admin/AdminPageWrapper'
+import { CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AdminPageWrapper, SectionCard } from '@/components/admin/AdminPageWrapper'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { formatDisplayDate } from '@/lib/demo-content'
+import { EmptyState, FilterBar, FilterLabel } from '@/components/ui/layout'
 
 export default function AdminResourcesPage() {
   const [loading, setLoading] = useState(true)
@@ -65,48 +66,53 @@ export default function AdminResourcesPage() {
       title="Resources & Publications"
       description="Audit content quality, metadata consistency, and publication status."
       filters={
-        <>
-          <label className="student-filter-control student-filter-control--search">
-            <span>Search</span>
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search resources" />
-          </label>
-          <label className="student-filter-control">
-            <span>Class</span>
-            <select className="ui-input" value={classFilter} onChange={(event) => setClassFilter(event.target.value)}>
+        <FilterBar>
+          <FilterLabel label="Search">
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search resources" className="w-full sm:w-72" />
+          </FilterLabel>
+          <FilterLabel label="Class">
+            <select className="ui-input w-full sm:w-44" value={classFilter} onChange={(event) => setClassFilter(event.target.value)}>
               {classOptions.map((option) => (
                 <option key={option} value={option}>{option === 'all' ? 'All Classes' : option}</option>
               ))}
             </select>
-          </label>
-          <label className="student-filter-control">
-            <span>Subject</span>
-            <select className="ui-input" value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)}>
+          </FilterLabel>
+          <FilterLabel label="Subject">
+            <select className="ui-input w-full sm:w-44" value={subjectFilter} onChange={(event) => setSubjectFilter(event.target.value)}>
               {subjectOptions.map((option) => (
                 <option key={option} value={option}>{option === 'all' ? 'All Subjects' : option}</option>
               ))}
             </select>
-          </label>
-          <Badge variant="outline" className="student-filter-count">{filtered.length} result(s)</Badge>
-        </>
+          </FilterLabel>
+          <Badge variant="outline" className="ml-auto">{filtered.length} result(s)</Badge>
+        </FilterBar>
       }
     >
       <SkeletonWrapper name="admin-resources-list" loading={loading}>
-        <div className="student-resource-grid">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.length === 0 ? (
+            <EmptyState
+              title="No resources found"
+              description="Try changing the search term or category filters."
+            />
+          ) : null}
           {filtered.map((entry) => (
-            <Card key={entry.id} className="student-resource-card">
-              <CardHeader className="student-resource-card__header">
-                <div className="student-resource-card__meta">
-                  <Badge>{entry.subject || 'General'}</Badge>
-                  <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+            <SectionCard key={entry.id}>
+              <CardHeader className="p-4 pb-0 md:p-5 md:pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge>{entry.subject || 'General'}</Badge>
+                    <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
+                  </div>
+                  <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
                 </div>
-                <Badge variant={entry.status === 'live' ? 'secondary' : 'outline'}>{entry.status || 'unknown'}</Badge>
               </CardHeader>
-              <CardContent>
-                <CardTitle className="student-resource-card__title">{entry.title || 'Untitled resource'}</CardTitle>
-                <p className="student-resource-card__summary">{entry.summary || 'No summary available.'}</p>
-                <p className="student-resource-card__updated">Created: {formatDisplayDate(entry.createdAt, 'N/A')}</p>
+              <CardContent className="space-y-3 p-4 md:p-5">
+                <CardTitle className="text-lg">{entry.title || 'Untitled resource'}</CardTitle>
+                <p className="text-sm text-muted-foreground">{entry.summary || 'No summary available.'}</p>
+                <p className="text-xs text-muted-foreground">Created: {formatDisplayDate(entry.createdAt, 'N/A')}</p>
               </CardContent>
-            </Card>
+            </SectionCard>
           ))}
         </div>
       </SkeletonWrapper>

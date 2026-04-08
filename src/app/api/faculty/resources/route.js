@@ -14,6 +14,22 @@ import {
   getRecentAuditCount
 } from '@/lib/server-data'
 import { uploadToDrive } from '@/lib/google-drive'
+import { sanitizeFileName, sanitizePlainText } from '@/lib/request-validation'
+
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+const ALLOWED_UPLOAD_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+])
+
+function extensionForMimeType(mimeType) {
+  const normalized = String(mimeType || '').toLowerCase()
+  if (normalized === 'application/pdf') return 'pdf'
+  if (normalized === 'application/msword') return 'doc'
+  if (normalized === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx'
+  return 'bin'
+}
 
 export async function GET(request) {
   try {
@@ -97,12 +113,31 @@ export async function POST(request) {
         throw new Error('A file is required for this resource.')
       }
 
+      if (!ALLOWED_UPLOAD_TYPES.has(String(file.type || '').toLowerCase())) {
+        throw new ApiError(400, 'Unsupported file type.')
+      }
+
+      if (Number(file.size || 0) <= 0 || Number(file.size || 0) > MAX_UPLOAD_BYTES) {
+        throw new ApiError(400, 'File size must be between 1 byte and 25MB.')
+      }
+
+      const originalFileName = String(file.name || '').trim()
+      if (!originalFileName || originalFileName.length > 180) {
+        throw new ApiError(400, 'Invalid file name.')
+      }
+
       const buffer = Buffer.from(await file.arrayBuffer())
+      const safeBaseName = sanitizeFileName(originalFileName)
+      if (safeBaseName === 'upload' || !/[a-zA-Z0-9]/.test(safeBaseName)) {
+        throw new ApiError(400, 'Invalid file name.')
+      }
+      const safeExtension = extensionForMimeType(file.type)
+      const safeUploadName = `${safeBaseName.replace(/\.[^.]+$/, '')}-${crypto.randomUUID().slice(0, 8)}.${safeExtension}`
       
       // 1. Upload to Google Drive
       const driveData = await uploadToDrive(
         buffer,
-        file.name,
+        safeUploadName,
         file.type,
         process.env.GOOGLE_DRIVE_FOLDER_ID
       )
@@ -114,21 +149,23 @@ export async function POST(request) {
           : '')
 
       payload = {
-        title: formData.get('title') || file.name,
-        subject: formData.get('subject'),
-        class: formData.get('class'),
-        summary: formData.get('summary'),
-        category: formData.get('category'),
+        title: sanitizePlainText(formData.get('title') || safeBaseName, { maxLength: 160, collapseWhitespace: true }),
+        subject: sanitizePlainText(formData.get('subject'), { maxLength: 80, collapseWhitespace: true }),
+        class: sanitizePlainText(formData.get('class'), { maxLength: 80, collapseWhitespace: true }),
+        summary: sanitizePlainText(formData.get('summary'), { maxLength: 2000 }),
+        category: sanitizePlainText(formData.get('category'), { maxLength: 80, collapseWhitespace: true }),
         fileUrl,
         driveFileId: driveData.fileId,
         driveFileLink: fileUrl,
         fileType: file.type,
         fileSize: file.size,
-        fileFormat: file.name.split('.').pop(),
+        fileFormat: safeExtension,
         status: formData.get('status') || 'live'
       }
     } else {
-      payload = await request.json()
+      payload = await request.json().catch(() => {
+        throw new ApiError(400, 'Invalid JSON in request body.')
+      })
     }
 
     const resource = await createResourceRecord({

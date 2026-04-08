@@ -1,86 +1,89 @@
 'use client'
 
 import { Skeleton as BoneyardSkeleton } from 'boneyard-js/react'
+import { cn } from '@/lib/cn'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function Box({ width, height, style = {} }) {
-  return <Skeleton style={{ width, height, ...style }} />
+function Box({ className = '' }) {
+  return <Skeleton className={cn('rounded-xl', className)} />
 }
 
 function DashboardShell({ sidebarRows = 4, metricCards = 3, tableRows = 5, footerCards = 2 }) {
   return (
-    <div className="dashboard-page">
-      <div className="dashboard-layout">
-        <aside className="dashboard-sidebar glass">
-          <div className="dashboard-sidebar__brand">
-            <Box width="13rem" height="2.5rem" />
-            <Box width="8rem" height="0.9rem" style={{ marginTop: '0.75rem' }} />
+    <div className="min-h-dvh w-full overflow-hidden bg-background">
+      <div className="flex min-h-dvh w-full overflow-hidden">
+        <aside className="hidden h-dvh w-72 flex-none flex-col border-r border-border/70 bg-card/70 p-4 md:flex">
+          <div className="space-y-3 border-b border-border/70 pb-4">
+            <Box className="h-10 w-44" />
+            <Box className="h-4 w-32" />
           </div>
-          <div className="dashboard-nav" style={{ gap: '0.75rem' }}>
+          <div className="flex flex-1 flex-col gap-3 py-4">
             {Array.from({ length: sidebarRows }).map((_, index) => (
-              <Box key={index} width="100%" height="3rem" style={{ borderRadius: '1rem' }} />
+              <Box key={index} className="h-12 w-full" />
             ))}
           </div>
-          <div className="dashboard-sidebar__footer">
-            <Box width="100%" height="3rem" style={{ borderRadius: '1rem' }} />
-            <Box width="100%" height="3rem" style={{ borderRadius: '1rem' }} />
-            <div className="dashboard-profile" style={{ alignItems: 'center' }}>
-              <Box width="3rem" height="3rem" style={{ borderRadius: '999px' }} />
-              <div style={{ flex: 1 }}>
-                <Box width="10rem" height="0.9rem" style={{ marginBottom: '0.5rem' }} />
-                <Box width="7rem" height="0.75rem" />
+          <div className="space-y-3 border-t border-border/70 pt-4">
+            <Box className="h-12 w-full" />
+            <Box className="h-12 w-full" />
+            <div className="flex items-center gap-3 rounded-xl border border-border/70 p-3">
+              <Box className="h-12 w-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Box className="h-4 w-40" />
+                <Box className="h-3 w-28" />
               </div>
             </div>
           </div>
         </aside>
 
-        <div className="dashboard-content">
-          <header className="dashboard-topbar glass">
-            <Box width="min(100%, 34rem)" height="3rem" style={{ borderRadius: '1rem' }} />
-            <div className="dashboard-topbar__actions">
-              <Box width="2.5rem" height="2.5rem" style={{ borderRadius: '999px' }} />
-              <Box width="2.5rem" height="2.5rem" style={{ borderRadius: '999px' }} />
-              <Box width="2.5rem" height="2.5rem" style={{ borderRadius: '999px' }} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex flex-col gap-3 border-b border-border/70 bg-background/90 px-4 py-3 md:px-6 md:py-4 lg:flex-row lg:items-center lg:justify-between">
+            <Box className="h-12 w-full max-w-3xl rounded-xl" />
+            <div className="flex items-center gap-2">
+              <Box className="h-10 w-10 rounded-full" />
+              <Box className="h-10 w-10 rounded-full" />
+              <Box className="h-10 w-10 rounded-full" />
             </div>
           </header>
 
-          <section className="dashboard-section">
-            <Box width="10rem" height="0.9rem" style={{ marginBottom: '0.85rem' }} />
-            <Box width="24rem" height="2.5rem" style={{ marginBottom: '0.85rem' }} />
-            <Box width="min(100%, 42rem)" height="1rem" style={{ marginBottom: '1.75rem' }} />
-            <div className="metric-grid">
+          <section className="mx-auto w-full max-w-[1400px] px-4 py-4 md:px-6 md:py-6">
+            <div className="space-y-3">
+              <Box className="h-4 w-32" />
+              <Box className="h-9 w-72" />
+              <Box className="h-4 w-full max-w-2xl" />
+            </div>
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: metricCards }).map((_, index) => (
-                <div key={index} className="metric-card glass">
-                  <Box width="40%" height="0.85rem" style={{ marginBottom: '0.9rem' }} />
-                  <Box width="60%" height="2rem" />
+                <div key={index} className="rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5">
+                  <Box className="h-4 w-24" />
+                  <Box className="mt-4 h-8 w-32" />
                 </div>
               ))}
             </div>
           </section>
 
-          <section className="dashboard-section">
-            <Box width="14rem" height="1.5rem" style={{ marginBottom: '1rem' }} />
-            <div className="table-shell glass">
-              <div className="table-shell__header">
-                <Box width="10rem" height="1rem" />
-                <Box width="7rem" height="2.5rem" style={{ borderRadius: '1rem' }} />
+          <section className="mx-auto w-full max-w-[1400px] px-4 py-4 md:px-6 md:py-6">
+            <Box className="h-6 w-56" />
+            <div className="mt-4 rounded-xl border border-border/70 bg-card shadow-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-border/70 p-4 md:p-5">
+                <Box className="h-4 w-32" />
+                <Box className="h-11 w-28 rounded-xl" />
               </div>
-              <div className="space-y-3 p-6" style={{ display: 'grid', gap: '0.75rem', padding: '1.5rem' }}>
+              <div className="grid gap-3 p-4 md:p-5">
                 {Array.from({ length: tableRows }).map((_, index) => (
-                  <Box key={index} width="100%" height="3.6rem" style={{ borderRadius: '1rem' }} />
+                  <Box key={index} className="h-14 w-full" />
                 ))}
               </div>
             </div>
           </section>
 
-          <section className="dashboard-section">
-            <div className="support-grid">
+          <section className="mx-auto w-full max-w-[1400px] px-4 py-4 md:px-6 md:py-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: footerCards }).map((_, index) => (
-                <div key={index} className="support-card glass" style={{ minHeight: '14rem' }}>
-                  <Box width="7rem" height="0.85rem" style={{ marginBottom: '1rem' }} />
-                  <Box width="100%" height="3rem" style={{ marginBottom: '0.75rem' }} />
-                  <Box width="85%" height="0.9rem" style={{ marginBottom: '0.5rem' }} />
-                  <Box width="70%" height="0.9rem" />
+                <div key={index} className="min-h-[14rem] rounded-xl border border-border/70 bg-card p-4 shadow-sm md:p-5">
+                  <Box className="h-4 w-28" />
+                  <Box className="mt-4 h-12 w-full" />
+                  <Box className="mt-3 h-4 w-5/6" />
+                  <Box className="mt-2 h-4 w-3/4" />
                 </div>
               ))}
             </div>

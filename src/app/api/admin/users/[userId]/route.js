@@ -9,6 +9,7 @@ import { isProtectedAdminEmail } from '@/lib/admin-protection'
 import { logAction } from '@/lib/audit-log'
 import { logActivity } from '@/lib/activity-log'
 import { deleteUserAndData, getUserRecordById, resetManagedCredentials, setManagedUserStatus } from '@/lib/server-data'
+import { sanitizePlainText, validatePassword } from '@/lib/request-validation'
 
 export async function DELETE(request, { params }) {
   try {
@@ -96,7 +97,10 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const action = body?.action
+    const action = sanitizePlainText(body?.action, {
+      maxLength: 40,
+      collapseWhitespace: true,
+    })
     const protectedTarget = isProtectedAdminEmail(targetUser.email)
     const selfTarget =
       (session.uid && targetUser.id && session.uid === targetUser.id) ||
@@ -147,11 +151,16 @@ export async function PATCH(request, { params }) {
         throw new ApiError(403, 'Only the protected admin can reset credentials for this account.')
       }
 
+      const requestedPassword = body?.password ? String(body.password) : null
+      if (requestedPassword) {
+        validatePassword(requestedPassword, true)
+      }
+
       const result = await resetManagedCredentials({
         userId,
         actorUid: session.uid,
         actorRole: session.role,
-        newPassword: body?.password || null,
+        newPassword: requestedPassword,
       })
 
       await logAction({

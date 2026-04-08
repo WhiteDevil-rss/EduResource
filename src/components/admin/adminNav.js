@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart3,
   FileBarChart2,
   FileText,
   HardDrive,
@@ -32,6 +33,18 @@ export const ADMIN_NAV_SECTIONS = [
     items: [
       { label: 'Resources & Publications', href: '/admin/resources', icon: FileText },
       { label: 'Resource Requests', href: '/admin/resource-requests', icon: Library },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { label: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Governance',
+    items: [
+      { label: 'Content Moderation', href: '/admin/moderation', icon: Shield },
     ],
   },
   {

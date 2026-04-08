@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { isProtectedAdminEmail } from '@/lib/admin-protection'
+import { FilterLabel } from '@/components/ui/layout'
 
 function formatDate(value) {
   if (!value) return 'Unknown'
@@ -192,8 +193,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
               placeholder="Reason (optional)"
               aria-label="Reason"
             />
-            <label className="student-filter-control security-block-form__select">
-              <span>Duration</span>
+            <FilterLabel label="Duration" className="security-block-form__select">
               <select className="ui-input" value={ipDuration} onChange={(event) => setIpDuration(event.target.value)} aria-label="Block duration">
                 <option value="permanent">Permanent</option>
                 <option value="15">15 minutes</option>
@@ -202,7 +202,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
                 <option value="1440">24 hours</option>
                 <option value="10080">7 days</option>
               </select>
-            </label>
+            </FilterLabel>
             <Button type="submit" disabled={savingIp}>
               <Ban size={14} />
               {savingIp ? 'Blocking...' : ipDuration === 'permanent' ? 'Block IP' : 'Block Temporarily'}
@@ -254,23 +254,21 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
           <CardDescription>Disable or re-enable specific user accounts. Protected admin accounts are hidden from blocking.</CardDescription>
         </CardHeader>
         <CardContent className="security-block-management__content">
-          <label className="student-filter-control student-filter-control--search">
-            <span>Search users</span>
+          <FilterLabel label="Search users">
             <Input
               value={userSearch}
               onChange={(event) => setUserSearch(event.target.value)}
               placeholder="Search by name, email, or role"
               aria-label="Search users"
             />
-          </label>
+          </FilterLabel>
 
           <div className="suspicious-summary">
             <Badge variant="outline">{blockedUsers.length} blocked</Badge>
             <Badge variant="outline">{activeUsers.length} active</Badge>
           </div>
 
-          <label className="student-filter-control security-block-form__select">
-            <span>User block duration</span>
+          <FilterLabel label="User block duration" className="security-block-form__select">
             <select className="ui-input" value={userDuration} onChange={(event) => setUserDuration(event.target.value)} aria-label="User block duration">
               <option value="permanent">Permanent</option>
               <option value="15">15 minutes</option>
@@ -279,7 +277,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
               <option value="1440">24 hours</option>
               <option value="10080">7 days</option>
             </select>
-          </label>
+          </FilterLabel>
 
           <div className="security-block-scroll">
             {filteredUsers.length === 0 ? (

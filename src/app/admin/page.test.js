@@ -9,6 +9,6 @@ describe('AdminIndexPage', () => {
   it('redirects to security settings', async () => {
     const mod = await import('@/app/admin/page')
     mod.default()
-    expect(redirect).toHaveBeenCalledWith('/admin/security-settings')
+    expect(redirect).toHaveBeenCalledWith('/admin/analytics')
   })
 })

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminNotificationsMenu } from '@/components/admin/AdminNotificationsMenu'
 import { ADMIN_NAV_SECTIONS } from '@/components/admin/adminNav'
+import { cn } from '@/lib/cn'
 
 async function fetchNotifications() {
   const response = await fetch('/api/notifications', { cache: 'no-store' })
@@ -158,8 +159,8 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="student-panel admin-v2-shell">
-      <a href="#admin-main-content" className="admin-v2-skip-link">
+    <div className="flex min-h-dvh w-full overflow-hidden bg-background">
+      <a href="#admin-main-content" className="skip-link">
         Skip to main content
       </a>
 
@@ -170,54 +171,66 @@ export default function AdminLayout({ children }) {
         onLogout={logout}
       />
 
-      <div className="student-panel__main">
-        <header className="student-topbar admin-v2-topbar">
-          <div className="student-topbar__left">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-40 flex flex-col gap-3 border-b border-border/70 bg-background/90 px-4 py-3 backdrop-blur-xl md:px-6 md:py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center justify-between gap-3 lg:justify-start">
             <Button
               type="button"
               variant="ghost"
-              className="student-topbar__menu"
+              className="h-10 w-10 rounded-xl md:hidden"
               onClick={() => setMobileNavOpen(true)}
               aria-label="Open navigation menu"
             >
               <Menu size={18} />
             </Button>
             <div>
-              <h1 className="student-topbar__title">Super Admin Console</h1>
-              <p className="student-topbar__subtitle">Category-driven operations across security, users, monitoring, and system tooling. Shortcuts: Shift+N (notifications), Cmd/Ctrl+B (menu).</p>
+              <h1 className="text-lg font-semibold text-foreground md:text-xl">Super Admin Console</h1>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                Category-driven operations across security, users, monitoring, and system tooling.
+                Shortcuts: Shift+N for notifications and Cmd/Ctrl+B for the menu.
+              </p>
             </div>
           </div>
 
-          <div className="student-topbar__right">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
             <Button
               ref={notificationsButtonRef}
               type="button"
               variant="outline"
-              className="student-topbar__icon"
+              className="relative h-11 w-11 rounded-xl"
               onClick={() => setNotificationsOpen((open) => !open)}
               aria-label="Open notifications"
               aria-expanded={notificationsOpen}
               aria-controls="admin-notifications-panel"
             >
               <Bell size={16} />
-              {unreadCount > 0 ? <span className="student-topbar__badge">{unreadCount}</span> : null}
+              {unreadCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                  {unreadCount}
+                </span>
+              ) : null}
             </Button>
 
             {sessionTimer.isVisible ? (
               <div
-                className={`session-indicator ${sessionTimer.isWarning ? 'session-indicator--warning' : ''}`}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm',
+                  sessionTimer.isWarning
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+                    : 'border-border/70 bg-card text-foreground'
+                )}
                 role="status"
                 aria-live="polite"
               >
                 <span>Session {sessionTimer.formatted}</span>
-                <Button type="button" variant="ghost" onClick={sessionTimer.onExtendSession}>
+                <Button type="button" variant="ghost" className="h-9 rounded-xl px-3" onClick={sessionTimer.onExtendSession}>
                   Extend
                 </Button>
               </div>
             ) : null}
 
-            <div className="student-topbar__profile" role="img" aria-label="super admin profile">
-              <span>{getDisplayName(user?.email, 'Super Admin')}</span>
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-card px-3 py-2" role="img" aria-label="super admin profile">
+              <span className="text-sm font-medium text-foreground">{getDisplayName(user?.email, 'Super Admin')}</span>
             </div>
           </div>
         </header>
@@ -239,7 +252,7 @@ export default function AdminLayout({ children }) {
           {unreadCount > 0 ? `${unreadCount} unread notifications` : 'No unread notifications'}
         </p>
 
-        <main id="admin-main-content" className="admin-v2-main" tabIndex={-1}>
+        <main id="admin-main-content" className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden" tabIndex={-1}>
           {children}
         </main>
       </div>

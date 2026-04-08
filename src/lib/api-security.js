@@ -81,6 +81,7 @@ export async function getSessionFromRequest(request) {
 }
 
 export async function requireApiSession(request, allowedRoles = null) {
+  assertSameOrigin(request)
   const session = await getSessionFromRequest(request)
 
   if (!session) {

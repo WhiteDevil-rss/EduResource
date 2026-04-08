@@ -6,9 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { AdminPageWrapper, SectionCard } from '@/components/admin/AdminPageWrapper'
+import { FilterBar, FilterLabel, PaginationControls, EmptyState } from '@/components/ui/layout'
+import { AdminPageWrapper } from '@/components/admin/AdminPageWrapper'
+import { SectionCard as AdminSectionCard } from '@/components/admin/AdminPageWrapper'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
-import { formatDisplayDate } from '@/lib/demo-content'
+import { formatISTCompact } from '@/lib/date-utils'
 
 const INITIAL_FILTERS = { search: '', action: '', status: '', fromDate: '', toDate: '' }
 
@@ -58,96 +60,134 @@ export default function AuditLogsPage() {
       title="Audit Logs"
       description="Inspect who did what, where, and when with protected super-admin visibility."
       filters={
-        <>
-          <label className="student-filter-control student-filter-control--search">
-            <span>Search</span>
-            <Input value={filters.search} onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} placeholder="Search user, action, module" />
-          </label>
-          <label className="student-filter-control">
-            <span>Action</span>
-            <Input value={filters.action} onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))} placeholder="e.g. LOGIN" />
-          </label>
-          <label className="student-filter-control">
-            <span>Status</span>
-            <select className="ui-input" value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
+        <FilterBar onReset={() => { setFilters(INITIAL_FILTERS); load(1, INITIAL_FILTERS); }}>
+          <FilterLabel label="Search">
+            <Input 
+              value={filters.search} 
+              onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} 
+              placeholder="User, action, module..." 
+              className="w-full sm:w-48"
+            />
+          </FilterLabel>
+          <FilterLabel label="Action">
+            <Input 
+              value={filters.action} 
+              onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))} 
+              placeholder="e.g. LOGIN" 
+              className="w-full sm:w-40"
+            />
+          </FilterLabel>
+          <FilterLabel label="Status">
+            <select 
+              className="ui-input px-3 py-2 rounded-lg text-sm bg-surface-card border border-outline hover:border-outline-strong hover:bg-surface-card-high transition-colors w-full sm:w-32" 
+              value={filters.status} 
+              onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
+            >
               <option value="">All</option>
               <option value="SUCCESS">SUCCESS</option>
               <option value="FAILED">FAILED</option>
             </select>
-          </label>
-          <label className="student-filter-control">
-            <span>From</span>
-            <Input type="date" value={filters.fromDate} onChange={(event) => setFilters((current) => ({ ...current, fromDate: event.target.value }))} />
-          </label>
-          <label className="student-filter-control">
-            <span>To</span>
-            <Input type="date" value={filters.toDate} onChange={(event) => setFilters((current) => ({ ...current, toDate: event.target.value }))} />
-          </label>
-          <div className="student-filter-actions">
-            <Button type="button" variant="default" onClick={() => load(1, filters)}>Apply</Button>
+          </FilterLabel>
+          <FilterLabel label="From">
+            <Input 
+              type="date" 
+              value={filters.fromDate} 
+              onChange={(event) => setFilters((current) => ({ ...current, fromDate: event.target.value }))} 
+              className="w-full sm:w-40"
+            />
+          </FilterLabel>
+          <FilterLabel label="To">
+            <Input 
+              type="date" 
+              value={filters.toDate} 
+              onChange={(event) => setFilters((current) => ({ ...current, toDate: event.target.value }))} 
+              className="w-full sm:w-40"
+            />
+          </FilterLabel>
+          <div className="sm:ml-auto">
+            <Button type="button" variant="default" onClick={() => load(1, filters)} className="w-full sm:w-auto">
+              Apply Filters
+            </Button>
           </div>
-        </>
+        </FilterBar>
       }
     >
       <SkeletonWrapper name="admin-audit-logs-list" loading={loading}>
-        <SectionCard>
+        <AdminSectionCard>
           {error ? (
-            <div className="student-inline-message student-inline-message--error" role="alert">
-              <AlertCircle size={16} />
-              <span>{error}</span>
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-danger/10 border border-danger/20 text-danger" role="alert">
+              <AlertCircle size={20} className="flex-shrink-0" />
+              <span className="text-sm">{error}</span>
             </div>
           ) : null}
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Module</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {logs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5}>No audit logs found for current filters.</TableCell>
-                </TableRow>
-              ) : null}
-              {logs.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>
-                    <strong>{entry.userName || entry.userEmail || 'Unknown user'}</strong>
-                    <p className="student-muted-text">{entry.userEmail || 'No email'}</p>
-                  </TableCell>
-                  <TableCell>
-                    <strong>{entry.action}</strong>
-                    <p className="student-muted-text">{entry.description || '-'}</p>
-                  </TableCell>
-                  <TableCell>{entry.module || 'General'}</TableCell>
-                  <TableCell>
-                    <Badge variant={entry.status === 'FAILED' ? 'outline' : 'secondary'}>
-                      {entry.status || 'SUCCESS'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatDisplayDate(entry.timestamp || entry.createdAt, 'N/A')}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {logs.length === 0 && !error ? (
+            <EmptyState
+              title="No audit logs found"
+              description="No logs match your current filters. Try removing some filters to see more results."
+              icon={AlertCircle}
+            />
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Module</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {logs.map((entry) => (
+                      <TableRow key={entry.id} className="hover:bg-surface-card-high transition-colors">
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <strong className="text-foreground">{entry.userName || entry.userEmail || 'Unknown user'}</strong>
+                            {entry.userEmail && entry.userEmail !== entry.userName && (
+                              <p className="text-xs text-muted">{entry.userEmail}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <strong className="text-foreground">{entry.action}</strong>
+                            <p className="text-xs text-muted line-clamp-1">{entry.description || '-'}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-foreground">{entry.module || 'General'}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={entry.status === 'FAILED' ? 'outline' : 'secondary'} className="text-xs">
+                            {entry.status || 'SUCCESS'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className="text-sm text-muted whitespace-nowrap" title={formatISTCompact(entry.timestamp || entry.createdAt, 'N/A')}>
+                            {formatISTCompact(entry.timestamp || entry.createdAt, 'N/A')}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-          <div className="student-filter-actions admin-stack-gap-top">
-            <Button type="button" variant="outline" disabled={pagination.page <= 1 || loading} onClick={() => load(Math.max(1, pagination.page - 1), filters)}>
-              Previous
-            </Button>
-            <Badge variant="outline">
-              Page {pagination.page} of {pagination.pages} ({pagination.total} logs)
-            </Badge>
-            <Button type="button" variant="outline" disabled={pagination.page >= pagination.pages || loading} onClick={() => load(Math.min(pagination.pages, pagination.page + 1), filters)}>
-              Next
-            </Button>
-          </div>
-        </SectionCard>
+              <PaginationControls
+                page={pagination.page}
+                pages={pagination.pages}
+                total={pagination.total}
+                loading={loading}
+                onPrevious={() => load(Math.max(1, pagination.page - 1), filters)}
+                onNext={() => load(Math.min(pagination.pages, pagination.page + 1), filters)}
+                className="mt-4"
+              />
+            </>
+          )}
+        </AdminSectionCard>
       </SkeletonWrapper>
     </AdminPageWrapper>
   )

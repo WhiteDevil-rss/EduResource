@@ -13,18 +13,15 @@ import {
   detectNewDeviceAndAlert,
   getSecurityControlsRecord,
 } from '@/lib/auth-security'
+import { validateChallengeId, validateOtpCode } from '@/lib/request-validation'
 
 export async function POST(request) {
   try {
     assertSameOrigin(request)
     await assertRequestNotBlocked(request)
     const body = await request.json().catch(() => ({}))
-    const challengeId = String(body?.challengeId || '').trim()
-    const otp = String(body?.otp || '').trim()
-
-    if (!challengeId || !otp) {
-      return withNoStore(NextResponse.json({ error: 'Challenge ID and OTP are required.' }, { status: 400 }))
-    }
+    const challengeId = validateChallengeId(body?.challengeId)
+    const otp = validateOtpCode(body?.otp)
 
     const verifiedUser = await verifyTwoFactorChallenge({ challengeId, otp })
 

@@ -7,6 +7,14 @@ export const metadata = {
   title: 'SPS EDUCATIONAM | Academic Resource Platform',
   description:
     'A role-based academic resource platform for admins, faculty, and students.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
+    ],
+    apple: '/apple-touch-icon.svg',
+    shortcut: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({ children }) {

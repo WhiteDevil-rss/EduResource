@@ -7,6 +7,7 @@ import {
 } from '@/lib/api-security'
 import { isSuperAdmin } from '@/lib/admin-protection'
 import { getActivityLogs } from '@/lib/activity-log'
+import { sanitizePlainText, validatePagination } from '@/lib/request-validation'
 
 export async function GET(request) {
   try {
@@ -17,11 +18,12 @@ export async function GET(request) {
     }
 
     const url = new URL(request.url)
-    const pageLimit = Math.min(Number(url.searchParams.get('limit')) || 50, 200)
-    const userId = url.searchParams.get('userId') || null
-    const action = url.searchParams.get('action') || null
-    const startDateStr = url.searchParams.get('startDate')
-    const endDateStr = url.searchParams.get('endDate')
+    const { limit } = validatePagination('1', url.searchParams.get('limit'))
+    const pageLimit = Math.min(limit, 200)
+    const userId = sanitizePlainText(url.searchParams.get('userId') || '', { maxLength: 128, collapseWhitespace: true }) || null
+    const action = sanitizePlainText(url.searchParams.get('action') || '', { maxLength: 80, collapseWhitespace: true }) || null
+    const startDateStr = sanitizePlainText(url.searchParams.get('startDate') || '', { maxLength: 40, collapseWhitespace: true })
+    const endDateStr = sanitizePlainText(url.searchParams.get('endDate') || '', { maxLength: 40, collapseWhitespace: true })
 
     const filters = {
       limit: pageLimit,
@@ -30,19 +32,19 @@ export async function GET(request) {
     }
 
     if (startDateStr) {
-      try {
-        filters.startDate = new Date(startDateStr)
-      } catch {
+      const parsedStartDate = new Date(startDateStr)
+      if (Number.isNaN(parsedStartDate.getTime())) {
         throw new ApiError(400, 'Invalid startDate format. Use ISO 8601 format.')
       }
+      filters.startDate = parsedStartDate
     }
 
     if (endDateStr) {
-      try {
-        filters.endDate = new Date(endDateStr)
-      } catch {
+      const parsedEndDate = new Date(endDateStr)
+      if (Number.isNaN(parsedEndDate.getTime())) {
         throw new ApiError(400, 'Invalid endDate format. Use ISO 8601 format.')
       }
+      filters.endDate = parsedEndDate
     }
 
     const activities = await getActivityLogs(filters)
