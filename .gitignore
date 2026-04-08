@@ -39,9 +39,10 @@ next-env.d.ts
 .DS_Store
 *.pem
 *.log
+*.backup
 .gemini/
 .wrangler/
-.github/
+# Intentionally track .github for workflows, templates, and repository metadata.
 .scripts/
 .env.example
 
