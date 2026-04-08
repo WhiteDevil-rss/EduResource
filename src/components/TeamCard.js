@@ -21,11 +21,26 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [flipped, setFlipped] = useState(false)
   const [imageSrc, setImageSrc] = useState(image || TEAM_FALLBACK_IMAGE)
-  const [isMobile, setIsMobile] = useState(false)
+  const [canHover, setCanHover] = useState(false)
 
   useEffect(() => {
-    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    const media = window.matchMedia('(hover: hover) and (pointer: fine)')
+    const syncHoverCapability = () => {
+      setCanHover(media.matches)
+    }
+
+    syncHoverCapability()
+    media.addEventListener('change', syncHoverCapability)
+
+    return () => {
+      media.removeEventListener('change', syncHoverCapability)
+    }
   }, [])
+
+  useEffect(() => {
+    setImageSrc(image || TEAM_FALLBACK_IMAGE)
+    setIsLoaded(false)
+  }, [image])
 
   const socialLinks = useMemo(
     () =>
@@ -37,13 +52,13 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
   )
 
   const handleMouseEnter = () => {
-    if (!isMobile) {
+    if (canHover) {
       setFlipped(true)
     }
   }
 
   const handleMouseLeave = () => {
-    if (!isMobile) {
+    if (canHover) {
       setFlipped(false)
     }
   }
@@ -56,12 +71,13 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={() => {
-            if (!isMobile) return
+            if (canHover) return
             setFlipped((current) => !current)
           }}
           tabIndex={0}
           role="button"
           aria-pressed={flipped}
+          aria-label={`Flip card for ${name} details`}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault()

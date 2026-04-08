@@ -26,6 +26,15 @@ export default function LandingPage() {
   const [resourceCount, setResourceCount] = useState(null)
   const [teamSectionActive, setTeamSectionActive] = useState(false)
   const teamSectionRef = useRef(null)
+  const spotlightTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (spotlightTimeoutRef.current) {
+        clearTimeout(spotlightTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     setIsVisible(true)
@@ -70,6 +79,17 @@ export default function LandingPage() {
       return
     }
 
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reducedMotion) {
+      teamSectionRef.current.scrollIntoView({ block: 'start' })
+      setTeamSectionActive(true)
+      if (spotlightTimeoutRef.current) {
+        clearTimeout(spotlightTimeoutRef.current)
+      }
+      spotlightTimeoutRef.current = setTimeout(() => setTeamSectionActive(false), 900)
+      return
+    }
+
     const headerOffset = 96
     const start = window.pageYOffset
     const target =
@@ -100,7 +120,10 @@ export default function LandingPage() {
 
     window.requestAnimationFrame(animateScroll)
     setTeamSectionActive(true)
-    setTimeout(() => setTeamSectionActive(false), 900)
+    if (spotlightTimeoutRef.current) {
+      clearTimeout(spotlightTimeoutRef.current)
+    }
+    spotlightTimeoutRef.current = setTimeout(() => setTeamSectionActive(false), 900)
   }
 
   const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)

@@ -16,9 +16,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { getPublicHeaderContent } from '@/lib/public-nav'
 
 const footerLinks = [
-  { label: 'Privacy Policy', href: '/login' },
-  { label: 'Terms of Service', href: '/login' },
-  { label: 'Support', href: '/#archive' },
+  { label: 'Privacy Policy', href: '/#features' },
+  { label: 'Terms of Service', href: '/#features' },
+  { label: 'Support', href: '/#team' },
 ]
 
 export default function Register() {
@@ -51,76 +51,66 @@ export default function Register() {
       />
 
       <main className="auth-main">
-        <div className="auth-card auth-card--register" style={{ maxWidth: '480px' }}>
-          <div className="auth-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div className="auth-icon-badge" style={{ 
-              width: '64px', 
-              height: '64px', 
-              borderRadius: '20px', 
-              background: 'rgba(var(--secondary-rgb), 0.1)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-              color: 'var(--secondary)'
-            }}>
+        <div className="auth-card auth-card--register">
+          <div className="auth-card__stack">
+          <div className="auth-header auth-header--centered">
+            <div className="auth-icon-badge">
               <GraduationCap size={32} />
             </div>
-            <h1>Student Registration</h1>
-            <p style={{ fontSize: '1.1rem', opacity: 0.8 }}>
-              Join the academic community and access verified research resources instantly.
+            <p className="auth-kicker">Student Onboarding</p>
+            <h1>Start your learning workspace in one step</h1>
+            <p>
+              Join the academic community with verified Google sign-in and get instant access to curated study resources.
             </p>
           </div>
 
-          <div className="auth-content">
-            <div className="auth-benefit-list" style={{ marginBottom: '2.5rem' }}>
-              <div className="auth-benefit-item" style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ color: 'var(--primary)', marginTop: '2px' }}><Sparkles size={18} /></div>
+          <div className="auth-highlight-grid">
+              <div className="auth-highlight">
+                <div className="auth-highlight__icon"><Sparkles size={18} /></div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Instant Access</h4>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.7 }}>No password required. Secure sign-on via your Gmail ID.</p>
+                  <h4>Instant access</h4>
+                  <p>No password setup required. Use your Gmail account and reach the student dashboard right away.</p>
                 </div>
               </div>
-              <div className="auth-benefit-item" style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ color: 'var(--primary)', marginTop: '2px' }}><Shield size={18} /></div>
+              <div className="auth-highlight">
+                <div className="auth-highlight__icon"><Shield size={18} /></div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Verified Resources</h4>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.7 }}>Gain exclusive access to peer-reviewed archives.</p>
+                  <h4>Verified resources</h4>
+                  <p>Browse faculty-approved notes, files, and course materials inside a secure role-based environment.</p>
                 </div>
               </div>
             </div>
 
             {error && (
-              <div className="auth-alert auth-alert--error" style={{ marginBottom: '1.5rem' }}>
+              <div className="auth-alert auth-alert--error">
                 <span>{error}</span>
               </div>
             )}
 
             <button
               type="button"
-              className="button-primary button-block"
+              className="button-primary button-block auth-submit auth-submit--tall"
               onClick={handleJoin}
               disabled={isAuthenticating}
-              style={{ height: '3.75rem', fontSize: '1.1rem', fontWeight: 600 }}
             >
               <Chrome size={22} />
               {isAuthenticating ? 'Authenticating...' : 'Register as a Student'}
             </button>
 
-            <div className="auth-terms-notice" style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', opacity: 0.6, lineHeight: 1.6 }}>
+            <div className="auth-terms-notice">
               By clicking "Register as a Student", you agree to our{' '}
-              <Link href="/login" style={{ textDecoration: 'underline' }}>Terms of Service</Link> and{' '}
-              <Link href="/login" style={{ textDecoration: 'underline' }}>Privacy Policy</Link>.
+              <Link href="/#features">Terms of Service</Link> and{' '}
+              <Link href="/#features">Privacy Policy</Link>.
             </div>
-          </div>
 
-          <div className="auth-footer" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <p style={{ textAlign: 'center' }}>
+          <div className="auth-footer">
+            <p>
               Already registered?{' '}
               <Link href="/login" style={{ color: 'var(--foreground)', fontWeight: 700 }}>
                 Sign In <ArrowRight size={14} style={{ display: 'inline', marginLeft: '4px' }} />
               </Link>
             </p>
+          </div>
           </div>
         </div>
 

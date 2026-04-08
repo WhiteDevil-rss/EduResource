@@ -24,10 +24,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { getPublicHeaderContent } from '@/lib/public-nav'
 
 const footerLinks = [
-  { label: 'Privacy Policy', href: '/register' },
-  { label: 'Terms of Service', href: '/register' },
-  { label: 'Academic Integrity', href: '/#scholarships' },
-  { label: 'Support', href: '/#archive' },
+  { label: 'Privacy Policy', href: '/#features' },
+  { label: 'Terms of Service', href: '/#features' },
+  { label: 'Academic Integrity', href: '/#team' },
+  { label: 'Support', href: '/#team' },
 ]
 
 export default function Login() {
@@ -210,8 +210,10 @@ export default function Login() {
 
       <main className="auth-main">
         <div className="auth-card">
+          <div className="auth-card__stack">
           <div className="auth-mode-selector">
             <button
+              type="button"
               className={`auth-mode-btn ${loginMode === 'staff' ? 'active' : ''}`}
               onClick={() => {
                 setLoginMode('staff')
@@ -222,9 +224,10 @@ export default function Login() {
               }}
             >
               <UserCircle size={20} />
-              <span>Academic Staff</span>
+              <span>Faculty & Admin</span>
             </button>
             <button
+              type="button"
               className={`auth-mode-btn ${loginMode === 'student' ? 'active' : ''}`}
               onClick={() => {
                 setLoginMode('student')
@@ -239,24 +242,25 @@ export default function Login() {
             </button>
           </div>
 
-          <div className="auth-header" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            <h1>{loginMode === 'staff' ? 'Staff Login' : 'Student Access'}</h1>
+          <div className="auth-header auth-header--centered auth-header--compact">
+            <p className="auth-kicker">Secure Sign In</p>
+            <h1>{loginMode === 'staff' ? 'Institutional workspace access' : 'Student portal access'}</h1>
             <p>
               {loginMode === 'staff'
-                ? 'Sign in with your institutional credentials.'
-                : 'Secure access via your verified Google account.'}
+                ? 'Use your issued credentials to reach faculty and admin tools with session protection and optional 2FA.'
+                : 'Students sign in with Google and land directly in the verified learning workspace.'}
             </p>
           </div>
 
           {unauthorized && (
-            <div className="auth-alert" style={{ marginBottom: '1rem' }}>
+            <div className="auth-alert auth-alert--error">
               <AlertCircle size={18} color="var(--tertiary)" />
               <span>Your account does not have permission to access that area.</span>
             </div>
           )}
 
           {sessionExpired && (
-            <div className="auth-alert" style={{ marginBottom: '1rem' }}>
+            <div className="auth-alert auth-alert--error">
               <AlertCircle size={18} color="var(--tertiary)" />
               <span>Session expired. Please login again.</span>
             </div>
@@ -278,7 +282,7 @@ export default function Login() {
 
           {loginMode === 'staff' ? twoFactorChallenge ? (
             <form className="auth-form" onSubmit={handleVerifyOtp}>
-              <div className="auth-alert" style={{ background: 'var(--background-secondary)', border: 'none' }}>
+              <div className="auth-note auth-note--subtle">
                 <Shield size={18} color="var(--secondary)" />
                 <span>
                   Two-factor verification required ({twoFactorChallenge.method}).
@@ -304,23 +308,27 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="auth-alert" style={{ background: 'transparent', border: '1px solid var(--border-color)' }}>
+              <div className="auth-note auth-note--outline">
                 <Clock size={18} color="var(--secondary)" />
-                <span>Code expires in {Math.floor(otpTimeLeft / 60)}:{String(otpTimeLeft % 60).padStart(2, '0')}</span>
+                <span className="auth-note__countdown">
+                  Code expires in {Math.floor(otpTimeLeft / 60)}:{String(otpTimeLeft % 60).padStart(2, '0')}
+                </span>
               </div>
 
               {twoFactorChallenge?.otpPreview ? (
-                <div className="auth-alert" style={{ marginTop: '0.5rem' }}>
+                <div className="auth-alert">
                   <AlertCircle size={18} color="var(--tertiary)" />
-                  <span>Dev OTP preview: {twoFactorChallenge.otpPreview}</span>
+                  <span className="auth-preview-chip">
+                    Dev OTP preview:
+                    <strong className="auth-preview-code">{twoFactorChallenge.otpPreview}</strong>
+                  </span>
                 </div>
               ) : null}
 
               <button
                 type="submit"
-                className="button-primary button-block"
+                className="button-primary button-block auth-submit"
                 disabled={isAuthenticating || otpTimeLeft <= 0}
-                style={{ marginTop: '1rem' }}
               >
                 {isAuthenticating ? (
                   <Loader2 size={18} className="icon-spin" />
@@ -335,7 +343,6 @@ export default function Login() {
                 className="button-secondary button-block"
                 onClick={handleResendOtp}
                 disabled={isAuthenticating}
-                style={{ marginTop: '0.75rem' }}
               >
                 Resend OTP
               </button>
@@ -350,7 +357,6 @@ export default function Login() {
                   setFormSuccess('')
                 }}
                 disabled={isAuthenticating}
-                style={{ marginTop: '0.75rem' }}
               >
                 Cancel
               </button>
@@ -402,9 +408,8 @@ export default function Login() {
 
               <button
                 type="submit"
-                className="button-primary button-block"
+                className="button-primary button-block auth-submit"
                 disabled={isAuthenticating}
-                style={{ marginTop: '1rem' }}
               >
                 {isAuthenticating ? (
                   <Loader2 size={18} className="icon-spin" />
@@ -415,18 +420,38 @@ export default function Login() {
               </button>
             </form>
           ) : (
-            <div className="auth-student-flow">
-              <div className="auth-alert" style={{ background: 'var(--background-secondary)', border: 'none' }}>
+            <div className="auth-student-flow auth-panel">
+              <div className="auth-note auth-note--subtle">
                 <Chrome size={18} color="var(--secondary)" />
                 <span>Single Sign-On is required for all students.</span>
               </div>
-              
+
+              <div className="auth-highlight-grid">
+                <div className="auth-highlight">
+                  <div className="auth-highlight__icon">
+                    <GraduationCap size={18} />
+                  </div>
+                  <div>
+                    <h4>Verified student entry</h4>
+                    <p>New students are registered on first sign-in and routed into the correct workspace automatically.</p>
+                  </div>
+                </div>
+                <div className="auth-highlight">
+                  <div className="auth-highlight__icon">
+                    <Shield size={18} />
+                  </div>
+                  <div>
+                    <h4>Low-friction secure access</h4>
+                    <p>Google authentication keeps onboarding fast while preserving role-based protection and session controls.</p>
+                  </div>
+                </div>
+              </div>
+
               <button
                 type="button"
-                className="button-primary button-block"
+                className="button-primary button-block auth-submit auth-submit--tall"
                 onClick={handleStudentLogin}
                 disabled={isAuthenticating}
-                style={{ marginTop: '2rem', height: '3.5rem', fontSize: '1rem' }}
               >
                 {isAuthenticating ? (
                   <Loader2 size={18} className="icon-spin" />
@@ -435,12 +460,13 @@ export default function Login() {
                 )}
                 {isAuthenticating ? 'Authenticating...' : 'Sign in with Google'}
               </button>
-              
-              <p className="auth-footer-note" style={{ textAlign: 'center', marginTop: '1.5rem', opacity: 0.7, fontSize: '0.875rem' }}>
+
+              <p className="auth-footer-note">
                 New students will be automatically registered on their first login.
               </p>
             </div>
           )}
+          </div>
         </div>
 
         <div className="auth-footer__trust">Authenticated Ecosystem</div>

@@ -90,8 +90,8 @@ export function SecurityAdvancedSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="student-request-form" style={{ gap: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-          <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', cursor: 'pointer' }}>
+        <div className="student-request-form admin-form-grid">
+          <label className="admin-check-label">
             <input
               type="checkbox"
               checked={Boolean(settings.enable2FA)}
@@ -148,7 +148,7 @@ export function SecurityAdvancedSettings() {
             />
           </label>
 
-          <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', cursor: 'pointer' }}>
+          <label className="admin-check-label">
             <input
               type="checkbox"
               checked={Boolean(settings.enableAlerts)}
@@ -160,13 +160,13 @@ export function SecurityAdvancedSettings() {
         </div>
 
         {weakConfigWarning ? (
-          <div className="student-inline-message" style={{ marginTop: '1rem' }}>
+          <div className="student-inline-message admin-stack-gap-top">
             <AlertCircle size={16} />
             <span>{weakConfigWarning}</span>
           </div>
         ) : null}
 
-        <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
+        <div className="student-filter-actions admin-stack-gap-top">
           <Button type="button" onClick={save} disabled={loading || saving}>
             <Shield size={14} />
             {saving ? 'Saving...' : 'Save Security Controls'}

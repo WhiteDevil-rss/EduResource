@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Menu, Moon, Globe, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function PublicHeader({
   brand = 'SPS EDUCATIONAM',
@@ -14,8 +14,35 @@ export default function PublicHeader({
 
   const closeMenu = () => setMenuOpen(false)
 
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [menuOpen])
+
   return (
-    <nav className={menuOpen ? 'public-nav public-nav--menu-open' : 'public-nav'}>
+    <nav
+      className={menuOpen ? 'public-nav public-nav--menu-open' : 'public-nav'}
+      aria-label="Primary navigation"
+    >
       <div className="public-nav__inner">
         <Link href="/" className="public-nav__brand" onClick={closeMenu}>
           {brand}
@@ -69,7 +96,7 @@ export default function PublicHeader({
       </div>
 
       {menuOpen ? (
-        <div className="public-nav__mobile-panel">
+        <div className="public-nav__mobile-panel" role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
           <div className="public-nav__mobile-links">
             {links.map((link) => (
               <Link

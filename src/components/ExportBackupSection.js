@@ -63,23 +63,13 @@ export function ExportReportsSection() {
         <CardDescription>Download users, logs, or analytics in CSV or PDF format</CardDescription>
       </CardHeader>
       <CardContent>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-              Export Type
-            </label>
+        <div className="admin-tool-grid">
+          <div className="admin-tool-field">
+            <label className="admin-tool-label">Export Type</label>
             <select
               value={exportType}
               onChange={(e) => setExportType(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-              }}
+              className="admin-tool-select"
             >
               <option value="users">Users</option>
               <option value="logs">Audit Logs</option>
@@ -87,22 +77,12 @@ export function ExportReportsSection() {
             </select>
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-              Format
-            </label>
+          <div className="admin-tool-field">
+            <label className="admin-tool-label">Format</label>
             <select
               value={exportFormat}
               onChange={(e) => setExportFormat(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-tertiary)',
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-              }}
+              className="admin-tool-select"
             >
               <option value="csv">CSV</option>
               <option value="pdf">PDF (Text)</option>
@@ -110,7 +90,7 @@ export function ExportReportsSection() {
           </div>
         </div>
 
-        <Button type="button" onClick={handleExport} disabled={loading} style={{ width: '100%' }}>
+        <Button type="button" onClick={handleExport} disabled={loading} className="button-block">
           {loading ? 'Exporting...' : 'Export Report'}
         </Button>
       </CardContent>
@@ -184,44 +164,22 @@ export function BackupSystemSection() {
         <CardDescription>Backup users and resources data</CardDescription>
       </CardHeader>
       <CardContent>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <Button type="button" onClick={handleBackup} disabled={loading} style={{ width: '100%' }}>
+        <div className="admin-tool-stack">
+          <Button type="button" onClick={handleBackup} disabled={loading} className="button-block">
             {loading ? 'Running Backup...' : 'Run Backup Now'}
           </Button>
 
           {!loadingInfo && lastBackup?.lastBackupTimestamp && (
-            <div
-              style={{
-                padding: '1rem',
-                borderRadius: '0.375rem',
-                backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-              }}
-            >
-              <Clock size={18} style={{ color: '#22c55e' }} />
-              <div style={{ fontSize: '0.875rem' }}>
-                <p style={{ fontWeight: '600', color: '#22c55e' }}>
-                  Last Backup: {lastBackup.lastBackupDate}
-                </p>
+            <div className="admin-tool-notice admin-tool-notice--success">
+              <Clock size={18} />
+              <div className="admin-tool-notice__content">
+                <p>Last Backup: {lastBackup.lastBackupDate}</p>
               </div>
             </div>
           )}
 
           {!loadingInfo && !lastBackup?.lastBackupTimestamp && (
-            <div
-              style={{
-                padding: '1rem',
-                borderRadius: '0.375rem',
-                backgroundColor: 'rgba(107, 114, 128, 0.1)',
-                border: '1px solid rgba(107, 114, 128, 0.3)',
-                fontSize: '0.875rem',
-                color: 'var(--text-secondary)',
-                textAlign: 'center',
-              }}
-            >
+            <div className="admin-tool-notice admin-tool-notice--muted">
               No backup yet. Click "Run Backup Now" to create the first backup.
             </div>
           )}

@@ -949,14 +949,7 @@ export default function AdminDashboard() {
                   <CardDescription>Changes sync globally and are applied to active users on the next settings refresh cycle.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div
-                    className="student-request-form"
-                    style={{
-                      gap: '1rem',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                    }}
-                  >
+                  <div className="student-request-form admin-form-grid">
                   <label>
                     <span>Inactivity Timeout (minutes)</span>
                     <Input
@@ -986,7 +979,7 @@ export default function AdminDashboard() {
                         }))
                       }
                     />
-                    <small className="student-muted-text" style={{ display: 'block', marginTop: '0.35rem' }}>
+                    <small className="student-muted-text admin-note">
                       Default 4 means warning appears at minute 4 of inactivity when timeout is 5.
                     </small>
                   </label>
@@ -1008,27 +1001,27 @@ export default function AdminDashboard() {
                 </div>
 
                 {parsedTimeoutForm.error ? (
-                  <div className="student-inline-message student-inline-message--error" style={{ marginTop: '1rem' }}>
+                  <div className="student-inline-message student-inline-message--error admin-stack-gap-top" role="alert">
                     <AlertCircle size={16} />
                     <span>{parsedTimeoutForm.error}</span>
                   </div>
                 ) : null}
 
                 {sessionTimeoutError ? (
-                  <div className="student-inline-message student-inline-message--error" style={{ marginTop: '1rem' }}>
+                  <div className="student-inline-message student-inline-message--error admin-stack-gap-top" role="alert">
                     <AlertCircle size={16} />
                     <span>{sessionTimeoutError}</span>
                   </div>
                 ) : null}
 
                 {showAggressiveTimeoutWarning ? (
-                  <div className="student-inline-message" style={{ marginTop: '1rem' }}>
+                  <div className="student-inline-message admin-stack-gap-top">
                     <AlertCircle size={16} />
                     <span>Very low inactivity timeout may log out users during normal reading workflows.</span>
                   </div>
                 ) : null}
 
-                <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
+                <div className="student-filter-actions admin-stack-gap-top">
                   <Button
                     type="button"
                     onClick={() => setSaveTimeoutConfirmOpen(true)}
@@ -1048,7 +1041,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <div style={{ marginTop: '1rem' }}>
+            <div className="admin-security-advanced">
               <SecurityAdvancedSettings />
             </div>
           </section>
@@ -1125,7 +1118,7 @@ export default function AdminDashboard() {
                     Reset Filters
                   </Button>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <div className="admin-selection-row">
                   <Button 
                     type="button" 
                     variant={userSelection.isSomeSelected ? 'secondary' : 'outline'}
@@ -1136,7 +1129,7 @@ export default function AdminDashboard() {
                     {userSelection.isAllSelected ? 'Deselect All' : 'Select All'}
                   </Button>
                   {userSelection.selectedCount > 0 && (
-                    <span style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', borderRadius: '0.375rem', backgroundColor: 'rgba(168, 85, 247, 0.1)', color: '#c084fc', fontSize: '0.875rem' }}>
+                    <span className="admin-selected-badge" aria-live="polite">
                       {userSelection.selectedCount} selected
                     </span>
                   )}
@@ -1180,7 +1173,7 @@ export default function AdminDashboard() {
                         <p className="student-resource-card__summary">{entry.email}</p>
                       <p className="student-resource-card__updated">{entry.loginId ? `Login ID: ${entry.loginId}` : 'Google-only identity'}</p>
                     </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <CardContent className="student-resource-card__actions">
                       {actionPolicy.showMenu ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1392,7 +1385,7 @@ export default function AdminDashboard() {
                       <p className="student-resource-card__summary">{entry.studentName || entry.studentEmail}</p>
                       <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
                     </CardContent>
-                    <CardContent style={{ paddingTop: 0, display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <CardContent className="student-resource-card__actions">
                       <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
                       <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
                       <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
@@ -1524,7 +1517,7 @@ export default function AdminDashboard() {
                     </TableBody>
                   </Table>
 
-                  <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
+                  <div className="student-filter-actions admin-stack-gap-top">
                     <Button type="button" variant="outline" disabled={auditPagination.page <= 1 || auditLoading} onClick={() => setAuditPage((current) => Math.max(1, current - 1))}>
                       Previous
                     </Button>
@@ -1741,7 +1734,7 @@ export default function AdminDashboard() {
             />
           </label>
           {exportVerifyError ? (
-            <div className="student-inline-message student-inline-message--error" style={{ marginTop: '0.8rem' }}>
+            <div className="student-inline-message student-inline-message--error admin-stack-gap-top-sm" role="alert">
               <AlertCircle size={16} />
               <span>{exportVerifyError}</span>
             </div>

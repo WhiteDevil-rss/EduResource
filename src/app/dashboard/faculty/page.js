@@ -782,7 +782,7 @@ export default function FacultyDashboard() {
                             : `${job.status} (${job.progress}%)`}
                         </p>
                       </div>
-                      <div style={{ width: '12rem' }}>
+                      <div className="faculty-upload-progress">
                         <Progress value={job.progress} aria-label={`${job.fileName} upload progress`} />
                       </div>
                     </div>
@@ -803,7 +803,7 @@ export default function FacultyDashboard() {
               <Card>
                 <CardHeader>
                   <CardDescription>Role</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CardTitle className="faculty-role-title">
                     <RoleAvatar role="faculty" size="sm" label="Faculty role icon" />
                     Faculty
                   </CardTitle>
