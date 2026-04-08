@@ -706,6 +706,15 @@ export default function AdminDashboard() {
     }
   }
 
+  const copyToClipboard = useCallback(async (value, label) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      toast.success(`${label} copied to clipboard.`)
+    } catch {
+      toast.error(`Could not copy ${label.toLowerCase()}.`)
+    }
+  }, [])
+
   const markNotificationRead = async (notificationId) => {
     setNotificationsSaving(true)
 
@@ -831,6 +840,7 @@ export default function AdminDashboard() {
                 className={`session-indicator ${sessionTimer.isWarning ? 'session-indicator--warning' : ''}`}
                 role="status"
                 aria-live="polite"
+                aria-label={sessionTimer.isWarning ? 'Session ending soon' : 'Session active'}
               >
                 <span>Session {sessionTimer.formatted}</span>
                 <Button type="button" variant="ghost" onClick={sessionTimer.onExtendSession}>
@@ -1066,10 +1076,46 @@ export default function AdminDashboard() {
                   <CardDescription>Copy and share securely. This view appears once per admin session.</CardDescription>
                 </CardHeader>
                 <CardContent className="student-download-list">
-                  <div className="student-download-item"><strong>Role</strong><p>{pendingCredentials.role}</p></div>
-                  <div className="student-download-item"><strong>Email</strong><p>{pendingCredentials.email}</p></div>
-                  {pendingCredentials.loginId ? <div className="student-download-item"><strong>Login ID</strong><p>{pendingCredentials.loginId}</p></div> : null}
-                  {pendingCredentials.temporaryPassword ? <div className="student-download-item"><strong>Temporary Password</strong><p>{pendingCredentials.temporaryPassword}</p></div> : null}
+                  <div className="student-download-item">
+                    <div>
+                      <strong>Role</strong>
+                      <p>{pendingCredentials.role}</p>
+                    </div>
+                    <Button type="button" variant="ghost" onClick={() => copyToClipboard(pendingCredentials.role, 'Role')}>
+                      Copy
+                    </Button>
+                  </div>
+                  <div className="student-download-item">
+                    <div>
+                      <strong>Email</strong>
+                      <p>{pendingCredentials.email}</p>
+                    </div>
+                    <Button type="button" variant="ghost" onClick={() => copyToClipboard(pendingCredentials.email, 'Email')}>
+                      Copy
+                    </Button>
+                  </div>
+                  {pendingCredentials.loginId ? (
+                    <div className="student-download-item">
+                      <div>
+                        <strong>Login ID</strong>
+                        <p>{pendingCredentials.loginId}</p>
+                      </div>
+                      <Button type="button" variant="ghost" onClick={() => copyToClipboard(pendingCredentials.loginId, 'Login ID')}>
+                        Copy
+                      </Button>
+                    </div>
+                  ) : null}
+                  {pendingCredentials.temporaryPassword ? (
+                    <div className="student-download-item">
+                      <div>
+                        <strong>Temporary Password</strong>
+                        <p>{pendingCredentials.temporaryPassword}</p>
+                      </div>
+                      <Button type="button" variant="ghost" onClick={() => copyToClipboard(pendingCredentials.temporaryPassword, 'Temporary password')}>
+                        Copy
+                      </Button>
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             </section>
@@ -1102,7 +1148,7 @@ export default function AdminDashboard() {
                   </select>
                 </label>
                 <div className="student-filter-actions">
-                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                  <Button type="button" variant="default" onClick={() => setSearchTerm(searchInput.trim())}>
                     <Users size={14} />
                     Apply
                   </Button>
@@ -1277,7 +1323,7 @@ export default function AdminDashboard() {
                   </select>
                 </label>
                 <div className="student-filter-actions">
-                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                  <Button type="button" variant="default" onClick={() => setSearchTerm(searchInput.trim())}>
                     <FileText size={14} />
                     Apply
                   </Button>
@@ -1348,7 +1394,7 @@ export default function AdminDashboard() {
                   </select>
                 </label>
                 <div className="student-filter-actions">
-                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
+                  <Button type="button" variant="default" onClick={() => setSearchTerm(searchInput.trim())}>
                     <Library size={14} />
                     Apply
                   </Button>
@@ -1386,9 +1432,19 @@ export default function AdminDashboard() {
                       <p className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</p>
                     </CardContent>
                     <CardContent className="student-resource-card__actions">
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'pending')} disabled={entry.status === 'pending'}>Pending</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'underreview')} disabled={entry.status === 'underreview'}>Review</Button>
-                      <Button type="button" variant="outline" onClick={() => handleRequestStatusChange(entry, 'done')} disabled={entry.status === 'done'}>Done</Button>
+                      <label className="admin-request-status">
+                        <span className="sr-only">Update request status for {entry.titleName || 'request'}</span>
+                        <select
+                          className="ui-input admin-request-status__select"
+                          value={entry.status || 'pending'}
+                          onChange={(event) => handleRequestStatusChange(entry, event.target.value)}
+                          aria-label={`Update status for ${entry.titleName || 'request'}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="underreview">Under Review</option>
+                          <option value="done">Done</option>
+                        </select>
+                      </label>
                     </CardContent>
                   </Card>
                 ))}
@@ -1435,7 +1491,7 @@ export default function AdminDashboard() {
                     <Input type="date" value={auditToDate} onChange={(event) => setAuditToDate(event.target.value)} />
                   </label>
                   <div className="student-filter-actions">
-                    <Button type="button" variant="outline" onClick={() => setAuditPage(1)}>Apply</Button>
+                    <Button type="button" variant="default" onClick={() => setAuditPage(1)}>Apply</Button>
                     <Button
                       type="button"
                       variant="ghost"
