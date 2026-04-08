@@ -1,3 +1,7 @@
+import { Database } from 'lucide-react'
+import { PageContainer, ContentSection } from '@/components/layout'
+import { BackupSystemSection } from '@/components/ExportBackupSection'
+
 export default function BackupSystemPage() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">

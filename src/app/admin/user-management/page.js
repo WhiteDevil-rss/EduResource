@@ -18,7 +18,7 @@ import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserManagementActionPolicy } from '@/lib/admin-protection'
 import { formatDisplayDate } from '@/lib/demo-content'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/cn'
 
 const EMPTY_CREATE_FORM = {
   role: 'faculty',
@@ -39,7 +39,6 @@ export default function UserManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [statusTarget, setStatusTarget] = useState(null)
   const [resetModal, setResetModal] = useState(null)
-  const [tab, setTab] = useState('active')
 
   const loadUsers = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true)

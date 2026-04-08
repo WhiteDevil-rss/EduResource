@@ -30,11 +30,10 @@ export default function AdminLayout({ children }) {
   const { user, role, loading, logout } = useAuth()
   const sessionTimer = useSessionTimer()
 
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
-  const [notificationsSaving, setNotificationsSaving] = useState(false)
+  const [, setNotificationsSaving] = useState(false)
   const [notificationsError, setNotificationsError] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
 

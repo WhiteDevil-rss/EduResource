@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/cn'
 import {
   PageContainer,
   ContentSection,

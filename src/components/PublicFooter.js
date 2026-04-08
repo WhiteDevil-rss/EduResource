@@ -34,7 +34,6 @@ const COMPANY_SOCIALS = [
 export default function PublicFooter({
   links = [],
   tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM. Zembaa Solution.`,
-  compact = false,
 }) {
   return (
     <footer className="w-full bg-card border-t border-border/40">

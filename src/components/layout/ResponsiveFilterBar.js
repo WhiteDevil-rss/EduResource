@@ -14,7 +14,6 @@ export function ResponsiveFilterBar({
   onFilterChange,
   onReset,
   className = '',
-  maxWidth = 'max-w-[1400px]',
   ...props
 }) {
   return (

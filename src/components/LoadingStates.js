@@ -8,7 +8,7 @@ function Box({ className = '' }) {
   return <Skeleton className={cn('rounded-2xl bg-muted/20', className)} />
 }
 
-function DashboardShell({ sidebarRows = 4, metricCards = 4, tableRows = 5, footerCards = 3 }) {
+function DashboardShell({ sidebarRows = 4, metricCards = 4, tableRows = 5 }) {
   return (
     <div className="min-h-screen w-full overflow-hidden bg-background flex flex-col md:flex-row">
       {/* Sidebar Skeleton */}

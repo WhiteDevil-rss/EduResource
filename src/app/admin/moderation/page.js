@@ -1,3 +1,5 @@
+'use client'
+
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   PageContainer,
@@ -16,12 +18,11 @@ import {
 } from '@/components/ui/dialog'
 import { CheckCircle2, XCircle, Eye, ShieldCheck, MessageSquare, Flag, Send, Trash, Clock, ShieldAlert } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/cn'
 
 export default function AdminModerationPage() {
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [selectedReview, setSelectedReview] = useState(null)
   const [actionTarget, setActionTarget] = useState(null)
   const [actionType, setActionType] = useState('publish')
@@ -34,10 +35,8 @@ export default function AdminModerationPage() {
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Failed to sync moderation data.')
       setReviews(Array.isArray(payload?.reviews) ? payload.reviews : [])
-      setError('')
     } catch (loadError) {
       if (loadError.name === 'AbortError') return
-      setError(loadError.message || 'Moderation sync failed.')
       setReviews([])
     } finally {
       setLoading(false)
@@ -45,7 +44,7 @@ export default function AdminModerationPage() {
   }, [])
 
   useEffect(() => {
-    const controller = new AbortController()
+    const controller = new globalThis.AbortController()
     loadData(controller.signal)
     return () => controller.abort()
   }, [loadData])

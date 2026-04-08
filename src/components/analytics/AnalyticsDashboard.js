@@ -1,13 +1,12 @@
 'use client'
 
-import { BookOpen, FolderKanban, Star, Users, TrendingUp, ArrowUpRight, BarChart3, Fingerprint, Activity } from 'lucide-react'
+import { BookOpen, FolderKanban, Star, Users, TrendingUp, ArrowUpRight, BarChart3, Activity } from 'lucide-react'
 import { StandardCard, StatCard } from '@/components/layout/StandardCards'
 
 export function AnalyticsDashboard({ summary, role = 'faculty' }) {
   if (!summary) return null
 
   const topResources = Array.isArray(summary.topResources) ? summary.topResources : []
-  const collections = Array.isArray(summary.collections) ? summary.collections : []
   const reviews = Array.isArray(summary.reviews) ? summary.reviews : []
 
   return (

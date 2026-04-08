@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import { isAbortError, useCancelableFetch } from '@/hooks/useCancelableFetch'
-import { Download, RefreshCcw, Search, Fingerprint, MapPin, Monitor, Clock, ShieldCheck, ArrowUpRight } from 'lucide-react'
+import { Download, RefreshCcw, Search, Fingerprint, MapPin, Monitor, Clock, ShieldCheck, ArrowUpRight, Activity, ShieldAlert, Cpu } from 'lucide-react'
 import { StandardCard, StatCard } from '@/components/layout/StandardCards'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/cn'
 
 function formatTime(value) {
   if (!value) return 'Unknown'
@@ -73,11 +73,6 @@ export function SuspiciousActivityPanel() {
     loadActivities(1)
     return () => cancel()
   }, [cancel, loadActivities])
-
-  const highCount = useMemo(
-    () => activities.filter((entry) => String(entry?.severity || '').toUpperCase() === 'HIGH').length,
-    [activities]
-  )
 
   const markReviewed = async (activityId) => {
     if (!activityId || saving) return

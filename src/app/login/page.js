@@ -12,7 +12,6 @@ import {
   Shield,
   UserCircle,
   GraduationCap,
-  ArrowRight,
 } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'

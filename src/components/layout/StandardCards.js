@@ -42,7 +42,6 @@ export function UserCard({
   email,
   role,
   status,
-  actions,
   lastActive,
   authProvider,
   onResetPassword,

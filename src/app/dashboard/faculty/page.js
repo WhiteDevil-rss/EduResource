@@ -15,6 +15,7 @@ import toast from 'react-hot-toast'
 import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import { useAuth } from '@/hooks/useAuth'
+import { cn } from '@/lib/cn'
 import { getDisplayName } from '@/lib/demo-content'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -93,16 +94,14 @@ export default function FacultyDashboard() {
   const [resourceViewerOpen, setResourceViewerOpen] = useState(false)
   const [analyticsSummary, setAnalyticsSummary] = useState(null)
   const [collections, setCollections] = useState([])
-  const [collectionModalOpen, setCollectionModalOpen] = useState(false)
-  const [collectionTitle, setCollectionTitle] = useState('')
-  const [collectionDescription, setCollectionDescription] = useState('')
+  const [, setCollectionModalOpen] = useState(false)
 
   const debouncedSearchInput = useDebouncedSearch(searchInput, 500)
 
   // Load resources
   useEffect(() => {
     if (!user?.uid) return
-    const controller = new AbortController()
+    const controller = new globalThis.AbortController()
     let isActive = true
 
     const loadResources = async () => {
@@ -136,7 +135,7 @@ export default function FacultyDashboard() {
   // Load notifications
   useEffect(() => {
     if (!user?.uid) return
-    const controller = new AbortController()
+    const controller = new globalThis.AbortController()
     let isActive = true
 
     const loadNotifications = async () => {
@@ -165,7 +164,7 @@ export default function FacultyDashboard() {
   // Load analytics and collections
   useEffect(() => {
     if (!user?.uid) return
-    const controller = new AbortController()
+    const controller = new globalThis.AbortController()
     let isActive = true
 
     const load = async () => {
@@ -315,29 +314,6 @@ export default function FacultyDashboard() {
   }, [])
 
   // Collections
-  const handleCreateCollection = async () => {
-    if (!collectionTitle) {
-      toast.error('Collection title is required.')
-      return
-    }
-    try {
-      const response = await fetch('/api/collections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: collectionTitle, description: collectionDescription }),
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload?.error || 'Failed to create collection.')
-      setCollections((current) => [payload.collection, ...current])
-      setCollectionTitle('')
-      setCollectionDescription('')
-      setCollectionModalOpen(false)
-      toast.success('Collection created successfully.')
-    } catch (error) {
-      toast.error(error.message)
-    }
-  }
-
   // Derived values
   const classOptions = useMemo(() => ['all', ...new Set(resources.map((r) => r.class).filter(Boolean))], [resources])
   const subjectOptions = useMemo(() => ['all', ...new Set(resources.map((r) => r.subject).filter(Boolean))], [resources])

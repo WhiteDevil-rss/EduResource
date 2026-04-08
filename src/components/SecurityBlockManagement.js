@@ -5,20 +5,8 @@ import toast from 'react-hot-toast'
 import { Ban, ShieldOff, Shield, RefreshCcw, Search, Fingerprint, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { StandardCard, StatCard } from '@/components/layout/StandardCards'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/cn'
 import { isProtectedAdminEmail } from '@/lib/admin-protection'
-
-function formatDate(value) {
-  if (!value) return 'Unknown'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Invalid Date'
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
 
 export function SecurityBlockManagement({ users = [], onChanged }) {
   const [blockedIps, setBlockedIps] = useState([])

@@ -7,7 +7,7 @@ import {
 } from '@/components/layout'
 import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
-import { Terminal, BarChart3, RefreshCcw, Activity, ShieldCheck } from 'lucide-react'
+import { BarChart3, RefreshCcw, Activity } from 'lucide-react'
 
 export default function AdminAnalyticsPage() {
   const [summary, setSummary] = useState(null)

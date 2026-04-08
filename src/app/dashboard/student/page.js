@@ -14,6 +14,7 @@ import { StudentDashboardSkeleton } from '@/components/LoadingStates'
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import { useAuth } from '@/hooks/useAuth'
 import { useBookmark } from '@/hooks/useBookmark'
+import { cn } from '@/lib/cn'
 import { formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
 import { Button } from '@/components/ui/button'
 import {
@@ -111,9 +112,9 @@ export default function StudentDashboard() {
 
   // State
   const [resources, setResources] = useState([])
-  const [downloads, setDownloads] = useState([])
+  const [, setDownloads] = useState([])
   const [notifications, setNotifications] = useState([])
-  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsLoading] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestSubmitting, setRequestSubmitting] = useState(false)
@@ -146,7 +147,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (!user?.uid) return
     let isActive = true
-    const controller = new AbortController()
+    const controller = new globalThis.AbortController()
 
     const load = async () => {
       setLoading(true)
@@ -172,7 +173,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (!user?.uid) return
     let isActive = true
-    const controller = new AbortController()
+    const controller = new globalThis.AbortController()
 
     const loadExtra = async () => {
       try {
