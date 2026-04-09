@@ -41,13 +41,13 @@ export function DashboardTopbar({
             <div className="relative w-full lg:w-[22rem]">
               <Search
                 size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
               <Input
                 value={searchValue}
                 onChange={(event) => onSearchChange(event.target.value)}
                 placeholder="Search"
-                className="h-11 rounded-xl pl-9 text-sm"
+                className="h-11 rounded-xl pl-11 text-sm"
                 aria-label="Search"
               />
             </div>
@@ -55,12 +55,12 @@ export function DashboardTopbar({
             <div className="flex items-center gap-2 md:gap-3">
               <Button
                 type="button"
-                variant="secondary"
-                className="relative h-11 w-11 rounded-xl"
+                variant="ghost"
+                className="button group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
                 onClick={onOpenNotifications}
                 aria-label="Open notifications"
               >
-                <Bell size={16} />
+                <Bell size={16} className="mx-auto block" />
                 {unreadCount > 0 ? (
                   <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
                     {unreadCount}

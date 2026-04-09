@@ -71,7 +71,7 @@ export function ResponsiveTopbar({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <ThemeToggle className="h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
+              <ThemeToggle className="button button theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground h-10 w-10 rounded-full border-border/50 bg-background/90 text-foreground hover:bg-muted/70 h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
               <Button
                 variant="ghost"
                 size="icon"
@@ -79,7 +79,7 @@ export function ResponsiveTopbar({
                 onClick={onOpenNotifications}
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
               >
-                <AppIcon icon={Bell} size={20} active={unreadCount > 0} interactive className="group-hover:text-foreground" />
+                <AppIcon icon={Bell} size={20} active={unreadCount > 0} interactive className="mx-auto block group-hover:text-foreground" />
                 {unreadCount > 0 && (
                   <span className="absolute right-2.5 top-2.5 flex h-4 w-4">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />

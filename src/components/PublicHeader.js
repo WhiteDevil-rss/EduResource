@@ -80,6 +80,14 @@ export default function PublicHeader({
         </div>
 
         <div className="hidden shrink-0 min-w-0 flex-wrap items-center justify-end gap-2 lg:gap-3 md:flex">
+          {showUtilityIcons ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/85 px-2 py-2 shadow-lg shadow-primary/10 backdrop-blur-xl">
+              <ThemeToggle />
+              <div className="hidden h-8 w-px bg-border/50 sm:block" aria-hidden="true" />
+              <AccentSelector />
+            </div>
+          ) : null}
+
           <div className="flex items-center justify-end gap-3 flex-wrap">
             {actions.map((action) => (
               <Button
@@ -113,16 +121,6 @@ export default function PublicHeader({
           </Button>
         </div>
       </nav>
-
-      {showUtilityIcons ? (
-        <div className="fixed right-4 top-20 z-50 md:right-6 md:top-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/85 px-2 py-2 shadow-lg shadow-primary/10 backdrop-blur-xl">
-            <ThemeToggle />
-            <div className="hidden h-8 w-px bg-border/50 sm:block" aria-hidden="true" />
-            <AccentSelector />
-          </div>
-        </div>
-      ) : null}
 
       <div
         className={cn(

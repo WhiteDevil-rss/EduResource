@@ -282,7 +282,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
 
           <div className="p-6 border-b border-border/40 space-y-4">
             <div className="relative group">
-              <Search className="absolute left-4 top-1/group-focus-within:text-primary transition-colors h-4 w-4" size={16} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors h-4 w-4" size={16} />
               <input
                 className="w-full h-10 pl-11 pr-4 rounded-xl border border-border/40 bg-background font-medium text-xs focus:ring-2 focus:ring-primary/20 transition-all"
                 value={userSearch}

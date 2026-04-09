@@ -40,7 +40,7 @@ export function ThemeSwitcher({ className = '', compact = false }) {
         className
       )}
     >
-      <ThemeToggle className="h-10 w-10 rounded-full border-border/50 bg-background/90 text-foreground hover:bg-muted/70" showLabel={!compact} />
+      <ThemeToggle className="button button theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground h-10 w-10 rounded-full border-border/50 bg-background/90 text-foreground hover:bg-muted/70 h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" showLabel={!compact} />
 
       <div className="hidden h-8 w-px bg-border/50 sm:block" aria-hidden="true" />
 
