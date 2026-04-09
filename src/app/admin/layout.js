@@ -28,7 +28,7 @@ async function fetchNotifications() {
 
 export default function AdminLayout({ children }) {
   const router = useRouter()
-  const { user, role, loading, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
   const sessionTimer = useSessionTimer()
 
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -46,7 +46,7 @@ export default function AdminLayout({ children }) {
     if (!isAdminUser(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [loading, role, router, user])
+  }, [loading, router, user])
 
   useEffect(() => {
     if (loading || !isAdminUser(user)) {
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }) {
     return () => {
       mounted = false
     }
-  }, [loading, role, user])
+  }, [loading, user])
 
   const markNotificationRead = async (notificationId) => {
     try {

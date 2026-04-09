@@ -19,7 +19,7 @@ const INITIAL_FILTERS = { search: '', action: '', status: '', fromDate: '', toDa
 
 export default function AdminAuditLogsPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [logs, setLogs] = useState([])
@@ -35,7 +35,7 @@ export default function AdminAuditLogsPage() {
     if (!isSuperAdmin(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   const load = useCallback(async (page = 1, nextFilters = INITIAL_FILTERS) => {
     if (!user || !isSuperAdmin(user)) return
@@ -64,7 +64,7 @@ export default function AdminAuditLogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, role])
+  }, [user])
 
   useEffect(() => {
     if (authLoading) return

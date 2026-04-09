@@ -14,7 +14,7 @@ import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 
 export default function AdminIpManagementPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -32,7 +32,7 @@ export default function AdminIpManagementPage() {
     if (!isSuperAdmin(user)) {
       router.replace('/admin/dashboard')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   const loadPageData = useCallback(async () => {
     if (!user || !isAdminUser(user) || !isSuperAdmin(user)) return
@@ -48,12 +48,12 @@ export default function AdminIpManagementPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, role])
+  }, [user])
 
   useEffect(() => {
     if (authLoading) return
     loadPageData()
-  }, [authLoading, user, role, loadPageData])
+  }, [authLoading, user, loadPageData])
 
   return (
     <div className="space-y-8">

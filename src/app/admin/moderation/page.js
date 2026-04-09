@@ -25,7 +25,7 @@ import { cn } from '@/lib/cn'
 
 export default function AdminModerationPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedReview, setSelectedReview] = useState(null)
@@ -42,7 +42,7 @@ export default function AdminModerationPage() {
     if (!isAdminUser(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   const loadData = useCallback(async (signal) => {
     if (!user || !isAdminUser(user)) return
@@ -58,7 +58,7 @@ export default function AdminModerationPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, role])
+  }, [user])
 
   useEffect(() => {
     if (authLoading) return

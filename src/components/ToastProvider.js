@@ -3,14 +3,15 @@ import { Toaster } from 'react-hot-toast'
 
 export default function ToastProvider() {
   return (
-    <Toaster 
-      position="top-center" 
+    <Toaster
+      position="top-center"
       toastOptions={{
         style: {
-          background: '#1c1f2b',
-          color: '#f0f0fd',
-          border: '1px solid rgba(115, 117, 128, 0.15)',
-          borderRadius: '12px'
+          background: 'var(--surface-card)',
+          color: 'var(--foreground)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          boxShadow: 'var(--shadow-card)',
         }
       }}
     />

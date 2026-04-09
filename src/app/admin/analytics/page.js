@@ -14,7 +14,7 @@ import { isAdminUser } from '@/lib/admin-protection'
 
 export default function AdminAnalyticsPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -28,7 +28,7 @@ export default function AdminAnalyticsPage() {
     if (!isAdminUser(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   useEffect(() => {
     if (authLoading || !user || !isAdminUser(user)) return
@@ -52,7 +52,7 @@ export default function AdminAnalyticsPage() {
     }
     load()
     return () => { isActive = false }
-  }, [authLoading, user, role])
+  }, [authLoading, user])
 
   return (
     <div className="space-y-6">

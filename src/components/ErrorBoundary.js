@@ -46,7 +46,7 @@ export class GlobalErrorBoundary extends React.Component {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button 
                 onClick={this.handleRetry}
-                className="flex-1 gap-2 rounded-xl bg-destructive font-bold text-white shadow-lg shadow-destructive/20 hover:bg-destructive/90"
+                className="flex-1 gap-2 rounded-xl bg-destructive font-bold text-destructive-foreground shadow-lg shadow-destructive/20 hover:bg-destructive/90"
               >
                 <RefreshCcw size={16} />
                 Try Again
@@ -63,7 +63,7 @@ export class GlobalErrorBoundary extends React.Component {
           </StandardCard>
           
           {process.env.NODE_ENV === 'development' && (
-            <div className="mt-8 max-w-2xl overflow-auto rounded-lg bg-black/40 p-4 text-left text-[10px] font-mono text-red-400">
+            <div className="mt-8 max-w-2xl overflow-auto rounded-lg bg-surface/80 p-4 text-left text-[10px] font-mono text-destructive backdrop-blur-sm">
               {this.state.error?.toString()}
             </div>
           )}

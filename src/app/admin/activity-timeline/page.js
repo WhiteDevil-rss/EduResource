@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
@@ -8,7 +10,7 @@ import { History } from 'lucide-react'
 
 export default function ActivityTimelinePage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
     if (authLoading) return
@@ -23,7 +25,7 @@ export default function ActivityTimelinePage() {
     if (!isSuperAdmin(user)) {
       router.replace('/admin/dashboard')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   return (
     <div className="space-y-8">

@@ -4,6 +4,7 @@ import { Menu, Bell, Search, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 /**
  * ResponsiveTopbar - Architected header system
@@ -69,6 +70,7 @@ export function ResponsiveTopbar({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
+              <ThemeToggle className="h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-foreground hover:bg-muted/50" />
               <Button
                 variant="ghost"
                 size="icon"

@@ -16,7 +16,7 @@ import { isAdminUser } from '@/lib/admin-protection'
 
 export default function AdminResourcesPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [resources, setResources] = useState([])
   const [search, setSearch] = useState('')
@@ -32,7 +32,7 @@ export default function AdminResourcesPage() {
     if (!isAdminUser(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   useEffect(() => {
     if (authLoading || !user || !isAdminUser(user)) return
@@ -53,7 +53,7 @@ export default function AdminResourcesPage() {
     }
     load()
     return () => { mounted = false }
-  }, [authLoading, user, role])
+  }, [authLoading, user])
 
   const classOptions = useMemo(() => [
     { label: 'All Classes', value: 'all' },

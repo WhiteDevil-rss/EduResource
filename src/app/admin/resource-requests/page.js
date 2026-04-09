@@ -25,7 +25,7 @@ function requestStatusConfig(status) {
 
 export default function ResourceRequestsPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [requests, setRequests] = useState([])
   const [search, setSearch] = useState('')
@@ -41,7 +41,7 @@ export default function ResourceRequestsPage() {
     if (!isAdminUser(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   const load = useCallback(async () => {
     if (!user || !isAdminUser(user)) return
@@ -57,7 +57,7 @@ export default function ResourceRequestsPage() {
     } finally {
       setLoading(false)
     }
-  }, [user, role])
+  }, [user])
 
   useEffect(() => {
     if (authLoading) return

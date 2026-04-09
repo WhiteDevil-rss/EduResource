@@ -40,8 +40,30 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang="en" data-scroll-behavior="smooth" className="dark" suppressHydrationWarning>
       <body suppressHydrationWarning>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`
+            (function () {
+              try {
+                var storageKey = 'eduresourcehub-theme';
+                var savedTheme = window.localStorage.getItem(storageKey);
+                var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+                var theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : (prefersLight ? 'light' : 'dark');
+
+                document.documentElement.classList.remove('light', 'dark');
+                document.documentElement.classList.add(theme);
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.style.colorScheme = theme;
+              } catch (error) {
+                document.documentElement.classList.remove('light', 'dark');
+                document.documentElement.classList.add('dark');
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.style.colorScheme = 'dark';
+              }
+            })();
+          `}
+        </Script>
         {process.env.NODE_ENV === 'development' ? (
           <Script id="clipboard-focus-guard" strategy="beforeInteractive">
             {`

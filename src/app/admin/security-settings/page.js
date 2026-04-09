@@ -54,7 +54,7 @@ function parseForm(formState) {
 
 export default function AdminSecuritySettingsPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -74,7 +74,7 @@ export default function AdminSecuritySettingsPage() {
     if (!isSuperAdmin(user)) {
       router.replace('/admin/dashboard')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   useEffect(() => {
     if (authLoading || !user || !isAdminUser(user) || !isSuperAdmin(user)) return
@@ -96,7 +96,7 @@ export default function AdminSecuritySettingsPage() {
     }
     load()
     return () => { mounted = false }
-  }, [authLoading, user, role])
+  }, [authLoading, user])
 
   const parsed = useMemo(() => parseForm(formState), [formState])
 

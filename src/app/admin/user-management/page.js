@@ -29,7 +29,7 @@ const EMPTY_CREATE_FORM = {
 
 export default function UserManagementPage() {
   const router = useRouter()
-  const { user, role, loading: authLoading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [users, setUsers] = useState([])
@@ -51,7 +51,7 @@ export default function UserManagementPage() {
     if (!isAdminUser(user)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [authLoading, user, role, router])
+  }, [authLoading, user, router])
 
   const loadUsers = useCallback(async ({ silent = false } = {}) => {
     if (!user || !isAdminUser(user)) return
@@ -67,7 +67,7 @@ export default function UserManagementPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [user, role])
+  }, [user])
 
   useEffect(() => {
     if (authLoading) return
