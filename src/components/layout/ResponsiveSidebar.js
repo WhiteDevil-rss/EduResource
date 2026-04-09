@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { LogOut, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AppIcon } from '@/components/ui/AppIcon'
 import { cn } from '@/lib/cn'
 import { filterNavItemsByRole } from '@/lib/feature-access'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
@@ -14,7 +15,7 @@ function SidebarContent({ user, role, title, subtitle, navItems, onLogout }) {
   const visibleNavItems = filterNavItemsByRole(user || { role }, navItems)
 
   return (
-    <div className="flex h-full flex-col bg-background/95 backdrop-blur-sm lg:bg-background lg:backdrop-blur-none">
+    <div className="panel-shell flex h-full min-w-0 flex-col overflow-x-hidden bg-background/95 backdrop-blur-sm lg:bg-background lg:backdrop-blur-none">
       {/* Sidebar Header */}
       <div className="border-b border-border/40 px-6 py-6">
         <div className="flex items-center gap-3">
@@ -27,7 +28,7 @@ function SidebarContent({ user, role, title, subtitle, navItems, onLogout }) {
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide" aria-label="Main Navigation">
+      <nav className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden px-3 py-4 scrollbar-hide" aria-label="Main Navigation">
         <ul className="space-y-1" role="list">
           {visibleNavItems.map((item) => {
             const Icon = item.icon
@@ -45,12 +46,12 @@ function SidebarContent({ user, role, title, subtitle, navItems, onLogout }) {
                   )}
                   aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon 
-                    size={18} 
-                    className={cn(
-                      'shrink-0 transition-transform duration-200 group-hover:scale-110',
-                      isActive ? 'text-primary' : 'text-muted-foreground/60'
-                    )} 
+                  <AppIcon
+                    icon={Icon}
+                    size={18}
+                    active={isActive}
+                    interactive={!isActive}
+                    className={cn('shrink-0 transition-transform duration-200 group-hover:scale-110', !isActive && 'group-hover:text-foreground')}
                   />
                   <span className="truncate">{item.label}</span>
                   {isActive && (
@@ -73,7 +74,7 @@ function SidebarContent({ user, role, title, subtitle, navItems, onLogout }) {
           className="h-11 w-full justify-start gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/5 hover:text-destructive active:scale-[0.98] transition-all"
           onClick={onLogout}
         >
-          <LogOut size={18} className="shrink-0" />
+          <AppIcon icon={LogOut} size={18} interactive className="shrink-0" />
           <span>Sign Out</span>
         </Button>
       </div>
@@ -110,16 +111,16 @@ export function ResponsiveSidebar({
       {/* Mobile Drawer */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-[70] w-full max-w-[300px] bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden',
+          'fixed inset-y-0 left-0 z-[70] w-full max-w-[300px] overflow-x-hidden bg-background shadow-2xl transition-transform duration-300 ease-in-out md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <button
           onClick={() => onMobileOpenChange(false)}
-          className="absolute right-4 top-4 z-[80] flex h-10 w-10 items-center justify-center rounded-full bg-muted/30 text-foreground transition-colors hover:bg-muted/50"
+          className="absolute right-4 top-4 z-[80] flex h-10 w-10 items-center justify-center rounded-full bg-muted/30 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
           aria-label="Close sidebar"
         >
-          <X size={20} />
+          <AppIcon icon={X} size={20} interactive />
         </button>
 
         <SidebarContent

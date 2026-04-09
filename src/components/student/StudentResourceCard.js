@@ -117,4 +117,16 @@ export const StudentResourceCard = memo(function StudentResourceCard({
       }
     />
   )
+}, (prevProps, nextProps) => {
+  const prevResource = prevProps.resource || {}
+  const nextResource = nextProps.resource || {}
+
+  return (
+    prevResource.id === nextResource.id &&
+    prevResource.uploadStatus === nextResource.uploadStatus &&
+    prevResource.uploadProgress === nextResource.uploadProgress &&
+    prevResource.updatedAt === nextResource.updatedAt &&
+    prevProps.bookmarked === nextProps.bookmarked &&
+    prevProps.allowDownload === nextProps.allowDownload
+  )
 })

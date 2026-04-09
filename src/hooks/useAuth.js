@@ -130,9 +130,22 @@ export function AuthProvider({ children }) {
   };
 
   const applySession = (session) => {
-    setUser(session?.user || null);
-    setRole(session?.role || null);
-    setStatus(session?.status || null);
+    const normalizedRole = session?.role || session?.user?.role || null;
+    const normalizedStatus = session?.status || session?.user?.status || null;
+
+    const nextUser = session?.user
+      ? {
+          ...session.user,
+          uid: session.user.uid || session.user.id || null,
+          id: session.user.id || session.user.uid || null,
+          ...(normalizedRole ? { role: normalizedRole } : {}),
+          ...(normalizedStatus ? { status: normalizedStatus } : {}),
+        }
+      : null;
+
+    setUser(nextUser);
+    setRole(normalizedRole);
+    setStatus(normalizedStatus);
     setAuthProvider(session?.authProvider || null);
 
     const nextSettings = normalizeSessionSettings(session?.sessionSettings);
@@ -153,23 +166,28 @@ export function AuthProvider({ children }) {
     let isActive = true;
 
     const loadSession = async () => {
-      const session = await fetchSessionSnapshot();
-      if (!isActive) {
-        return;
-      }
-
-      applySession(session);
-      if (session?.user && session?.role) {
-        const existingSessionStart = readSessionStart();
-        if (existingSessionStart) {
-          setSessionStartedAtMs(existingSessionStart);
-        } else {
-          writeSessionStart(Date.now());
+      try {
+        const session = await fetchSessionSnapshot();
+        if (!isActive) {
+          return;
         }
-      } else {
-        clearSessionStart();
+
+        applySession(session);
+        if (session?.user && (session?.role || session?.user?.role)) {
+          const existingSessionStart = readSessionStart();
+          if (existingSessionStart) {
+            setSessionStartedAtMs(existingSessionStart);
+          } else {
+            writeSessionStart(Date.now());
+          }
+        } else {
+          clearSessionStart();
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
       }
-      setLoading(false);
     };
 
     loadSession();
@@ -468,10 +486,18 @@ export function AuthProvider({ children }) {
       );
     };
 
-    const intervalId = window.setInterval(refresh, 60000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    };
+
+    const intervalId = window.setInterval(refresh, 300000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       mounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.clearInterval(intervalId);
     };
   }, [role, user?.uid]);

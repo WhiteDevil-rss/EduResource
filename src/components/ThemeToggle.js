@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MoonStar, SunMedium } from 'lucide-react';
 
+import { AppIcon } from '@/components/ui/AppIcon'
 import { Button } from './ui/button';
 
 const STORAGE_KEY = 'eduresourcehub-theme';
@@ -52,11 +53,11 @@ export function ThemeToggle({ className = '', showLabel = false }) {
       variant="ghost"
       size={showLabel ? 'default' : 'icon'}
       onClick={toggleTheme}
-      className={`theme-toggle gap-2 rounded-full border border-surface/70 bg-surface/80 px-3 text-surface-muted backdrop-blur-sm hover:bg-surface-panel hover:text-surface-foreground ${className}`}
+      className={`theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground ${className}`}
       aria-label={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
       title={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
     >
-      {theme === 'dark' ? <SunMedium className="h-4 w-4" aria-hidden="true" /> : <MoonStar className="h-4 w-4" aria-hidden="true" />}
+      <AppIcon icon={theme === 'dark' ? SunMedium : MoonStar} size={16} className="text-foreground" />
       {showLabel ? <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span> : null}
     </Button>
   );

@@ -77,6 +77,35 @@ function isConfigurationError(message = '') {
   )
 }
 
+function normalizeEmailValue(value = '') {
+  return String(value || '').trim().toLowerCase()
+}
+
+const SECURITY_CONTROLS_CACHE_TTL_MS = 60_000
+let cachedSecurityControls = null
+let cachedSecurityControlsFetchedAt = 0
+
+async function getCachedSecurityControls() {
+  const now = Date.now()
+  if (cachedSecurityControls && now - cachedSecurityControlsFetchedAt < SECURITY_CONTROLS_CACHE_TTL_MS) {
+    return cachedSecurityControls
+  }
+
+  const controls = await getSecurityControlsRecord().catch(() => null)
+  cachedSecurityControls = controls
+  cachedSecurityControlsFetchedAt = now
+  return controls
+}
+
+function withTimeout(promise, timeoutMs) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
+    }),
+  ])
+}
+
 export async function POST(request) {
   const timer = new RequestTimer('credential-login')
   try {
@@ -93,7 +122,7 @@ export async function POST(request) {
     const isEmailIdentifier = loginIdentifier.includes('@')
 
     if (!loginIdentifier || !password) {
-      await logAction({
+      void logAction({
         user: { email: loginIdentifier || null, role: 'admin' },
         action: 'LOGIN',
         description: 'Credential login failed: missing email/login ID or password.',
@@ -127,7 +156,7 @@ export async function POST(request) {
       )
     }
 
-    const securityControls = await getSecurityControlsRecord().catch(() => null)
+    const securityControls = await getCachedSecurityControls()
     const maxLoginAttempts = Number(securityControls?.maxLoginAttempts || 5)
     const lockDurationMinutes = Number(securityControls?.lockDurationMinutes || 15)
     const alertsEnabled = Boolean(securityControls?.enableAlerts)
@@ -138,7 +167,7 @@ export async function POST(request) {
     const lockCheck = await isLoginLocked(loginIdentifier)
     timer.markPhase('lock-check')
     if (lockCheck.locked) {
-      await logSuspiciousActivity({
+      void logSuspiciousActivity({
         user: { email: loginIdentifier },
         action: 'FAILED_LOGIN',
         description: 'Blocked login attempt against a temporarily locked account.',
@@ -148,7 +177,7 @@ export async function POST(request) {
       }).catch(() => null)
 
       if (alertsEnabled) {
-        await emitSuspiciousActivityAlert({
+        void emitSuspiciousActivityAlert({
           user: { email: loginIdentifier },
           reason: 'Blocked login due to account lockout threshold',
           request,
@@ -165,27 +194,26 @@ export async function POST(request) {
       )
     }
 
-    let recordByEmailInput = null
-    let recordByLoginIdInput = null
+    let resolvedRecord = null
     let lookupFailed = false
-    try {
-      recordByEmailInput = await findUserRecordByEmail(loginIdentifier)
-      recordByLoginIdInput = recordByEmailInput
-        ? null
-        : await findUserRecordByLoginId(loginIdentifier)
-    } catch {
-      // Firestore lookup is required when using login IDs.
-      lookupFailed = true
-      recordByEmailInput = null
-      recordByLoginIdInput = null
+    if (!isEmailIdentifier) {
+      try {
+        const recordByEmailInput = await findUserRecordByEmail(loginIdentifier)
+        const recordByLoginIdInput = recordByEmailInput
+          ? null
+          : await findUserRecordByLoginId(loginIdentifier)
+        resolvedRecord = recordByEmailInput || recordByLoginIdInput
+      } catch {
+        // Firestore lookup is required when using login IDs.
+        lookupFailed = true
+        resolvedRecord = null
+      }
     }
     timer.markPhase('profile-lookup')
 
-    const resolvedRecord = recordByEmailInput || recordByLoginIdInput
-
     if (!isEmailIdentifier) {
       if (lookupFailed) {
-        await logAction({
+        void logAction({
           user: { email: loginIdentifier || null, role: 'admin' },
           action: 'LOGIN',
           description: 'Credential login failed: login directory lookup unavailable.',
@@ -210,7 +238,7 @@ export async function POST(request) {
         })
 
         if (alertsEnabled && failedAttempt.locked) {
-          await emitSuspiciousActivityAlert({
+          void emitSuspiciousActivityAlert({
             user: { email: loginIdentifier },
             reason: 'Multiple failed login attempts detected',
             request,
@@ -218,7 +246,7 @@ export async function POST(request) {
         }
 
         if (failedAttempt.attempts >= Math.max(3, maxLoginAttempts - 1)) {
-          await logSuspiciousActivity({
+          void logSuspiciousActivity({
             user: { email: loginIdentifier },
             action: 'FAILED_LOGIN',
             description: `Repeated failed login attempts detected (${failedAttempt.attempts}).`,
@@ -229,7 +257,7 @@ export async function POST(request) {
           }).catch(() => null)
         }
 
-        await logAction({
+        void logAction({
           user: { email: loginIdentifier || null, role: 'admin' },
           action: 'LOGIN',
           description: 'Credential login failed: invalid login ID.',
@@ -247,20 +275,8 @@ export async function POST(request) {
     }
 
     const accountEmail = String(
-      resolvedRecord?.user?.email || loginIdentifier
+      isEmailIdentifier ? loginIdentifier : resolvedRecord?.user?.email || loginIdentifier
     ).toLowerCase()
-
-    const canonicalLockCheck = await isLoginLocked(accountEmail)
-    if (canonicalLockCheck.locked) {
-      return withNoStore(
-        NextResponse.json(
-          {
-            error: `Too many failed attempts. Account temporarily locked until ${new Date(canonicalLockCheck.lockedUntil).toLocaleString()}.`,
-          },
-          { status: 429 }
-        )
-      )
-    }
 
     let result
     try {
@@ -268,7 +284,7 @@ export async function POST(request) {
     } catch (error) {
       const message = String(error?.message || '')
       if (message.includes('USER_DISABLED')) {
-        await logAction({
+        void logAction({
           user: { email: accountEmail || null, role: 'admin' },
           action: 'LOGIN',
           description: 'Credential login blocked: disabled account.',
@@ -302,7 +318,7 @@ export async function POST(request) {
         })
 
         if (alertsEnabled && failedAttempt.locked) {
-          await emitSuspiciousActivityAlert({
+          void emitSuspiciousActivityAlert({
             user: { email: accountEmail || loginIdentifier },
             reason: 'Multiple failed login attempts detected',
             request,
@@ -310,7 +326,7 @@ export async function POST(request) {
         }
 
         if (failedAttempt.attempts >= Math.max(3, maxLoginAttempts - 1)) {
-          await logSuspiciousActivity({
+          void logSuspiciousActivity({
             user: { email: accountEmail || loginIdentifier },
             action: 'FAILED_LOGIN',
             description: `Credential login failures nearing lock threshold (${failedAttempt.attempts}).`,
@@ -321,7 +337,7 @@ export async function POST(request) {
           }).catch(() => null)
         }
 
-        await logAction({
+        void logAction({
           user: { email: accountEmail || null, role: 'admin' },
           action: 'LOGIN',
           description: 'Credential login failed: invalid credentials.',
@@ -340,16 +356,26 @@ export async function POST(request) {
     }
     timer.markPhase('password-verification')
 
-    const [recordByUid, recordByResolvedEmail] = await Promise.all([
-      getUserRecordById(result.uid).catch(() => null),
-      findUserRecordByEmail(accountEmail).catch(() => null),
-    ])
+    const resolvedRecordUser = resolvedRecord?.user || null
+    const canReuseResolvedUser =
+      resolvedRecordUser &&
+      String(resolvedRecordUser.uid || '').trim() === String(result.uid || '').trim() &&
+      (!resolvedRecordUser.email || normalizeEmailValue(resolvedRecordUser.email) === normalizeEmailValue(accountEmail))
 
-    const resolvedUser =
-      recordByUid ||
-      recordByResolvedEmail?.user ||
-      resolvedRecord?.user ||
-      null
+    let resolvedUser = canReuseResolvedUser ? resolvedRecordUser : null
+
+    if (!resolvedUser) {
+      resolvedUser = await getUserRecordById(result.uid).catch(() => null)
+    }
+
+    if (!resolvedUser) {
+      const recordByResolvedEmail = await findUserRecordByEmail(accountEmail).catch(() => null)
+      resolvedUser = recordByResolvedEmail?.user || null
+    }
+
+    if (!resolvedUser) {
+      resolvedUser = resolvedRecordUser
+    }
     timer.markPhase('user-record-resolution')
 
     if (resolvedUser?.isBlocked) {
@@ -379,7 +405,7 @@ export async function POST(request) {
     }
 
     if (effectiveUser.role === 'student') {
-      await logAction({
+      void logAction({
         user: { uid: effectiveUser.uid || null, name: effectiveUser.displayName, email: effectiveUser.email, role: effectiveUser.role },
         action: 'LOGIN',
         description: 'Credential login rejected: student must use Google portal.',
@@ -438,7 +464,7 @@ export async function POST(request) {
         ttlMinutes: 5,
       })
 
-      await logAction({
+      void logAction({
         user: {
           uid: result.uid,
           name: effectiveUser.displayName || null,
@@ -472,18 +498,23 @@ export async function POST(request) {
     let sessionRegistryCreated = false
 
     try {
-      await createSessionRecord({
-        sessionId,
-        uid: result.uid,
-        role: effectiveUser.role,
-        email: effectiveUser.email,
-        name: effectiveUser.displayName || null,
-        authProvider: 'credentials',
-        userAgent: request.headers.get('user-agent'),
-        expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
-      })
+      await withTimeout(
+        createSessionRecord({
+          sessionId,
+          uid: result.uid,
+          role: effectiveUser.role,
+          email: effectiveUser.email,
+          name: effectiveUser.displayName || null,
+          authProvider: 'credentials',
+          userAgent: request.headers.get('user-agent'),
+          expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString(),
+        }),
+        450
+      )
       sessionRegistryCreated = true
-      await Promise.allSettled([
+
+      // Non-critical writes should not block login response.
+      void Promise.allSettled([
         touchUserLogin(result.uid),
         createAuditRecord({
           actorUid: result.uid,
@@ -508,7 +539,7 @@ export async function POST(request) {
         )
       }
 
-      // Do not block successful credential auth when profile/audit persistence is unavailable.
+      // Do not block successful credential auth when persistence is unavailable or slow.
       console.warn(`Post-login persistence failed: ${message || error}`)
     }
     timer.markPhase('session-creation')
@@ -527,9 +558,11 @@ export async function POST(request) {
 
     const response = withNoStore(
       NextResponse.json({
+        token: 'session-cookie',
         user: {
-          ...effectiveUser,
-          uid: result.uid,
+          id: result.uid,
+          email: effectiveUser.email || null,
+          role: effectiveUser.role,
         },
         role: effectiveUser.role,
       })
@@ -609,7 +642,7 @@ export async function POST(request) {
       )
     }
 
-    await logAction({
+    void logAction({
       user: null,
       action: 'LOGIN',
       description: 'Credential login failed.',

@@ -514,8 +514,8 @@ function getDocumentData(document) {
   return document
 }
 
-async function getCollectionRecords(collectionName) {
-  return firestore.listDocs(collectionName)
+async function getCollectionRecords(collectionName, options = {}) {
+  return firestore.listDocs(collectionName, options)
 }
 
 async function syncExpiredUserBlock(docId, data) {
@@ -822,8 +822,11 @@ export async function findUserRecordByLoginId(loginId) {
   }
 }
 
-export async function listUserRecords() {
-  const records = await getCollectionRecords(USERS_COLLECTION)
+export async function listUserRecords({ limit = 400 } = {}) {
+  const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 400))
+  const records = await getCollectionRecords(USERS_COLLECTION, {
+    pageSize: safeLimit,
+  })
   const activeRecords = []
 
   for (const document of records) {
@@ -845,6 +848,50 @@ export async function listResourceRecords() {
     )
 }
 
+export async function listResourceRecordsWithLimit({
+  limit = 300,
+  fieldMask = null,
+} = {}) {
+  const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 300))
+  const records = await getCollectionRecords(RESOURCES_COLLECTION, {
+    pageSize: safeLimit,
+    ...(Array.isArray(fieldMask) && fieldMask.length > 0 ? { fieldMask } : {}),
+  })
+
+  return records
+    .map((document) => sanitizeResourceData(document.id, getDocumentData(document)))
+    .sort((left, right) =>
+      String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
+    )
+}
+
+export async function listResourceRecordsByOwner(ownerUid, { limit = 300 } = {}) {
+  const normalizedOwnerUid = String(ownerUid || '').trim()
+  if (!normalizedOwnerUid) {
+    return []
+  }
+
+  const safeLimit = Math.max(1, Math.min(600, Number(limit) || 300))
+
+  const [uploadedByMatches, facultyIdMatches] = await Promise.all([
+    firestore.runQueryMany(RESOURCES_COLLECTION, ['uploadedBy', '==', normalizedOwnerUid], safeLimit).catch(() => []),
+    firestore.runQueryMany(RESOURCES_COLLECTION, ['facultyId', '==', normalizedOwnerUid], safeLimit).catch(() => []),
+  ])
+
+  const deduped = new Map()
+  ;[...uploadedByMatches, ...facultyIdMatches].forEach((entry) => {
+    if (entry?.id) {
+      deduped.set(entry.id, entry)
+    }
+  })
+
+  return Array.from(deduped.values())
+    .map((entry) => sanitizeResourceData(entry.id, entry))
+    .sort((left, right) =>
+      String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
+    )
+}
+
 export async function listBookmarkedResourcesByStudent(uid) {
   const user = await getUserRecordById(uid)
   if (!user) {
@@ -856,8 +903,17 @@ export async function listBookmarkedResourcesByStudent(uid) {
     return []
   }
 
-  const resources = await listResourceRecords()
-  return resources.filter((resource) => bookmarkIds.includes(String(resource.id || '').trim()))
+  const normalizedBookmarkIds = [...new Set(bookmarkIds.map((value) => String(value || '').trim()).filter(Boolean))]
+  const resources = await Promise.all(
+    normalizedBookmarkIds.map((resourceId) =>
+      firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`).catch(() => null)
+    )
+  )
+
+  return resources
+    .filter(Boolean)
+    .map((entry) => sanitizeResourceData(entry.id, getDocumentData(entry)))
+    .sort((left, right) => String(right.createdAt || '').localeCompare(String(left.createdAt || '')))
 }
 
 export async function toggleBookmarkForStudent({ studentUid, resourceId }) {
@@ -1028,8 +1084,9 @@ export async function searchResourceRecords({
   subject = '',
   classFilter = '',
   status = 'live',
+  limit = 300,
 } = {}) {
-  const allRecords = await listResourceRecords()
+  const allRecords = await listResourceRecordsWithLimit({ limit })
   const liveRecords = allRecords.filter((entry) => entry.status === status)
 
   return liveRecords.filter((entry) => {
@@ -2048,19 +2105,27 @@ export async function countAuditRecords({ action = null, targetIds = [] } = {}) 
     }).length
 }
 
-export async function listNotificationRecords(recipientUid) {
+export async function listNotificationRecords(recipientUid, { page = 1, limit = 50 } = {}) {
   const normalizedRecipientUid = String(recipientUid || '').trim()
   if (!normalizedRecipientUid) {
     return []
   }
 
-  const records = await getCollectionRecords(NOTIFICATIONS_COLLECTION).catch(() => [])
-  return records
+  const safePage = Math.max(1, Number(page) || 1)
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 50))
+  const offset = (safePage - 1) * safeLimit
+  const scanSize = Math.min(500, Math.max(100, offset + safeLimit))
+
+  const records = await firestore
+    .runQueryMany(NOTIFICATIONS_COLLECTION, ['recipientUid', '==', normalizedRecipientUid], scanSize)
+    .catch(() => [])
+  const sorted = records
     .map((document) => sanitizeNotificationData(document.id, getDocumentData(document)))
-    .filter((record) => record.recipientUid === normalizedRecipientUid)
     .sort((left, right) =>
       String(right.createdAt || '').localeCompare(String(left.createdAt || ''))
     )
+
+  return sorted.slice(offset, offset + safeLimit)
 }
 
 export async function countUnreadNotificationRecords(recipientUid) {
@@ -2221,9 +2286,22 @@ export async function createSessionRecord({
     throw new Error('Session registration failed.')
   }
 
-  const activeSessions = await listActiveSessionRecordsByUser(normalizedUid)
-  if (activeSessions.length >= 2) {
-    throw new Error('You can only be signed in on 2 devices at a time. Please log out from another device first.')
+  // Fast-path guard: check only this user's recent sessions and skip global fallbacks.
+  try {
+    const records = await firestore.runQueryMany(SESSIONS_COLLECTION, ['uid', '==', normalizedUid], 5)
+    const activeSessions = records
+      .map((entry) => sanitizeSessionData(entry.id, entry))
+      .filter(isActiveSessionRecord)
+
+    if (activeSessions.length >= 2) {
+      throw new Error('You can only be signed in on 2 devices at a time. Please log out from another device first.')
+    }
+  } catch (error) {
+    const message = String(error?.message || '')
+    if (message.includes('You can only be signed in on 2 devices at a time')) {
+      throw error
+    }
+    // Do not block login when the session directory query is temporarily unavailable.
   }
 
   const createdAt = nowIso()

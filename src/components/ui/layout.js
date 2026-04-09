@@ -56,12 +56,12 @@ export function SectionDivider({ className = '', ...props }) {
  */
 export function FilterBar({ children, className = '', onReset, ...props }) {
   return (
-    <div className={cn('flex flex-col sm:flex-row flex-wrap items-end gap-3 p-4 rounded-lg bg-surface-panel/50 border border-outline/50', className)} {...props}>
+    <div className={cn('ui-panel-muted flex flex-col flex-wrap items-end gap-3 p-4 sm:flex-row', className)} {...props}>
       <div className="flex flex-1 flex-wrap items-end gap-3">
         {children}
       </div>
       {onReset && (
-        <button type="button" onClick={onReset} className="px-4 py-2 text-sm font-medium rounded-lg bg-muted/10 hover:bg-muted/20 text-muted hover:text-foreground transition-colors">
+        <button type="button" onClick={onReset} className="button-ghost px-4 py-2 text-sm">
           Reset
         </button>
       )}
@@ -111,7 +111,7 @@ export function EmptyState({ icon: Icon, title, description, action, className =
  */
 export function StatCard({ label, value, unit, trend, className = '', ...props }) {
   return (
-    <div className={cn('p-4 rounded-lg bg-surface-panel border border-outline', className)} {...props}>
+    <div className={cn('ui-panel p-4', className)} {...props}>
       <p className="text-xs text-muted-strong font-medium mb-2">{label}</p>
       <div className="flex items-baseline gap-2">
         <p className="text-2xl font-bold text-foreground">{value}</p>
@@ -127,14 +127,14 @@ export function StatCard({ label, value, unit, trend, className = '', ...props }
  */
 export function PaginationControls({ page, pages, total, loading, onPrevious, onNext, className = '', ...props }) {
   return (
-    <div className={cn('flex items-center justify-center gap-3 p-4 rounded-lg bg-surface-panel/50 border border-outline/50', className)} {...props}>
-      <button type="button" onClick={onPrevious} disabled={page <= 1 || loading} className="px-4 py-2 text-sm font-medium rounded-lg bg-surface-card hover:bg-surface-card-high disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+    <div className={cn('ui-panel-muted flex items-center justify-center gap-3 p-4', className)} {...props}>
+      <button type="button" onClick={onPrevious} disabled={page <= 1 || loading} className="button-secondary px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
         Previous
       </button>
       <span className="text-sm text-muted">
         Page <span className="font-semibold">{page}</span> of <span className="font-semibold">{pages}</span> ({total} items)
       </span>
-      <button type="button" onClick={onNext} disabled={page >= pages || loading} className="px-4 py-2 text-sm font-medium rounded-lg bg-surface-card hover:bg-surface-card-high disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+      <button type="button" onClick={onNext} disabled={page >= pages || loading} className="button-secondary px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
         Next
       </button>
     </div>

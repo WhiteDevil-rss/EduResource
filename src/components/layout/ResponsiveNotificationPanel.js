@@ -2,6 +2,7 @@
 
 import { X, Trash2, CheckCircle2, Bell, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { AppIcon } from '@/components/ui/AppIcon'
 import { cn } from '@/lib/cn'
 
 /**
@@ -35,9 +36,9 @@ export function ResponsiveNotificationPanel({
       {/* Main Slide-over Panel */}
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-[110] flex w-full flex-col bg-background/95 shadow-2xl transition-transform duration-500 ease-out backdrop-blur-xl md:w-[28rem]',
+          'ui-panel fixed inset-y-0 right-0 z-[110] flex w-full max-w-full flex-col overflow-x-hidden bg-background/90 shadow-2xl transition-transform duration-500 ease-out backdrop-blur-xl md:w-[28rem]',
           isOpen ? 'translate-x-0' : 'translate-x-full',
-          'border-l border-border/40',
+          'rounded-none border-l border-border/40 md:rounded-l-2xl md:rounded-r-none',
           className
         )}
       >
@@ -61,10 +62,10 @@ export function ResponsiveNotificationPanel({
 
           <button
             onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/40 text-muted-foreground hover:bg-muted/60 transition-colors"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-muted/35 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary"
             aria-label="Close notification panel"
           >
-            <X size={20} />
+            <AppIcon icon={X} size={20} interactive />
           </button>
         </div>
 
@@ -89,7 +90,7 @@ export function ResponsiveNotificationPanel({
 
         {/* Fixed Footer with Actions */}
         {notificationCount > 0 && (
-          <div className="flex shrink-0 gap-3 border-t border-border/40 bg-muted/5 p-6">
+          <div className="ui-panel-muted flex shrink-0 gap-3 border-x-0 border-b-0 border-t border-border/40 p-6">
             <Button
               variant="outline"
               size="sm"
@@ -134,7 +135,7 @@ export function NotificationItem({
   return (
     <div
       className={cn(
-        'group relative p-5 transition-all duration-300 hover:bg-muted/40',
+        'group relative p-5 transition-all duration-300 hover:bg-primary/8',
         isUnread && 'bg-primary/5'
       )}
     >
@@ -144,10 +145,10 @@ export function NotificationItem({
 
       <div className="flex items-start gap-4">
         <div className={cn(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground transition-all group-hover:scale-110 group-hover:bg-primary/10 group-hover:text-primary',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-muted/45 text-muted-foreground transition-all group-hover:scale-110 group-hover:bg-primary/12 group-hover:text-primary',
           isUnread && 'bg-primary/20 text-primary'
         )}>
-          <Icon size={20} />
+          <AppIcon icon={Icon} size={20} active={isUnread} interactive={!isUnread} className={cn(!isUnread && 'group-hover:text-primary')} />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -156,13 +157,13 @@ export function NotificationItem({
               {title}
             </h4>
             {timestamp && (
-              <span className="shrink-0 text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/60 transition-opacity group-hover:opacity-100">
+              <span className="shrink-0 text-[10px] font-bold uppercase tracking-tighter text-muted-foreground transition-opacity group-hover:opacity-100">
                 {timestamp}
               </span>
             )}
           </div>
 
-          <p className="mt-1 line-clamp-2 text-[13px] font-medium leading-relaxed text-muted-foreground/80">
+          <p className="mt-1 line-clamp-2 text-[13px] font-medium leading-relaxed text-muted-foreground">
             {description}
           </p>
 
@@ -179,10 +180,10 @@ export function NotificationItem({
             {onDismiss && (
               <button
                 onClick={onDismiss}
-                className="opacity-0 group-hover:opacity-100 transition-opacity flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+                className="opacity-0 group-hover:opacity-100 transition-opacity flex h-7 w-7 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
                 aria-label="Dismiss notification"
               >
-                <X size={14} />
+                <AppIcon icon={X} size={14} className="text-inherit" />
               </button>
             )}
           </div>
@@ -203,12 +204,12 @@ export function EmptyNotifications({
     <div className="flex h-[60vh] flex-col items-center justify-center px-10 text-center">
       <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
         <div className="absolute inset-0 animate-pulse rounded-full bg-primary/5" />
-        <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-muted/30 text-muted-foreground/20">
-          <Sparkles size={40} />
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-3xl bg-muted/30 text-muted-foreground/60">
+          <AppIcon icon={Sparkles} size={40} />
         </div>
       </div>
       <h3 className="text-base font-black uppercase tracking-widest text-foreground">{title}</h3>
-      <p className="mt-3 text-sm font-medium text-muted-foreground/70">{description}</p>
+      <p className="mt-3 text-sm font-medium text-muted-foreground">{description}</p>
     </div>
   )
 }

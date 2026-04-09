@@ -105,7 +105,7 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
                     isLoaded ? "opacity-100" : "opacity-0"
                   )}
                   fill
-                  sizes="(max-width: 900px) 100vw, 25vw"
+                  sizes="(max-width: 900px) 95vw, 25vw"
                   onLoad={() => setIsLoaded(true)}
                   onError={() => {
                     setImageSrc(TEAM_FALLBACK_IMAGE)

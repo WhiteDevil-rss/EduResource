@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { jsonError, requireApiSession, withNoStore } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
-import { listResourceRecords, listUserRecords } from '@/lib/server-data'
+import { listResourceRecordsWithLimit, listUserRecords } from '@/lib/server-data'
 import { detectRapidRepeatedActions } from '@/lib/suspicious-activity'
 import { sanitizePlainText, validateSearchTerm } from '@/lib/request-validation'
 
@@ -103,12 +103,16 @@ export async function GET(request) {
       : 'newest'
     const page = Number(searchParams.get('page') || 1)
     const limit = Number(searchParams.get('limit') || 20)
+    const scanLimit = Math.min(600, Math.max(50, Number(searchParams.get('scanLimit') || 250)))
 
     const items = []
     const suggestions = []
 
     if (['resources', 'all'].includes(type)) {
-      const resources = await listResourceRecords()
+      const resources = await listResourceRecordsWithLimit({
+        limit: scanLimit,
+        fieldMask: ['title', 'titleLower', 'subject', 'class', 'summary', 'status', 'createdAt', 'updatedAt', 'uploadedBy', 'facultyId', 'facultyName', 'facultyEmail', 'fileUrl'],
+      })
       const filtered = resources.filter((entry) => {
         // Role-based visibility
         if (session.role === 'student' && entry.status !== 'live') {
@@ -140,7 +144,7 @@ export async function GET(request) {
     if (['users', 'all'].includes(type)) {
       // Only admins can search users
       if (session.role === 'admin') {
-        const users = await listUserRecords()
+        const users = await listUserRecords({ limit: scanLimit })
         const filtered = users.filter((entry) => {
           // Search term matching
           if (!matchesSearchTerm(q, entry.displayName, entry.email, entry.loginId, entry.role)) {
@@ -197,6 +201,7 @@ export async function GET(request) {
         results: entries,
         suggestions: Array.from(new Set(suggestions)).slice(0, 10),
         pagination,
+        meta: { scanLimit },
       })
     )
   } catch (error) {

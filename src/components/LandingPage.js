@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { getPublicHeaderContent } from '@/lib/public-nav'
 import { TEAM_MEMBERS } from '@/lib/team'
 import { cn } from '@/lib/cn'
+import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 
 export default function LandingPage() {
   const pathname = usePathname()
@@ -47,7 +48,10 @@ export default function LandingPage() {
 
     const loadResourceCount = async () => {
       try {
-        const response = await fetch('/api/public/resource-count', { cache: 'no-store' })
+        const response = await fetch('/api/public/resource-count', {
+          cache: 'force-cache',
+          next: { revalidate: 120 },
+        })
         const payload = await response.json().catch(() => ({}))
 
         if (!response.ok) {
@@ -65,7 +69,7 @@ export default function LandingPage() {
     }
 
     loadResourceCount()
-    intervalId = setInterval(loadResourceCount, 30000)
+    intervalId = setInterval(loadResourceCount, 120000)
 
     return () => {
       active = false
@@ -164,57 +168,60 @@ export default function LandingPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col">
+      <div className="fixed right-4 top-20 z-50 md:right-6 md:top-6">
+        <ThemeSwitcher compact />
+      </div>
       <PublicHeader brand="SPS EDUCATIONAM" links={navLinks} actions={navActions} />
 
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {/* Hero Section */}
         <section className={cn(
-          "max-w-[1400px] mx-auto px-4 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center transition-all duration-700",
+          "w-full max-w-full lg:max-w-[1400px] mx-auto px-4 py-16 lg:py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center transition-all duration-700",
           isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         )}>
-          <div className="space-y-8">
+          <div className="space-y-8 min-w-0">
             <Badge variant="outline" className="px-3 py-1 bg-primary/5 border-primary/20 text-primary-foreground flex items-center gap-2 w-fit">
               <Sparkles className="w-4 h-4 text-primary" />
               Trusted academic workspace for education experts
             </Badge>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] break-words">
               The Modern Foundation for <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/80 to-primary/60">Academic Excellence</span>.
             </h1>
 
-            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl break-words">
               SPS EDUCATIONAM streamlines how students discover resources, faculty publishes content, and administrators govern academic operations—all in one high-performance SaaS platform.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button asChild size="lg" className="h-12 px-8 rounded-full shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
+              <Button asChild size="lg" className="h-12 w-full sm:w-auto px-8 rounded-full shadow-lg shadow-primary/20 transition-all hover:scale-[1.02]">
                 <Link href="/register">
                   Get Started <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 px-8 rounded-full border-border/40 hover:bg-accent transition-all">
+              <Button asChild variant="outline" size="lg" className="h-12 w-full sm:w-auto px-8 rounded-full border-border/40 hover:bg-accent transition-all">
                 <Link href="/login">Dashboard Access</Link>
               </Button>
             </div>
 
             {/* Metrics Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-12 border-t border-border/40">
+            <div className="grid w-full max-w-full grid-cols-2 md:grid-cols-4 gap-6 pt-12 border-t border-border/40">
               {metrics.map((metric) => (
-                <div key={metric.label} className="space-y-1">
+                <div key={metric.label} className="space-y-1 min-w-0">
                   <p className="text-2xl font-bold tracking-tight">{metric.value}</p>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{metric.label}</p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider break-words">{metric.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <Card className="relative overflow-hidden rounded-3xl border-border/40 bg-card shadow-2xl transition-all duration-500 hover:shadow-primary/5 lg:scale-105">
+          <Card className="relative w-full max-w-full min-w-0 overflow-hidden rounded-3xl border-border/40 bg-card shadow-2xl transition-all duration-500 hover:shadow-primary/5 lg:scale-105">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
             <CardHeader className="p-8 pb-4">
               <Badge variant="outline" className="w-fit mb-4">Platform Intelligence</Badge>
-              <CardTitle className="text-2xl font-bold">What users can do from day one</CardTitle>
-              <CardDescription className="text-base">
+              <CardTitle className="text-2xl font-bold break-words">What users can do from day one</CardTitle>
+              <CardDescription className="text-base break-words">
                 A streamlined, secure workflow built for the future of academic resource management and collaboration.
               </CardDescription>
             </CardHeader>
@@ -228,9 +235,9 @@ export default function LandingPage() {
                   <div className="mt-1 shrink-0 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <div>
-                    <h4 className="font-bold text-base">{item.title}</h4>
-                    <p className="text-sm text-muted-foreground leading-snug">{item.desc}</p>
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-base break-words">{item.title}</h4>
+                    <p className="text-sm text-muted-foreground leading-snug break-words">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -245,12 +252,12 @@ export default function LandingPage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="bg-accent/30 py-24">
-          <div className="max-w-[1400px] mx-auto px-4">
+        <section id="features" className="w-full max-w-full bg-accent/30 py-24 overflow-x-hidden">
+          <div className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4">
             <div className="max-w-3xl mb-16 space-y-4">
               <Badge variant="outline" className="font-semibold px-4 py-1">Why Choose Us</Badge>
-              <h2 className="text-3xl md:text-4xl font-bold">Built for real-world academic scale.</h2>
-              <p className="text-lg text-muted-foreground">
+              <h2 className="text-3xl md:text-4xl font-bold break-words">Built for real-world academic scale.</h2>
+              <p className="text-lg text-muted-foreground break-words">
                 We've eliminated the friction in academic resource management, allowing educators and students to focus on what matters most: learning.
               </p>
             </div>
@@ -259,12 +266,12 @@ export default function LandingPage() {
               {featureCards.map((feature) => {
                 const Icon = feature.icon
                 return (
-                  <Card key={feature.title} className="p-8 border-border/40 bg-card rounded-2xl shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
+                  <Card key={feature.title} className="w-full max-w-full min-w-0 p-8 border-border/40 bg-card rounded-2xl shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
                     <div className="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary mb-6 transition-all group-hover:bg-primary group-hover:text-primary-foreground">
                       <Icon className="w-6 h-6" />
                     </div>
-                    <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                    <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
+                    <h3 className="text-xl font-bold mb-3 break-words">{feature.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed break-words">{feature.description}</p>
                   </Card>
                 )
               })}
@@ -273,13 +280,13 @@ export default function LandingPage() {
         </section>
 
         {/* Workflow Section */}
-        <section id="workflow" className="max-w-[1400px] mx-auto px-4 py-24 grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-2 p-8 md:p-12 border-border/40 bg-card rounded-3xl overflow-hidden relative group">
+        <section id="workflow" className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4 py-24 grid grid-cols-1 lg:grid-cols-3 gap-8 overflow-x-hidden">
+          <Card className="lg:col-span-2 w-full max-w-full min-w-0 p-8 md:p-12 border-border/40 bg-card rounded-3xl overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[100px] rounded-full pointer-events-none transition-opacity group-hover:opacity-100" />
             <div className="relative space-y-12">
               <div className="space-y-4">
                 <Badge variant="outline">Strategic Workflow</Badge>
-                <h2 className="text-3xl font-bold tracking-tight">How the platform enables daily success</h2>
+                <h2 className="text-3xl font-bold tracking-tight break-words">How the platform enables daily success</h2>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -288,22 +295,22 @@ export default function LandingPage() {
                   { step: '02', title: 'Publishing', desc: 'Faculty upload and manage resources with ease.' },
                   { step: '03', title: 'Governance', desc: 'Admins maintain the ecosystem integrity and security.' }
                 ].map((item) => (
-                  <div key={item.step} className="space-y-4">
+                  <div key={item.step} className="space-y-4 min-w-0">
                     <span className="text-4xl font-black text-primary/10 tracking-tighter">{item.step}</span>
-                    <h4 className="font-bold text-lg">{item.title}</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                    <h4 className="font-bold text-lg break-words">{item.title}</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed break-words">{item.desc}</p>
                   </div>
                 ))}
               </div>
             </div>
           </Card>
 
-          <Card className="p-8 md:p-12 border-none bg-gradient-to-br from-primary to-primary-foreground/90 text-primary-foreground rounded-3xl flex flex-col justify-center gap-8 shadow-xl shadow-primary/20">
+          <Card className="w-full max-w-full min-w-0 p-8 md:p-12 border-none bg-gradient-to-br from-primary to-primary-foreground/90 text-primary-foreground rounded-3xl flex flex-col justify-center gap-8 shadow-xl shadow-primary/20">
             <div className="space-y-4">
               <Badge className="bg-white/10 text-white border-white/20 hover:bg-white/20 px-3 py-1">Philosophy</Badge>
-              <h3 className="text-2xl font-bold leading-tight">Driven by Practical Outcomes.</h3>
+              <h3 className="text-2xl font-bold leading-tight break-words">Driven by Practical Outcomes.</h3>
             </div>
-            <p className="text-lg text-primary-foreground/80 leading-relaxed italic">
+            <p className="text-lg text-primary-foreground/80 leading-relaxed italic break-words">
               "We believe that educational tools should be invisible. The technology should handle the complexity so teachers can teach and students can learn."
             </p>
             <div className="pt-4 border-t border-white/10">
@@ -319,14 +326,14 @@ export default function LandingPage() {
           ref={teamSectionRef}
           className={cn(
             "bg-accent/30 py-24 transition-all duration-1000",
-            teamSectionActive ? "bg-accent/40 scale-[1.01]" : ""
+            teamSectionActive ? "bg-accent/40 md:scale-[1.01]" : ""
           )}
         >
-          <div className="max-w-[1400px] mx-auto px-4">
+          <div className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4 overflow-x-hidden">
             <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
               <Badge variant="outline" className="px-4 py-1">Our Leadership</Badge>
-              <h2 className="text-3xl md:text-4xl font-bold">The minds behind EDUCATIONAM</h2>
-              <p className="text-lg text-muted-foreground">
+              <h2 className="text-3xl md:text-4xl font-bold break-words">The minds behind EDUCATIONAM</h2>
+              <p className="text-lg text-muted-foreground break-words">
                 A multidisciplinary team of educators, engineers, and visionaries dedicated to academic resource excellence.
               </p>
             </div>
@@ -340,20 +347,20 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="max-w-[1400px] mx-auto px-4 py-24">
-          <Card className="p-8 md:p-16 border-border/40 bg-card rounded-[2.5rem] text-center space-y-8 relative overflow-hidden group">
+        <section className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4 py-24 overflow-x-hidden">
+          <Card className="w-full max-w-full min-w-0 p-8 md:p-16 border-border/40 bg-card rounded-[2.5rem] text-center space-y-8 relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50 pointer-events-none" />
             <div className="max-w-2xl mx-auto space-y-6 relative">
               <Badge variant="outline" className="px-4 py-1 mx-auto">Instant Deployment</Badge>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Ready to elevate your academic experience?</h2>
-              <p className="text-lg text-muted-foreground">
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight break-words">Ready to elevate your academic experience?</h2>
+              <p className="text-lg text-muted-foreground break-words">
                 Join our ecosystem today and transition from manual resource management to high-fidelity academic operations.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-                <Button asChild size="lg" className="h-12 px-10 rounded-xl">
+              <div className="flex flex-wrap flex-col sm:flex-row gap-4 justify-center pt-6">
+                <Button asChild size="lg" className="h-12 w-full sm:w-auto px-8 sm:px-10 rounded-xl">
                   <Link href="/register">Create Account <ArrowRight className="ml-2 w-4 h-4" /></Link>
                 </Button>
-                <Button asChild variant="secondary" size="lg" className="h-12 px-10 rounded-xl">
+                <Button asChild variant="secondary" size="lg" className="h-12 w-full sm:w-auto px-8 sm:px-10 rounded-xl">
                   <Link href="/login">Portal Login</Link>
                 </Button>
               </div>

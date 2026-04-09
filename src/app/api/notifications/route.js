@@ -10,13 +10,17 @@ import {
 export async function GET(request) {
   try {
     const session = await requireApiSession(request, ['student', 'faculty', 'admin'])
-    const notifications = await listNotificationRecords(session.uid)
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, Number(searchParams.get('page') || 1))
+    const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
+    const notifications = await listNotificationRecords(session.uid, { page, limit })
     const unreadCount = await countUnreadNotificationRecords(session.uid)
 
     return withNoStore(
       NextResponse.json({
         notifications,
         unreadCount,
+        pagination: { page, limit, returned: notifications.length },
       })
     )
   } catch (error) {
@@ -27,12 +31,15 @@ export async function GET(request) {
 export async function PATCH(request) {
   try {
     const session = await requireApiSession(request, ['student', 'faculty', 'admin'])
+    const { searchParams } = new URL(request.url)
+    const page = Math.max(1, Number(searchParams.get('page') || 1))
+    const limit = Math.min(100, Math.max(1, Number(searchParams.get('limit') || 50)))
     const body = await request.json().catch(() => ({}))
     const action = String(body?.action || '').trim().toLowerCase()
 
     if (action === 'read-all') {
       const clearedCount = await markAllNotificationsAsRead(session.uid)
-      const notifications = await listNotificationRecords(session.uid)
+      const notifications = await listNotificationRecords(session.uid, { page, limit })
       const unreadCount = await countUnreadNotificationRecords(session.uid)
 
       return withNoStore(
@@ -40,6 +47,7 @@ export async function PATCH(request) {
           notifications,
           unreadCount,
           clearedCount,
+          pagination: { page, limit, returned: notifications.length },
         })
       )
     }
@@ -62,7 +70,7 @@ export async function PATCH(request) {
       )
     }
 
-    const notifications = await listNotificationRecords(session.uid)
+    const notifications = await listNotificationRecords(session.uid, { page, limit })
     const unreadCount = await countUnreadNotificationRecords(session.uid)
 
     return withNoStore(
@@ -70,6 +78,7 @@ export async function PATCH(request) {
         notification,
         notifications,
         unreadCount,
+        pagination: { page, limit, returned: notifications.length },
       })
     )
   } catch (error) {

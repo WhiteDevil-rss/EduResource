@@ -13,7 +13,7 @@ import {
   UserCircle,
   GraduationCap,
 } from 'lucide-react'
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { getRedirectResult } from 'firebase/auth'
@@ -48,6 +48,7 @@ export default function Login() {
   const [twoFactorChallenge, setTwoFactorChallenge] = useState(null)
   const [otpCode, setOtpCode] = useState('')
   const [otpTimeLeft, setOtpTimeLeft] = useState(0)
+  const [isResendingOtp, setIsResendingOtp] = useState(false)
   
   const {
     loginWithCredentials,
@@ -63,6 +64,10 @@ export default function Login() {
   
   const router = useRouter()
   const redirectCheckStartedRef = useRef(false)
+  const staffSubmitInFlightRef = useRef(false)
+  const otpVerifyInFlightRef = useRef(false)
+  const otpResendInFlightRef = useRef(false)
+  const studentLoginInFlightRef = useRef(false)
   const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)
 
   // Redirect if already logged in
@@ -104,8 +109,13 @@ export default function Login() {
     checkRedirect()
   }, [loginWithGoogle])
 
-  const handleStaffSubmit = async (event) => {
+  const handleStaffSubmit = useCallback(async (event) => {
     event.preventDefault()
+    if (staffSubmitInFlightRef.current || isAuthenticating) {
+      return
+    }
+
+    staffSubmitInFlightRef.current = true
     setFormError('')
     setFormSuccess('')
 
@@ -125,11 +135,18 @@ export default function Login() {
       setFormSuccess('Signed in successfully.')
     } catch (error) {
       setFormError(error.message || 'Failed to sign in.')
+    } finally {
+      staffSubmitInFlightRef.current = false
     }
-  }
+  }, [email, isAuthenticating, loginWithCredentials, password])
 
-  const handleVerifyOtp = async (event) => {
+  const handleVerifyOtp = useCallback(async (event) => {
     event.preventDefault()
+    if (otpVerifyInFlightRef.current || isAuthenticating) {
+      return
+    }
+
+    otpVerifyInFlightRef.current = true
     setFormError('')
     setFormSuccess('')
 
@@ -148,14 +165,18 @@ export default function Login() {
       setFormSuccess('Verification successful.')
     } catch (error) {
       setFormError(error.message || 'Verification failed.')
+    } finally {
+      otpVerifyInFlightRef.current = false
     }
-  }
+  }, [isAuthenticating, otpCode, twoFactorChallenge, verifyTwoFactorCode])
 
-  const handleResendOtp = async () => {
-    if (!twoFactorChallenge?.challengeId) {
+  const handleResendOtp = useCallback(async () => {
+    if (!twoFactorChallenge?.challengeId || otpResendInFlightRef.current || isAuthenticating) {
       return
     }
 
+    otpResendInFlightRef.current = true
+    setIsResendingOtp(true)
     setFormError('')
     try {
       const payload = await resendTwoFactorCode(twoFactorChallenge.challengeId)
@@ -171,8 +192,11 @@ export default function Login() {
       setFormSuccess('A new verification code was sent.')
     } catch (error) {
       setFormError(error.message || 'Could not resend verification code.')
+    } finally {
+      setIsResendingOtp(false)
+      otpResendInFlightRef.current = false
     }
-  }
+  }, [isAuthenticating, resendTwoFactorCode, twoFactorChallenge])
 
   useEffect(() => {
     if (!twoFactorChallenge?.expiresAt) {
@@ -196,24 +220,31 @@ export default function Login() {
     return () => window.clearInterval(intervalId)
   }, [twoFactorChallenge?.expiresAt])
 
-  const handleStudentLogin = async () => {
+  const handleStudentLogin = useCallback(async () => {
+    if (studentLoginInFlightRef.current || isAuthenticating) {
+      return
+    }
+
+    studentLoginInFlightRef.current = true
     setFormError('')
     setFormSuccess('')
     try {
       await signInWithGoogleStudent()
     } catch (error) {
       setFormError(error.message || 'Student login failed.')
+    } finally {
+      studentLoginInFlightRef.current = false
     }
-  }
+  }, [isAuthenticating, signInWithGoogleStudent])
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col">
       <PublicHeader
         links={navLinks}
         actions={navActions}
       />
 
-      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8">
         <div className="w-full max-w-xl">
           <Card className="border-border/40 bg-card shadow-2xl rounded-[2.5rem] overflow-hidden">
             <div className="p-1">
@@ -319,7 +350,14 @@ export default function Login() {
                       <Clock size={14} />
                       <span>Expires in {Math.floor(otpTimeLeft / 60)}:{String(otpTimeLeft % 60).padStart(2, '0')}</span>
                     </div>
-                    <button type="button" onClick={handleResendOtp} className="text-primary font-bold hover:underline">Resend Code</button>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      className={cn('text-primary font-bold hover:underline', (isAuthenticating || isResendingOtp) && 'pointer-events-none opacity-70')}
+                      disabled={isAuthenticating || isResendingOtp}
+                    >
+                      {isResendingOtp ? 'Processing...' : 'Resend Code'}
+                    </button>
                   </div>
 
                   {twoFactorChallenge?.otpPreview && (
@@ -331,11 +369,11 @@ export default function Login() {
 
                   <Button
                     type="submit"
-                    className="w-full h-12 rounded-2xl text-base font-bold"
-                    disabled={isAuthenticating || otpTimeLeft <= 0}
+                    className={cn('w-full h-12 rounded-2xl text-base font-bold', isAuthenticating && 'pointer-events-none')}
+                    disabled={isAuthenticating || otpTimeLeft <= 0 || otpVerifyInFlightRef.current}
                   >
                     {isAuthenticating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Shield className="w-5 h-5 mr-2" />}
-                    Verify & Sign In
+                    {isAuthenticating ? 'Processing...' : 'Verify & Sign In'}
                   </Button>
 
                   <Button
@@ -400,11 +438,11 @@ export default function Login() {
 
                   <Button
                     type="submit"
-                    className="w-full h-12 rounded-2xl text-base font-bold shadow-lg shadow-primary/20"
-                    disabled={isAuthenticating}
+                    className={cn('w-full h-12 rounded-2xl text-base font-bold shadow-lg shadow-primary/20', isAuthenticating && 'pointer-events-none')}
+                    disabled={isAuthenticating || staffSubmitInFlightRef.current}
                   >
                     {isAuthenticating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <LogIn className="w-5 h-5 mr-2" />}
-                    Sign in to Dashboard
+                    {isAuthenticating ? 'Processing...' : 'Sign in to Dashboard'}
                   </Button>
                 </form>
               ) : (
@@ -430,12 +468,12 @@ export default function Login() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-14 rounded-2xl text-lg font-bold border-input border-2 hover:bg-muted transition-all flex gap-3"
+                    className={cn('w-full h-14 rounded-2xl text-lg font-bold border-input border-2 hover:bg-muted transition-all flex gap-3', isAuthenticating && 'pointer-events-none')}
                     onClick={handleStudentLogin}
-                    disabled={isAuthenticating}
+                    disabled={isAuthenticating || studentLoginInFlightRef.current}
                   >
                     {isAuthenticating ? <Loader2 size={24} className="animate-spin" /> : <Chrome size={24} />}
-                    Continue with Google
+                    {isAuthenticating ? 'Processing...' : 'Continue with Google'}
                   </Button>
 
                   <p className="text-center text-xs text-muted-foreground leading-relaxed">

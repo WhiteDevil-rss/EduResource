@@ -16,7 +16,7 @@ export function PageContainer({
     <div
       className={cn(
         maxWidth,
-        'mx-auto w-full min-h-full',
+        'page-shell mx-auto w-full max-w-full min-h-full overflow-x-hidden',
         'px-4 md:px-6',
         'py-4 md:py-6',
         className
@@ -49,7 +49,7 @@ export function ContentSection({
   }
 
   return (
-    <section className={cn('flex flex-col gap-4 md:gap-6', !noPaddingBottom && 'pb-4 md:pb-6', className)} {...props}>
+    <section className={cn('w-full max-w-full min-w-0 flex flex-col gap-4 overflow-x-hidden md:gap-6', !noPaddingBottom && 'pb-4 md:pb-6', className)} {...props}>
       {(title || actions) && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
@@ -106,7 +106,7 @@ export function GridContainer({
   }[columns]
 
   return (
-    <div className={cn('grid min-w-0', colClasses, gap, className)} {...props}>
+    <div className={cn('grid w-full max-w-full min-w-0', colClasses, gap, className)} {...props}>
       {children}
     </div>
   )
@@ -127,7 +127,7 @@ export function FlexContainer({
   const dirClass = direction === 'row' ? 'flex-col md:flex-row' : 'flex-col'
 
   return (
-    <div className={cn('flex min-w-0', dirClass, gap, className)} {...props}>
+    <div className={cn('flex w-full max-w-full min-w-0 flex-wrap', dirClass, gap, className)} {...props}>
       {children}
     </div>
   )

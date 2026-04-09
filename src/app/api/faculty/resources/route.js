@@ -10,7 +10,7 @@ import { logAction } from '@/lib/audit-log'
 import { 
   countAuditRecords, 
   createResourceRecord, 
-  listResourceRecords,
+  listResourceRecordsByOwner,
   getRecentAuditCount
 } from '@/lib/server-data'
 import { uploadToDrive } from '@/lib/google-drive'
@@ -34,16 +34,25 @@ function extensionForMimeType(mimeType) {
 export async function GET(request) {
   try {
     const session = await requireApiSession(request, ['faculty'])
-    const resources = await listResourceRecords()
-    const visibleResources = resources.filter(
-      (entry) => entry.uploadedBy === session.uid || entry.facultyId === session.uid
-    )
-    const totalDownloads = await countAuditRecords({
-      action: 'resource.downloaded',
-      targetIds: visibleResources.map((entry) => entry.id),
-    })
+    const { searchParams } = new URL(request.url)
+    const limit = Math.min(500, Math.max(1, Number(searchParams.get('limit') || 200)))
+    const includeMetrics = searchParams.get('includeMetrics') === '1'
 
-    return withNoStore(NextResponse.json({ resources: visibleResources, totalDownloads }))
+    const visibleResources = await listResourceRecordsByOwner(session.uid, { limit })
+    const totalDownloads = includeMetrics
+      ? await countAuditRecords({
+          action: 'resource.downloaded',
+          targetIds: visibleResources.map((entry) => entry.id),
+        })
+      : 0
+
+    return withNoStore(
+      NextResponse.json({
+        resources: visibleResources,
+        totalDownloads,
+        pagination: { limit, total: visibleResources.length },
+      })
+    )
   } catch (error) {
     await logAction({
       user: await requireApiSession(request, ['faculty']).catch(() => null),

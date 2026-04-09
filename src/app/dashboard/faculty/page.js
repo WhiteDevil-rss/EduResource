@@ -10,7 +10,7 @@ import {
   Shield,
   Upload,
 } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
@@ -42,10 +42,17 @@ import {
   NotificationItem,
   StandardCard,
 } from '@/components/layout'
-import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
-import { ResourceViewer } from '@/components/ResourceViewer'
-import { CollectionManager } from '@/components/CollectionManager'
-import { UploadDropzone } from '@/components/faculty/UploadDropzone'
+
+const LazyAnalyticsDashboard = lazy(() => import('@/components/analytics/AnalyticsDashboard').then((module) => ({ default: module.AnalyticsDashboard })))
+const LazyResourceViewer = lazy(() => import('@/components/ResourceViewer').then((module) => ({ default: module.ResourceViewer })))
+const LazyCollectionManager = lazy(() => import('@/components/CollectionManager').then((module) => ({ default: module.CollectionManager })))
+const LazyUploadDropzone = lazy(() => import('@/components/faculty/UploadDropzone').then((module) => ({ default: module.UploadDropzone })))
+
+function PanelSkeleton({ minHeight = 'min-h-[220px]' }) {
+  return (
+    <div className={`w-full ${minHeight} rounded-xl border border-border/40 bg-card/40 p-6 animate-pulse`} />
+  )
+}
 
 const EMPTY_DRAFT = {
   title: '',
@@ -396,7 +403,9 @@ export default function FacultyDashboard() {
         {/* Analytics: ENGAGEMENT_HEURISTICS */}
         {analyticsSummary && (
           <ContentSection title="Engagement Analytics" subtitle="Track how students interact with your content">
-            <AnalyticsDashboard summary={analyticsSummary} />
+            <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
+              <LazyAnalyticsDashboard summary={analyticsSummary} />
+            </Suspense>
           </ContentSection>
         )}
 
@@ -452,7 +461,9 @@ export default function FacultyDashboard() {
         <ContentSection id="uploads" title="Upload Center" subtitle="Securely upload and process your library files">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <UploadDropzone onFileSelect={handleFileSelection} />
+              <Suspense fallback={<PanelSkeleton minHeight="min-h-[280px]" />}>
+                <LazyUploadDropzone onFileSelect={handleFileSelection} />
+              </Suspense>
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
@@ -482,7 +493,7 @@ export default function FacultyDashboard() {
                               </div>
                             </div>
                             <span className={cn(
-                              "text-[10px] font-bold whitespace-nowrap",
+                              "text-[10px] font-bold break-words",
                               job.status === 'done' ? "text-emerald-500" : "text-primary"
                             )}>
                               {job.status === 'done' ? 'Success' : `${job.progress}%`}
@@ -527,7 +538,9 @@ export default function FacultyDashboard() {
             </button>
           }
         >
-          <CollectionManager collections={collections} />
+          <Suspense fallback={<PanelSkeleton minHeight="min-h-[260px]" />}>
+            <LazyCollectionManager collections={collections} />
+          </Suspense>
         </ContentSection>
 
         {/* Support: SYSTEM_INTELLIGENCE */}
@@ -559,7 +572,11 @@ export default function FacultyDashboard() {
       </PageContainer>
 
       {/* Resource Viewer & Editor: MODAL_OVERLAYS */}
-      {resourceViewerOpen && <ResourceViewer resource={previewResource} onClose={() => setResourceViewerOpen(false)} />}
+      {resourceViewerOpen && (
+        <Suspense fallback={<PanelSkeleton minHeight="min-h-[320px]" />}>
+          <LazyResourceViewer resource={previewResource} onClose={() => setResourceViewerOpen(false)} />
+        </Suspense>
+      )}
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogHeader className="p-6 pb-4 border-b border-border/40">

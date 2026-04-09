@@ -41,6 +41,11 @@ export default {
         warning: 'var(--warning)',
         info: 'var(--info)',
         danger: 'var(--danger)',
+        icon: {
+          DEFAULT: 'var(--muted-foreground)',
+          active: 'var(--primary)',
+          hover: 'var(--foreground)',
+        },
         outline: 'var(--outline)',
         input: 'var(--input)',
         ring: 'var(--ring)',

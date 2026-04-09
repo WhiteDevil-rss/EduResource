@@ -36,18 +36,18 @@ export default function PublicFooter({
   tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM. Zembaa Solution.`,
 }) {
   return (
-    <footer className="w-full bg-card border-t border-border/40">
-      <div className="max-w-[1400px] mx-auto px-4 py-12 md:py-16">
+    <footer className="w-full max-w-full overflow-x-hidden bg-card border-t border-border/40">
+      <div className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
           {/* Brand Section */}
           <div className="lg:col-span-2 space-y-6">
             <Link href="/" className="text-xl font-black tracking-tighter text-primary">
               SPS EDUCATIONAM
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs break-words">
               Empowering academic communities through high-fidelity resource management and governance.
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {COMPANY_SOCIALS.map((item) => {
                 const Icon = item.icon
                 return (
@@ -93,12 +93,12 @@ export default function PublicFooter({
           <div className="space-y-6">
             <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/70">Partnership</h4>
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground break-words">
                 Zembaa Solution Private Limited
               </p>
               <a
                 href="mailto:info@zembaa.com"
-                className="text-sm text-primary font-medium hover:underline"
+                className="text-sm text-primary font-medium break-all hover:underline"
               >
                 info@zembaa.com
               </a>
@@ -107,11 +107,11 @@ export default function PublicFooter({
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 md:mt-16 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-muted-foreground font-medium">
+        <div className="mt-12 md:mt-16 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+          <p className="text-xs text-muted-foreground font-medium break-words">
             {tagline}
           </p>
-          <p className="text-xs text-muted-foreground/60">
+          <p className="text-xs text-muted-foreground/60 break-words">
             Precision engineered for faster learning outcomes.
           </p>
         </div>

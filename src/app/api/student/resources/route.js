@@ -16,15 +16,33 @@ export async function GET(request) {
       maxLength: 80,
       collapseWhitespace: true,
     })
+    const limit = Math.min(250, Math.max(1, Number(searchParams.get('limit') || 120)))
 
     const resources = await searchResourceRecords({
       searchTerm,
       subject,
       classFilter,
       status: 'live',
+      limit,
     })
 
-    return withNoStore(NextResponse.json({ resources }))
+    const minimalResources = resources.map((resource) => ({
+      id: resource.id,
+      title: resource.title,
+      subject: resource.subject,
+      class: resource.class,
+      summary: resource.summary,
+      fileUrl: resource.fileUrl,
+      facultyName: resource.facultyName,
+      facultyEmail: resource.facultyEmail,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt,
+      uploadStatus: resource.uploadStatus || resource.status,
+      uploadProgress: resource.uploadProgress,
+      isBookmarked: resource.isBookmarked,
+    }))
+
+    return withNoStore(NextResponse.json({ resources: minimalResources, pagination: { limit, total: minimalResources.length } }))
   } catch (error) {
     return jsonError(error, 'Could not load the student catalog.')
   }

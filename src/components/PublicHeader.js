@@ -55,12 +55,12 @@ export default function PublicHeader({
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 w-full border-b transition-all duration-300',
+        'sticky top-0 z-50 w-full max-w-full overflow-x-clip border-b transition-all duration-300',
         scrolled ? 'border-border/40 bg-background/80 py-3 backdrop-blur-md' : 'border-transparent bg-transparent py-5'
       )}
     >
-      <nav className="mx-auto flex max-w-[1400px] items-center justify-between px-4" aria-label="Primary navigation">
-        <Link href="/" className="text-xl font-black tracking-tighter text-primary" onClick={closeMenu}>
+      <nav className="mx-auto flex w-full max-w-[1400px] min-w-0 items-center justify-between px-4" aria-label="Primary navigation">
+        <Link href="/" className="min-w-0 max-w-[calc(100%-7rem)] truncate text-lg font-black tracking-tight text-primary sm:max-w-none sm:text-xl" onClick={closeMenu}>
           {brand}
         </Link>
 
@@ -105,7 +105,7 @@ export default function PublicHeader({
           ))}
         </div>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex shrink-0 items-center gap-2 md:hidden">
           <ThemeToggle className="h-10 w-10 border-border/50 bg-surface/70 text-muted-foreground" />
           <Button
             variant="ghost"
@@ -122,7 +122,7 @@ export default function PublicHeader({
 
       <div
         className={cn(
-          'fixed inset-0 top-[60px] z-40 flex flex-col gap-8 bg-background px-4 py-8 transition-all duration-300 ease-in-out md:hidden',
+          'fixed inset-y-0 left-0 right-0 top-[60px] z-40 w-full max-w-full overflow-x-hidden flex flex-col gap-8 bg-background px-4 py-8 transition-all duration-300 ease-in-out md:hidden',
           menuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         )}
       >

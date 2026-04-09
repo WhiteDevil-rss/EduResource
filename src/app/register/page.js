@@ -48,13 +48,13 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col">
       <PublicHeader
         links={navLinks}
         actions={navActions}
       />
 
-      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 py-16">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8 py-16">
         <div className="w-full max-w-xl">
           <Card className="border-border/40 bg-card shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pt-12 pb-6 text-center px-8 space-y-4">

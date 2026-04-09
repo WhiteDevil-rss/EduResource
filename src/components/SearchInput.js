@@ -10,7 +10,7 @@ export function SearchInput({
   onChange,
   onSuggestionsChange,
   placeholder = 'Search...',
-  debounceMs = 300,
+  debounceMs = 450,
   type = 'resources',
   disabled = false,
   className = '',
@@ -36,7 +36,7 @@ export function SearchInput({
       setError('')
 
       try {
-        const response = await execute(`/api/search?q=${encodeURIComponent(debouncedQuery)}&type=${encodeURIComponent(type)}&limit=5`, {
+        const response = await execute(`/api/search?q=${encodeURIComponent(debouncedQuery)}&type=${encodeURIComponent(type)}&limit=5&scanLimit=60`, {
           cache: 'no-store',
         })
 
@@ -79,7 +79,7 @@ export function SearchInput({
         value={value}
         onChange={(event) => onChange?.(event.target.value)}
         placeholder={placeholder}
-        disabled={disabled || loading}
+        disabled={disabled}
         aria-label="Search input"
         className="search-input"
       />

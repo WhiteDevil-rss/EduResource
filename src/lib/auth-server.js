@@ -32,6 +32,8 @@ export async function getSessionUser() {
       email: session.email || null,
       name: session.name || null,
       loginId: session.loginId || null,
+      role: session.role || null,
+      status: session.status || 'active',
     },
     role: session.role,
     status: session.status || 'active',

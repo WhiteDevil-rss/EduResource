@@ -8,7 +8,7 @@ import {
   Clock,
   CheckCircle2,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { StudentDashboardSkeleton } from '@/components/LoadingStates'
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
@@ -36,15 +36,23 @@ import {
   ResponsiveNotificationPanel,
   NotificationItem,
 } from '@/components/layout'
-import { ResourceViewer } from '@/components/ResourceViewer'
-import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
-import { CollectionManager } from '@/components/CollectionManager'
-import { RecommendationPanel } from '@/components/RecommendationPanel'
-import { NotificationPreferencesPanel } from '@/components/NotificationPreferencesPanel'
-import { SavedSearchPanel } from '@/components/SavedSearchPanel'
+import { PaginationControls } from '@/components/ui/layout'
 import { StudentResourceCard } from '@/components/student/StudentResourceCard'
 
 const DOWNLOADS_STORAGE_KEY = 'sps.educationam.downloads.v1'
+
+const LazyResourceViewer = lazy(() => import('@/components/ResourceViewer').then((module) => ({ default: module.ResourceViewer })))
+const LazyAnalyticsDashboard = lazy(() => import('@/components/analytics/AnalyticsDashboard').then((module) => ({ default: module.AnalyticsDashboard })))
+const LazyCollectionManager = lazy(() => import('@/components/CollectionManager').then((module) => ({ default: module.CollectionManager })))
+const LazyRecommendationPanel = lazy(() => import('@/components/RecommendationPanel').then((module) => ({ default: module.RecommendationPanel })))
+const LazyNotificationPreferencesPanel = lazy(() => import('@/components/NotificationPreferencesPanel').then((module) => ({ default: module.NotificationPreferencesPanel })))
+const LazySavedSearchPanel = lazy(() => import('@/components/SavedSearchPanel').then((module) => ({ default: module.SavedSearchPanel })))
+
+function PanelSkeleton({ minHeight = 'min-h-[220px]' }) {
+  return (
+    <div className={`w-full ${minHeight} rounded-xl border border-border/40 bg-card/40 p-6 animate-pulse`} />
+  )
+}
 
 function inferResourceFormat(fileUrl) {
   const value = String(fileUrl || '').toLowerCase()
@@ -128,6 +136,7 @@ export default function StudentDashboard() {
   const [searchInput, setSearchInput] = useState('')
   const [selectedClass, setSelectedClass] = useState('all')
   const [selectedSubject, setSelectedSubject] = useState('all')
+  const [resourcePage, setResourcePage] = useState(1)
   const [previewResource, setPreviewResource] = useState(null)
   const [resourceViewerOpen, setResourceViewerOpen] = useState(false)
   const [collections, setCollections] = useState([])
@@ -316,6 +325,22 @@ export default function StudentDashboard() {
     })
   }, [resources, debouncedSearchInput, selectedClass, selectedSubject])
 
+  useEffect(() => {
+    setResourcePage(1)
+  }, [debouncedSearchInput, selectedClass, selectedSubject])
+
+  const pageSize = 12
+  const totalResourcePages = Math.max(1, Math.ceil(filteredResources.length / pageSize))
+  const paginatedResources = useMemo(() => {
+    const startIndex = (resourcePage - 1) * pageSize
+    return filteredResources.slice(startIndex, startIndex + pageSize)
+  }, [filteredResources, resourcePage])
+
+  const unreadNotifications = useMemo(
+    () => notifications.filter((n) => !n.isRead).length,
+    [notifications]
+  )
+
   const filterConfig = useMemo(() => [
     { id: 'search', type: 'search', label: 'Search Resources', placeholder: 'Find resources...', value: searchInput },
     {
@@ -390,19 +415,33 @@ export default function StudentDashboard() {
                 <p className="mt-1 text-xs text-muted-foreground">Adjust your filters to see more results.</p>
               </div>
             ) : (
-              <GridContainer columns={3}>
-                {filteredResources.map((resource) => (
-                  <StudentResourceCard
-                    key={resource.id}
-                    resource={resource}
-                    bookmarked={resource.isBookmarked}
-                    onPreview={handlePreviewResource}
-                    onDownload={handleResourceAction}
-                    onBookmark={handleToggleBookmark}
-                    onReview={(r) => setReviewTarget(r)}
-                  />
-                ))}
-              </GridContainer>
+              <>
+                <GridContainer columns={3}>
+                  {paginatedResources.map((resource) => (
+                    <StudentResourceCard
+                      key={resource.id}
+                      resource={resource}
+                      bookmarked={resource.isBookmarked}
+                      onPreview={handlePreviewResource}
+                      onDownload={handleResourceAction}
+                      onBookmark={handleToggleBookmark}
+                      onReview={(r) => setReviewTarget(r)}
+                    />
+                  ))}
+                </GridContainer>
+                {filteredResources.length > pageSize && (
+                  <div className="mt-6">
+                    <PaginationControls
+                      page={resourcePage}
+                      pages={totalResourcePages}
+                      total={filteredResources.length}
+                      loading={false}
+                      onPrevious={() => setResourcePage((current) => Math.max(1, current - 1))}
+                      onNext={() => setResourcePage((current) => Math.min(totalResourcePages, current + 1))}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </ContentSection>
@@ -411,8 +450,16 @@ export default function StudentDashboard() {
         {(analyticsSummary || collections.length > 0) && (
           <ContentSection id="insights" title="Learning Insights" subtitle="Visual overview of your platform engagement">
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-              {analyticsSummary && <AnalyticsDashboard summary={analyticsSummary} />}
-              {collections.length > 0 && <CollectionManager collections={collections} onToggleSave={() => { }} />}
+              {analyticsSummary && (
+                <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
+                  <LazyAnalyticsDashboard summary={analyticsSummary} />
+                </Suspense>
+              )}
+              {collections.length > 0 && (
+                <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
+                  <LazyCollectionManager collections={collections} onToggleSave={() => { }} />
+                </Suspense>
+              )}
             </div>
           </ContentSection>
         )}
@@ -420,10 +467,16 @@ export default function StudentDashboard() {
         {/* Personalization */}
         <ContentSection id="personal" title="Workspace Management" subtitle="Customize and manage your academic workspace">
           <GridContainer columns={3}>
-            <RecommendationPanel />
-            <SavedSearchPanel />
+            <Suspense fallback={<PanelSkeleton />}>
+              <LazyRecommendationPanel />
+            </Suspense>
+            <Suspense fallback={<PanelSkeleton />}>
+              <LazySavedSearchPanel />
+            </Suspense>
             <div className="flex flex-col gap-6">
-              <NotificationPreferencesPanel />
+              <Suspense fallback={<PanelSkeleton />}>
+                <LazyNotificationPreferencesPanel />
+              </Suspense>
               <div className="mt-auto overflow-hidden rounded-xl border border-primary/10 bg-primary/5 p-6">
                 <h4 className="text-xs font-semibold text-primary">Need a specific resource?</h4>
                 <p className="mt-2 text-[11px] leading-relaxed text-primary/70">
@@ -446,7 +499,7 @@ export default function StudentDashboard() {
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
         notificationCount={notifications.length}
-        unreadCount={notifications.filter(n => !n.isRead).length}
+        unreadCount={unreadNotifications}
         onMarkAllRead={readAllNotifications}
         isLoading={notificationsLoading}
       >
@@ -462,10 +515,12 @@ export default function StudentDashboard() {
       </ResponsiveNotificationPanel>
 
       {resourceViewerOpen && (
-        <ResourceViewer
-          resource={previewResource}
-          onClose={() => setResourceViewerOpen(false)}
-        />
+        <Suspense fallback={<PanelSkeleton minHeight="min-h-[320px]" />}>
+          <LazyResourceViewer
+            resource={previewResource}
+            onClose={() => setResourceViewerOpen(false)}
+          />
+        </Suspense>
       )}
 
       {/* Resource Request Dialog */}

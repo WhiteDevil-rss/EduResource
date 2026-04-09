@@ -4,6 +4,8 @@ import { GlobalErrorBoundary } from '@/components/ErrorBoundary'
 import ToastProvider from '@/components/ToastProvider'
 import Script from 'next/script'
 
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-RECK6F2WB4'
+
 export const metadata = {
   title: {
     default: 'EDUCATIONAM | Intelligent Academic Resource Platform',
@@ -47,18 +49,23 @@ export default function RootLayout({ children }) {
             (function () {
               try {
                 var storageKey = 'eduresourcehub-theme';
+                var accentKey = 'eduresourcehub-accent';
                 var savedTheme = window.localStorage.getItem(storageKey);
+                var savedAccent = window.localStorage.getItem(accentKey);
                 var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
                 var theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : (prefersLight ? 'light' : 'dark');
+                var accent = ['blue', 'teal', 'violet'].includes(savedAccent) ? savedAccent : 'blue';
 
                 document.documentElement.classList.remove('light', 'dark');
                 document.documentElement.classList.add(theme);
                 document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.setAttribute('data-accent', accent);
                 document.documentElement.style.colorScheme = theme;
               } catch (error) {
                 document.documentElement.classList.remove('light', 'dark');
                 document.documentElement.classList.add('dark');
                 document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-accent', 'blue');
                 document.documentElement.style.colorScheme = 'dark';
               }
             })();
@@ -84,6 +91,20 @@ export default function RootLayout({ children }) {
             `}
           </Script>
         ) : null}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}', {
+              send_page_view: true,
+            });
+          `}
+        </Script>
         <a href="#main-content" className="skip-link">Skip to Content</a>
         <GlobalErrorBoundary>
           <AuthProvider>

@@ -49,8 +49,8 @@ export function isSuperAdmin(user) {
   return isProtectedAdminEmail(user.email)
 }
 
-export function isAdminUser(user) {
-  const role = String(user?.role || '').trim().toLowerCase()
+export function isAdminUser(user, roleOverride = null) {
+  const role = String(roleOverride || user?.role || '').trim().toLowerCase()
   return role === 'admin' || isSuperAdmin(user)
 }
 

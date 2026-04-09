@@ -14,7 +14,7 @@ function sortByTimestampDescending(records) {
  */
 export async function getAllUsersForExport() {
   try {
-    const users = await firestore.listDocs('users')
+    const users = await firestore.listDocs('users', { pageSize: 1000 })
     return users.map((user) => ({
       id: user.id,
       ...user,
@@ -30,7 +30,7 @@ export async function getAllUsersForExport() {
  */
 export async function getAuditLogsForExport({ limit = 1000 } = {}) {
   try {
-    const logs = await firestore.listDocs('audit_logs')
+    const logs = await firestore.listDocs('audit_logs', { pageSize: 1200 })
     return sortByTimestampDescending(
       logs.map((log) => ({
         id: log.id,
@@ -48,7 +48,7 @@ export async function getAuditLogsForExport({ limit = 1000 } = {}) {
  */
 export async function getActivityLogsForExport({ limit = 1000 } = {}) {
   try {
-    const logs = await firestore.listDocs('activity_logs')
+    const logs = await firestore.listDocs('activity_logs', { pageSize: 1200 })
     return sortByTimestampDescending(
       logs.map((log) => ({
         id: log.id,
@@ -66,7 +66,7 @@ export async function getActivityLogsForExport({ limit = 1000 } = {}) {
  */
 export async function getAllResourcesForExport() {
   try {
-    const resources = await firestore.listDocs('resources')
+    const resources = await firestore.listDocs('resources', { pageSize: 1200 })
     return resources.map((resource) => ({
       id: resource.id,
       ...resource,

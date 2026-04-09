@@ -67,6 +67,39 @@ npm run dev
 
 The app runs at `http://localhost:3000`.
 
+## API Performance Benchmark
+
+Run the built-in benchmark script to measure endpoint latency (avg, p50, p95, p99):
+
+```bash
+npm run bench:api
+```
+
+By default (without credentials), it benchmarks public health endpoints.
+
+To benchmark authenticated flows, provide login credentials and optional tuning variables:
+
+```bash
+BENCH_LOGIN_ID=student@example.com \
+BENCH_PASSWORD='your-password' \
+BENCH_ITERATIONS=20 \
+BENCH_WARMUP=5 \
+BENCH_TIMEOUT_MS=20000 \
+npm run bench:api
+```
+
+Optional custom endpoint list (comma-separated):
+
+```bash
+BENCH_ENDPOINTS='/api/session,/api/search?q=math&type=resources&limit=20&scanLimit=150,/api/student/resources?limit=120' npm run bench:api
+```
+
+To measure stability and compare best/median/worst latency drift across repeated runs:
+
+```bash
+BENCH_TREND_RUNS=3 npm run bench:api:trend
+```
+
 ## Authentication & Security
 
 - **Login**: Uses Firebase Auth on the client.

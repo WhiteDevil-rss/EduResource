@@ -4,6 +4,7 @@ import { Menu, Bell, Search, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { AppIcon } from '@/components/ui/AppIcon'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
 /**
@@ -22,7 +23,7 @@ export function ResponsiveTopbar({
 }) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto w-full max-w-[1400px] px-4 md:px-6">
+      <div className="mx-auto w-full max-w-full lg:max-w-[1400px] overflow-x-hidden px-4 md:px-6">
         <div className="flex h-16 items-center justify-between gap-4 md:h-20">
 
           {/* Left Section: Menu & Title */}
@@ -34,7 +35,7 @@ export function ResponsiveTopbar({
               onClick={onOpenMenu}
               aria-label="Open menu"
             >
-              <Menu size={22} className="text-foreground" />
+              <AppIcon icon={Menu} size={22} interactive className="text-muted-foreground hover:text-foreground" />
             </Button>
 
             <div className="min-w-0">
@@ -70,15 +71,15 @@ export function ResponsiveTopbar({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <ThemeToggle className="h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-foreground hover:bg-muted/50" />
+              <ThemeToggle className="h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-11 w-11 rounded-xl hover:bg-muted/50 transition-all active:scale-95"
+                className="group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
                 onClick={onOpenNotifications}
                 aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
               >
-                <Bell size={20} className="text-foreground" />
+                <AppIcon icon={Bell} size={20} active={unreadCount > 0} interactive className="group-hover:text-foreground" />
                 {unreadCount > 0 && (
                   <span className="absolute right-2.5 top-2.5 flex h-4 w-4">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
@@ -100,7 +101,7 @@ export function ResponsiveTopbar({
                     </span>
                   </div>
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <User size={16} className="shrink-0" />
+                    <AppIcon icon={User} size={16} active className="shrink-0" />
                   </div>
                 </div>
               )}

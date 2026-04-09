@@ -10,10 +10,12 @@ import { logAction } from '@/lib/audit-log'
 import { logActivity } from '@/lib/activity-log'
 import { getUserRecordById, getResourceRecordById } from '@/lib/server-data'
 
+const encoder = new TextEncoder()
+
 /**
  * Generate CSV content from user records
  */
-function generateUserCSV(users) {
+function generateUserCSVRows(users) {
   const headers = ['ID', 'Email', 'Display Name', 'Role', 'Status', 'Created At']
   const rows = users.map((user) => [
     user.id || '',
@@ -24,18 +26,13 @@ function generateUserCSV(users) {
     user.createdAt ? new Date(user.createdAt).toISOString() : '',
   ])
 
-  const csvContent = [
-    headers.map((h) => `"${h}"`).join(','),
-    ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-  ].join('\n')
-
-  return csvContent
+  return { headers, rows }
 }
 
 /**
  * Generate CSV content from resource records
  */
-function generateResourceCSV(resources) {
+function generateResourceCSVRows(resources) {
   const headers = [
     'ID',
     'Title',
@@ -57,12 +54,25 @@ function generateResourceCSV(resources) {
     resource.downloads || 0,
   ])
 
-  const csvContent = [
-    headers.map((h) => `"${h}"`).join(','),
-    ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-  ].join('\n')
+  return { headers, rows }
+}
 
-  return csvContent
+function toCsvCell(value) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`
+}
+
+function createCsvStream(headers, rows) {
+  return new globalThis.ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(`${headers.map(toCsvCell).join(',')}\n`))
+
+      rows.forEach((row) => {
+        controller.enqueue(encoder.encode(`${row.map(toCsvCell).join(',')}\n`))
+      })
+
+      controller.close()
+    },
+  })
 }
 
 /**
@@ -102,45 +112,54 @@ export async function POST(request) {
         throw new ApiError(403, 'Only admins can export user accounts.')
       }
 
-      for (const userId of ids) {
-        try {
-          const user = await getUserRecordById(userId)
-          if (user) {
-            items.push(user)
-          } else {
-            failedIds.push(userId)
+      const resolvedUsers = await Promise.all(
+        ids.map(async (userId) => {
+          try {
+            return await getUserRecordById(userId)
+          } catch {
+            return null
           }
-        } catch {
-          failedIds.push(userId)
+        })
+      )
+
+      resolvedUsers.forEach((user, index) => {
+        if (user) {
+          items.push(user)
+        } else {
+          failedIds.push(ids[index])
         }
-      }
+      })
     } else if (type === 'resource') {
-      for (const resourceId of ids) {
-        try {
-          const resource = await getResourceRecordById(resourceId)
-          if (resource) {
-            // Faculty can only export their own resources
-            if (session.role === 'faculty' && resource.uploadedBy !== session.uid) {
-              failedIds.push(resourceId)
-            } else {
-              items.push(resource)
-            }
-          } else {
-            failedIds.push(resourceId)
+      const resolvedResources = await Promise.all(
+        ids.map(async (resourceId) => {
+          try {
+            return await getResourceRecordById(resourceId)
+          } catch {
+            return null
           }
-        } catch {
+        })
+      )
+
+      resolvedResources.forEach((resource, index) => {
+        const resourceId = ids[index]
+        if (!resource) {
           failedIds.push(resourceId)
+          return
         }
-      }
+
+        if (session.role === 'faculty' && resource.uploadedBy !== session.uid) {
+          failedIds.push(resourceId)
+          return
+        }
+
+        items.push(resource)
+      })
     }
 
-    // Generate CSV
-    let csvContent
-    if (type === 'user') {
-      csvContent = generateUserCSV(items)
-    } else {
-      csvContent = generateResourceCSV(items)
-    }
+    const csvData = type === 'user'
+      ? generateUserCSVRows(items)
+      : generateResourceCSVRows(items)
+    const csvStream = createCsvStream(csvData.headers, csvData.rows)
 
     // Log the export action
     await logAction({
@@ -176,7 +195,7 @@ export async function POST(request) {
     // Return CSV as file download
     const filename = `${type}-export-${new Date().toISOString().split('T')[0]}.csv`
 
-    return new NextResponse(csvContent, {
+    return new NextResponse(csvStream, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',

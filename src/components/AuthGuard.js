@@ -38,7 +38,7 @@ export function ProtectedRoute({
       return
     }
 
-    if (adminOnly && !isAdminUser(user)) {
+    if (adminOnly && !isAdminUser(user, role)) {
       router.replace(redirectTo)
       return
     }
@@ -61,7 +61,7 @@ export function ProtectedRoute({
     return <AuthLoadingState message={loadingMessage} />
   }
 
-  if (adminOnly && !isAdminUser(user)) {
+  if (adminOnly && !isAdminUser(user, role)) {
     return <AuthLoadingState message={loadingMessage} />
   }
 

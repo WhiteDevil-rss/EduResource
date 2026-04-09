@@ -336,8 +336,30 @@ export const firestore = {
     return { id: data.name.split('/').pop(), ...fromFirestore(data.fields) }
   },
   
-  listDocs: async (collectionPath) => {
-    const data = await firestoreRequest('GET', collectionPath)
+  listDocs: async (collectionPath, options = {}) => {
+    const queryParams = new URLSearchParams()
+    const pageSize = Number(options?.pageSize || 0)
+    if (Number.isFinite(pageSize) && pageSize > 0) {
+      queryParams.set('pageSize', String(Math.min(1000, Math.max(1, Math.floor(pageSize)))))
+    }
+
+    if (options?.orderBy) {
+      queryParams.set('orderBy', String(options.orderBy))
+    }
+
+    const fieldMask = Array.isArray(options?.fieldMask) ? options.fieldMask : []
+    fieldMask
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .forEach((fieldPath) => {
+        queryParams.append('mask.fieldPaths', fieldPath)
+      })
+
+    const pathWithQuery = queryParams.toString()
+      ? `${collectionPath}?${queryParams.toString()}`
+      : collectionPath
+
+    const data = await firestoreRequest('GET', pathWithQuery)
     if (!data || !data.documents) return []
     return (data.documents).map(doc => ({
       id: doc.name.split('/').pop(),

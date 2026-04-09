@@ -7,15 +7,15 @@ export function UserCard({ user, className = '', children, ...props }) {
   const { name, email, role } = user || {}
 
   return (
-    <div className={cn('flex items-start justify-between gap-4 p-4 rounded-lg bg-surface-card hover:bg-surface-card-high transition-colors', className)} {...props}>
+    <div className={cn('flex items-start justify-between gap-4 rounded-2xl border border-border/60 bg-surface-card/90 p-4 shadow-sm transition-all hover:bg-surface-card-high hover:shadow-md', className)} {...props}>
       <div className="flex items-start gap-3 min-w-0">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary via-tertiary to-secondary flex items-center justify-center flex-shrink-0 shadow-sm shadow-primary/20">
           <span className="text-sm font-semibold text-white">{(name || email || '?')[0]?.toUpperCase()}</span>
         </div>
         <div className="min-w-0">
           <p className="font-semibold text-foreground truncate">{name || email || 'Unknown'}</p>
           <p className="text-xs text-muted truncate">{email}</p>
-          {role && <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-primary/20 text-primary font-medium">{role}</span>}
+          {role && <span className="inline-block mt-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{role}</span>}
         </div>
       </div>
       {children}
@@ -30,7 +30,7 @@ export function ResourceCard({ resource, className = '', onView, onDownload, ...
   const { title, subject, class: classValue, fileType, uploadedBy } = resource || {}
 
   return (
-    <div className={cn('flex flex-col gap-3 p-5 rounded-lg bg-surface-card hover:bg-surface-card-high transition-colors border border-outline', className)} {...props}>
+    <div className={cn('flex flex-col gap-3 rounded-2xl border border-outline/80 bg-surface-card/90 p-5 shadow-sm transition-all hover:bg-surface-card-high hover:shadow-md', className)} {...props}>
       <div>
         <p className="font-semibold text-foreground line-clamp-2">{title || 'Untitled Resource'}</p>
         <div className="flex items-center gap-2 mt-2 text-xs text-muted">
@@ -51,14 +51,14 @@ export function ResourceCard({ resource, className = '', onView, onDownload, ...
         </div>
       )}
       {(onView || onDownload) && (
-        <div className="flex items-center gap-2 pt-2 border-t border-outline">
+        <div className="flex items-center gap-2 pt-2 border-t border-outline/70">
           {onView && (
-            <button type="button" onClick={onView} className="flex-1 px-3 py-2 text-xs font-medium rounded-md bg-primary/10 hover:bg-primary/20 text-primary transition-colors">
+            <button type="button" onClick={onView} className="flex-1 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
               View
             </button>
           )}
           {onDownload && (
-            <button type="button" onClick={onDownload} className="flex-1 px-3 py-2 text-xs font-medium rounded-md bg-secondary/10 hover:bg-secondary/20 text-secondary transition-colors">
+            <button type="button" onClick={onDownload} className="flex-1 rounded-lg bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary transition-colors hover:bg-secondary/20">
               Download
             </button>
           )}
@@ -76,7 +76,7 @@ export function LogCard({ log, className = '', ...props }) {
   const isError = status === 'FAILED'
 
   return (
-    <div className={cn('flex items-center justify-between gap-4 p-4 rounded-lg bg-surface-card hover:bg-surface-card-high transition-colors border border-outline/50', className)} {...props}>
+    <div className={cn('flex items-center justify-between gap-4 rounded-2xl border border-outline/70 bg-surface-card/90 p-4 shadow-sm transition-all hover:bg-surface-card-high hover:shadow-md', className)} {...props}>
       <div className="flex items-start gap-3 min-w-0">
         <div className="flex flex-col gap-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -90,7 +90,7 @@ export function LogCard({ log, className = '', ...props }) {
         </div>
       </div>
       <div className="text-right flex-shrink-0">
-        <p className="text-xs text-muted whitespace-nowrap">{timestamp}</p>
+        <p className="text-xs text-muted break-words">{timestamp}</p>
         {module && <p className="text-xs text-muted-strong mt-1">{module}</p>}
       </div>
     </div>
@@ -102,7 +102,7 @@ export function LogCard({ log, className = '', ...props }) {
  */
 export function SectionCard({ className = '', children, ...props }) {
   return (
-    <div className={cn('rounded-xl bg-surface-card border border-outline shadow-sm overflow-hidden', className)} {...props}>
+    <div className={cn('overflow-hidden rounded-2xl border border-outline/70 bg-surface-card/90 shadow-sm', className)} {...props}>
       {children}
     </div>
   )

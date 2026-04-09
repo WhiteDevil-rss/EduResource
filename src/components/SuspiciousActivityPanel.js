@@ -166,7 +166,7 @@ export function SuspiciousActivityPanel() {
 
       <StandardCard className="p-0 overflow-hidden border-border/40 bg-background/50 backdrop-blur-md">
         <div className="p-6 border-b border-border/40 bg-muted/20 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-4 flex-1 min-w-[300px]">
+          <div className="flex flex-wrap gap-4 flex-1 min-w-0">
             <div className="relative group flex-1 max-w-sm">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" size={14} />
               <input

@@ -30,7 +30,7 @@ export function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className={cn('flex min-h-screen w-full flex-col bg-background text-foreground md:flex-row', className)}>
+    <div className={cn('app-shell flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-background text-foreground md:flex-row', className)}>
       {/* Sidebar Navigation */}
       <ResponsiveSidebar
         user={user}
@@ -44,7 +44,7 @@ export function AppLayout({
       />
 
       {/* Main Content Area */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">
         {/* Sticky Topbar */}
         <ResponsiveTopbar
           title={topbarTitle}
@@ -58,8 +58,8 @@ export function AppLayout({
         />
 
         {/* Content Section with standardized container */}
-        <main className="flex-1 overflow-x-hidden p-4 md:p-6">
-          <div className="mx-auto w-full max-w-[1400px] animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <main className="flex-1 w-full max-w-full overflow-x-hidden p-4 md:p-6">
+          <div className="mx-auto w-full max-w-full lg:max-w-[1400px] animate-in fade-in slide-in-from-bottom-2 duration-500">
             <GlobalErrorBoundary>
               {children}
             </GlobalErrorBoundary>

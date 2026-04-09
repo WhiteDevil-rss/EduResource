@@ -3,6 +3,7 @@
 import { X, Filter, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { AppIcon } from '@/components/ui/AppIcon'
 import { cn } from '@/lib/cn'
 
 /**
@@ -19,7 +20,7 @@ export function ResponsiveFilterBar({
   return (
     <div
       className={cn(
-        'w-full flex flex-col gap-4',
+        'w-full max-w-full overflow-x-hidden flex flex-col gap-4',
         className
       )}
       {...props}
@@ -31,7 +32,7 @@ export function ResponsiveFilterBar({
         {/* Main Filters Section */}
         <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
           {filters.map((filter) => (
-            <div key={filter.id} className="flex w-full flex-col gap-1.5 md:min-w-[200px] lg:w-auto">
+            <div key={filter.id} className="flex w-full min-w-0 flex-col gap-1.5 md:min-w-[180px] lg:w-auto">
               {filter.label && (
                 <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-strong px-1">
                   {filter.label}
@@ -70,7 +71,7 @@ export function ResponsiveFilterBar({
                     ))}
                   </select>
                   <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                    <Filter size={14} className="text-muted-foreground/60" />
+                    <AppIcon icon={Filter} size={14} />
                   </div>
                 </div>
               )}
@@ -115,7 +116,7 @@ export function ResponsiveFilterBar({
               className="h-11 w-full gap-2 rounded-lg text-xs font-semibold text-muted-strong hover:bg-destructive/5 hover:text-destructive transition-all md:w-auto md:px-4"
               aria-label="Reset filters"
             >
-              <RotateCcw size={14} />
+              <AppIcon icon={RotateCcw} size={14} className="text-current" />
               Reset All
             </Button>
           </div>
@@ -185,7 +186,7 @@ export function ActiveFiltersDisplay({
   return (
     <div className={cn('flex flex-wrap items-center gap-3 px-1', className)}>
       <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-strong mr-1">
-        <Filter size={12} />
+        <AppIcon icon={Filter} size={12} className="text-muted-foreground" />
         <span>Active</span>
       </div>
       {activeFilters.map((filter) => {

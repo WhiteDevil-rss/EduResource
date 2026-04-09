@@ -18,7 +18,7 @@ import { ADMIN_NAV_SECTIONS } from '@/components/admin/adminNav'
 import { cn } from '@/lib/cn'
 
 async function fetchNotifications() {
-  const response = await fetch('/api/notifications', { cache: 'no-store' })
+  const response = await fetch('/api/notifications?limit=50&page=1', { cache: 'no-store' })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
     throw new Error(payload?.error || 'Could not load notifications.')
@@ -28,7 +28,7 @@ async function fetchNotifications() {
 
 export default function AdminLayout({ children }) {
   const router = useRouter()
-  const { user, loading, logout } = useAuth()
+  const { user, role, loading, logout } = useAuth()
   const sessionTimer = useSessionTimer()
 
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -43,13 +43,13 @@ export default function AdminLayout({ children }) {
       return
     }
 
-    if (!isAdminUser(user)) {
+    if (!isAdminUser(user, role)) {
       router.replace('/login?reason=unauthorized')
     }
-  }, [loading, router, user])
+  }, [loading, role, router, user])
 
   useEffect(() => {
-    if (loading || !isAdminUser(user)) {
+    if (loading || !isAdminUser(user, role)) {
       return
     }
 
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }) {
     return () => {
       mounted = false
     }
-  }, [loading, user])
+  }, [loading, role, user])
 
   const markNotificationRead = async (notificationId) => {
     try {
@@ -122,7 +122,7 @@ export default function AdminLayout({ children }) {
   const handleOpenNotifications = () => setNotificationsOpen(true)
   const handleCloseNotifications = () => setNotificationsOpen(false)
 
-  if (loading || !user || !isAdminUser(user)) {
+  if (loading || !user || !isAdminUser(user, role)) {
     return (
       <div className="flex min-h-screen items-center justify-center px-6 text-center text-muted-foreground">
         <div className="space-y-4">
