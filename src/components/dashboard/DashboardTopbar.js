@@ -55,7 +55,7 @@ export function DashboardTopbar({
             <div className="flex items-center gap-2 md:gap-3">
               <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
                 className="button group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
                 onClick={onOpenNotifications}
                 aria-label="Open notifications"

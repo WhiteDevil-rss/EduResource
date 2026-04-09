@@ -53,7 +53,7 @@ export function ThemeToggle({ className = '', showLabel = false }) {
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant="secondary"
       size={showLabel ? 'default' : 'icon'}
       onClick={toggleTheme}
       className={`${baseClasses} ${className}`}
