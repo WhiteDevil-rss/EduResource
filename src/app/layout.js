@@ -43,6 +43,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" data-scroll-behavior="smooth" className="dark" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body suppressHydrationWarning>
         <Script id="theme-init" strategy="beforeInteractive">
           {`

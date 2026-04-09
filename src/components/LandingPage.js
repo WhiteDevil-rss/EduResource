@@ -20,7 +20,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { getPublicHeaderContent } from '@/lib/public-nav'
 import { TEAM_MEMBERS } from '@/lib/team'
 import { cn } from '@/lib/cn'
-import { ThemeSwitcher } from '@/components/ThemeSwitcher'
 
 export default function LandingPage() {
   const pathname = usePathname()
@@ -169,10 +168,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col">
-      <div className="fixed right-4 top-20 z-50 md:right-6 md:top-6">
-        <ThemeSwitcher compact />
-      </div>
-      <PublicHeader brand="SPS EDUCATIONAM" links={navLinks} actions={navActions} />
+      <PublicHeader brand="SPS EDUCATIONAM" links={navLinks} actions={navActions} showUtilityIcons />
 
       <main className="flex-1 w-full max-w-full overflow-x-hidden">
         {/* Hero Section */}

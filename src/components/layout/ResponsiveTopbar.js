@@ -54,7 +54,7 @@ export function ResponsiveTopbar({
           <div className="flex items-center gap-2 md:gap-4">
 
             {/* Contextual Search - Hidden on very small screens, visible on md+ */}
-            <div className="relative hidden w-64 items-center sm:flex lg:w-80">
+            <div className="relative hidden w-56 items-center sm:flex lg:w-72 xl:w-80">
               <Search
                 size={16}
                 className="pointer-events-none absolute left-3.5 text-muted-foreground"

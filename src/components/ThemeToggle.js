@@ -47,17 +47,21 @@ export function ThemeToggle({ className = '', showLabel = false }) {
     applyTheme(nextTheme);
   };
 
+  const baseClasses = showLabel
+    ? 'theme-toggle flex items-center justify-center gap-2 rounded-md px-3 py-2 text-foreground transition-colors hover:bg-muted hover:text-primary border border-border/50 bg-background/80 shadow-sm backdrop-blur-sm'
+    : 'theme-toggle p-2 rounded-md hover:bg-muted flex items-center justify-center text-foreground transition-colors hover:text-primary'
+
   return (
     <Button
       type="button"
       variant="ghost"
       size={showLabel ? 'default' : 'icon'}
       onClick={toggleTheme}
-      className={`theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground ${className}`}
+      className={`${baseClasses} ${className}`}
       aria-label={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
       title={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
     >
-      <AppIcon icon={theme === 'dark' ? SunMedium : MoonStar} size={16} className="text-foreground" />
+      <AppIcon icon={theme === 'dark' ? SunMedium : MoonStar} size={16} className="text-foreground hover:text-primary" />
       {showLabel ? <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span> : null}
     </Button>
   );

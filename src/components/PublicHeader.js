@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Menu, Globe, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { AppIcon } from '@/components/ui/AppIcon'
 
 export default function PublicHeader({
   brand = 'SPS EDUCATIONAM',
@@ -59,12 +60,12 @@ export default function PublicHeader({
         scrolled ? 'border-border/40 bg-background/80 py-3 backdrop-blur-md' : 'border-transparent bg-transparent py-5'
       )}
     >
-      <nav className="mx-auto flex w-full max-w-[1400px] min-w-0 items-center justify-between px-4" aria-label="Primary navigation">
-        <Link href="/" className="min-w-0 max-w-[calc(100%-7rem)] truncate text-lg font-black tracking-tight text-primary sm:max-w-none sm:text-xl" onClick={closeMenu}>
+      <nav className="mx-auto flex w-full max-w-[1400px] min-w-0 items-center justify-between gap-3 px-4" aria-label="Primary navigation">
+        <Link href="/" className="shrink min-w-0 max-w-[calc(100%-7rem)] truncate text-lg font-black tracking-tight text-primary sm:text-xl lg:max-w-[240px] xl:max-w-none" onClick={closeMenu}>
           {brand}
         </Link>
 
-        <div className="hidden items-center gap-8 md:flex">
+        <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 lg:flex">
           {links.map((link) => (
             <Link
               key={`${link.href}-${link.label}`}
@@ -77,45 +78,42 @@ export default function PublicHeader({
           ))}
         </div>
 
-        <div className="hidden items-center gap-4 md:flex">
-          {showUtilityIcons && (
-            <div className="mr-4 flex items-center gap-2 border-r border-border/40 pr-4">
-              <ThemeToggle className="h-9 w-9 border-border/50 bg-surface/70 text-muted-foreground hover:text-surface-foreground" />
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground">
-                <Globe size={18} />
-              </Button>
-            </div>
-          )}
+        <div className="hidden shrink-0 min-w-0 flex-wrap items-center justify-end gap-2 lg:gap-3 md:flex">
+          {showUtilityIcons ? (
+            <ThemeToggle className="h-9 w-9 p-2 rounded-md hover:bg-muted flex items-center justify-center text-foreground hover:text-primary" />
+          ) : null}
 
-          {actions.map((action) => (
-            <Button
-              key={`${action.href}-${action.label}`}
-              asChild
-              variant={action.variant === 'primary' ? 'default' : 'ghost'}
-              size="sm"
-              className={cn(
-                'font-semibold',
-                action.variant === 'primary' ? 'rounded-full px-6' : 'text-muted-foreground'
-              )}
-            >
-              <Link href={action.href} aria-current={action.current ? 'page' : undefined}>
-                {action.label}
-              </Link>
-            </Button>
-          ))}
+          <div className="flex items-center justify-end gap-3 flex-wrap">
+            {actions.map((action) => (
+              <Button
+                key={`${action.href}-${action.label}`}
+                asChild
+                variant={action.variant === 'primary' ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'font-semibold',
+                  action.variant === 'primary' ? 'rounded-full px-6' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Link href={action.href} aria-current={action.current ? 'page' : undefined}>
+                  {action.label}
+                </Link>
+              </Button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 md:hidden">
-          <ThemeToggle className="h-10 w-10 border-border/50 bg-surface/70 text-muted-foreground" />
+        <div className="flex shrink-0 flex-wrap items-center gap-2 md:hidden">
+          <ThemeToggle className="h-10 w-10 p-2 rounded-md hover:bg-muted flex items-center justify-center text-foreground hover:text-primary" />
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10"
+            className="h-10 w-10 text-muted-foreground hover:text-foreground"
             aria-expanded={menuOpen}
             aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
             onClick={() => setMenuOpen((open) => !open)}
           >
-            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+            {menuOpen ? <AppIcon icon={X} size={24} interactive /> : <AppIcon icon={Menu} size={24} interactive />}
           </Button>
         </div>
       </nav>

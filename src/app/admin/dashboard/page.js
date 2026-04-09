@@ -9,12 +9,6 @@ import { ADMIN_NAV_SECTIONS } from '@/components/admin/adminNav'
 import { PageContainer, ContentSection, GridContainer } from '@/components/layout'
 import { StandardCard } from '@/components/layout/StandardCards'
 
-function dashboardLeadText(isSuperAdminUser) {
-  return isSuperAdminUser
-    ? 'Full admin access is enabled. Security, monitoring, and system tools are available.'
-    : 'Core admin access is enabled. Super admin-only security and system tools are hidden.'
-}
-
 export default function AdminDashboardPage() {
   const { user } = useAuth()
   const superAdmin = isSuperAdmin(user)
@@ -52,12 +46,12 @@ export default function AdminDashboardPage() {
         noPaddingBottom
       >
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 rounded-lg border border-primary/10 bg-primary/5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
             <ShieldCheck size={14} />
             {superAdmin ? 'Super Admin enabled' : 'Admin enabled'}
           </div>
-          <div className="rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            {dashboardLeadText(superAdmin)}
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-emerald-600">
+            Workspace Ready
           </div>
         </div>
       </ContentSection>
@@ -67,12 +61,12 @@ export default function AdminDashboardPage() {
           <StandardCard className="border-border/40 bg-card/80 p-6 shadow-lg shadow-black/5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
+                <h2 className="text-lg font-bold text-foreground">Quick Actions</h2>
                 <p className="text-sm text-muted-foreground">
                   Jump into the admin modules you are allowed to manage.
                 </p>
               </div>
-              <div className="rounded-xl border border-border/40 bg-muted/20 px-4 py-2 text-xs font-medium text-muted-foreground">
+              <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary">
                 {quickLinks.length} visible sections
               </div>
             </div>
