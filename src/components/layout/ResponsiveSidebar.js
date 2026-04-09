@@ -70,7 +70,7 @@ function SidebarContent({ user, role, title, subtitle, navItems, onLogout }) {
       {/* Sidebar Footer */}
       <div className="border-t border-border/40 p-4">
         <Button
-          variant="secondary"
+          variant="ghost"
           className="h-11 w-full justify-start gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/5 hover:text-destructive active:scale-[0.98] transition-all"
           onClick={onLogout}
         >

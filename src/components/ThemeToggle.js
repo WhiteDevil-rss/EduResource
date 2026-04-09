@@ -48,12 +48,12 @@ export function ThemeToggle({ className = '', showLabel = false }) {
 
   const baseClasses = showLabel
     ? 'theme-toggle flex items-center justify-center gap-2 rounded-md px-3 py-2 text-foreground transition-colors hover:bg-muted hover:text-primary border border-border/50 bg-background/80 shadow-sm backdrop-blur-sm'
-    : 'theme-toggle p-2 rounded-md hover:bg-muted flex items-center justify-center text-foreground transition-colors hover:text-primary'
+    : 'theme-toggle p-2 rounded-md hover:bg-muted/40 flex items-center justify-center text-foreground transition-colors hover:text-primary'
 
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size={showLabel ? 'default' : 'icon'}
       onClick={toggleTheme}
       className={`${baseClasses} ${className}`}
@@ -61,9 +61,9 @@ export function ThemeToggle({ className = '', showLabel = false }) {
       title={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
     >
       {theme === 'dark' ? (
-        <SunMedium size={16} className="text-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+        <SunMedium size={18} className="text-yellow-500 transition-colors group-hover:text-yellow-600 brightness-110" aria-hidden="true" />
       ) : (
-        <MoonStar size={16} className="text-foreground transition-colors group-hover:text-primary" aria-hidden="true" />
+        <MoonStar size={18} className="text-blue-400 transition-colors group-hover:text-blue-500 brightness-110" aria-hidden="true" />
       )}
       {showLabel ? <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span> : null}
     </Button>

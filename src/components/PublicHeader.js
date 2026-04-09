@@ -111,7 +111,7 @@ export default function PublicHeader({
           <ThemeToggle className="group h-10 w-10 border border-border/60 bg-card text-foreground shadow-sm hover:bg-muted/70 hover:text-primary" />
           <AccentSelector />
           <Button
-            variant="secondary"
+            variant="ghost"
             size="icon"
             className="h-10 w-10 text-muted-foreground hover:text-foreground"
             aria-expanded={menuOpen}

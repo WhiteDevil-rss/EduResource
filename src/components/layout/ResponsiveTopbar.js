@@ -29,7 +29,7 @@ export function ResponsiveTopbar({
           {/* Left Section: Menu & Title */}
           <div className="flex min-w-0 items-center gap-3">
             <Button
-              variant="secondary"
+              variant="ghost"
               size="icon"
               className="h-10 w-10 shrink-0 rounded-xl hover:bg-muted/50 md:hidden"
               onClick={onOpenMenu}
@@ -73,7 +73,7 @@ export function ResponsiveTopbar({
             <div className="flex items-center gap-2">
               <ThemeToggle className="h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="icon"
                 className="group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
                 onClick={onOpenNotifications}
