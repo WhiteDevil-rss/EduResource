@@ -53,7 +53,7 @@ export default function PublicFooter({
                 return (
                   <Button
                     key={item.label}
-                    variant="secondary"
+                    variant="ghost"
                     size="icon"
                     asChild
                     className="w-9 h-9 text-muted-foreground hover:text-primary transition-colors"

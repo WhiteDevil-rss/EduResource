@@ -147,7 +147,7 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
               return (
                 <Button
                   key={entry.key}
-                  variant="secondary"
+                  variant="ghost"
                   size="icon"
                   asChild
                   className="w-8 h-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"

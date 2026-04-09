@@ -139,7 +139,7 @@ export function SavedSearchPanel() {
                 <div className="flex items-center gap-2 shrink-0">
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteSearch(entry.id)}
                     aria-label={`Delete ${entry.query}`}

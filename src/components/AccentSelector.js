@@ -44,30 +44,32 @@ export function AccentSelector({ className = '' }) {
 
   return (
     <div
-      className={cn(
-        'flex items-center gap-2 rounded-lg border border-border/50 bg-background/40 p-1.5 backdrop-blur-sm',
-        className
-      )}
+      className={cn('flex items-center gap-1', className)}
       role="group"
       aria-label="Accent color selector"
     >
       {ACCENTS.map((opt) => (
         <button
           key={opt.value}
+          type="button"
           onClick={() => handleAccentChange(opt.value)}
           className={cn(
-            'h-6 w-6 rounded-md transition-all',
+            'flex h-8 w-8 items-center justify-center rounded-full border transition-all',
             accent === opt.value
-              ? 'ring-2 ring-offset-1 ring-offset-background/50 shadow-md'
-              : 'opacity-60 hover:opacity-100'
+              ? 'border-primary bg-primary/10 shadow-sm shadow-primary/20'
+              : 'border-border/40 bg-background hover:bg-muted/70 hover:border-primary/30'
           )}
-          style={{
-            backgroundColor: opt.color,
-          }}
-          title={`Switch to ${opt.label} accent`}
-          aria-label={`${opt.label} accent`}
-          aria-current={accent === opt.value ? 'true' : 'false'}
-        />
+          aria-label={`Set accent to ${opt.label}`}
+          aria-pressed={accent === opt.value}
+          title={`${opt.label} accent`}
+        >
+          <span
+            className={cn(
+              'h-3.5 w-3.5 rounded-full ring-2 ring-offset-2 ring-offset-background',
+              opt.value === 'indigo' ? 'bg-blue-500' : opt.value === 'teal' ? 'bg-teal-500' : 'bg-violet-500'
+            )}
+          />
+        </button>
       ))}
     </div>
   )

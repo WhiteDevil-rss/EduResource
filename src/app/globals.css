@@ -381,7 +381,9 @@ h3 { font-size: 1.5rem; font-weight: 600; }
 }
 
 .button-ghost {
+  background: transparent;
   border: 1px solid transparent;
+  color: var(--foreground);
 }
 
 .button-ghost:hover {
