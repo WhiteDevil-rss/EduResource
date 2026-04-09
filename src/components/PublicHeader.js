@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { AccentSelector } from '@/components/AccentSelector'
 import { AppIcon } from '@/components/ui/AppIcon'
 
 export default function PublicHeader({
@@ -80,7 +81,10 @@ export default function PublicHeader({
 
         <div className="hidden shrink-0 min-w-0 flex-wrap items-center justify-end gap-2 lg:gap-3 md:flex">
           {showUtilityIcons ? (
-            <ThemeToggle className="h-9 w-9 p-2 rounded-md hover:bg-muted flex items-center justify-center text-foreground hover:text-primary" />
+            <>
+              <ThemeToggle className="group h-9 w-9 border border-border/60 bg-card text-foreground shadow-sm hover:bg-muted/70 hover:text-primary" />
+              <AccentSelector className="shadow-sm" />
+            </>
           ) : null}
 
           <div className="flex items-center justify-end gap-3 flex-wrap">
@@ -104,9 +108,10 @@ export default function PublicHeader({
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center gap-2 md:hidden">
-          <ThemeToggle className="h-10 w-10 p-2 rounded-md hover:bg-muted flex items-center justify-center text-foreground hover:text-primary" />
+          <ThemeToggle className="group h-10 w-10 border border-border/60 bg-card text-foreground shadow-sm hover:bg-muted/70 hover:text-primary" />
+          <AccentSelector />
           <Button
-            variant="ghost"
+            variant="secondary"
             size="icon"
             className="h-10 w-10 text-muted-foreground hover:text-foreground"
             aria-expanded={menuOpen}

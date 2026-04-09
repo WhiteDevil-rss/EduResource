@@ -29,7 +29,7 @@ export function ResponsiveTopbar({
           {/* Left Section: Menu & Title */}
           <div className="flex min-w-0 items-center gap-3">
             <Button
-              variant="ghost"
+              variant="secondary"
               size="icon"
               className="h-10 w-10 shrink-0 rounded-xl hover:bg-muted/50 md:hidden"
               onClick={onOpenMenu}
@@ -64,7 +64,7 @@ export function ResponsiveTopbar({
                 placeholder="Search resources, users, or settings..."
                 value={searchValue}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="h-11 w-full rounded-2xl bg-muted/40 pl-10 text-sm font-medium border-transparent transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
+                className="h-11 w-full rounded-2xl bg-muted/40 pl-11 text-sm font-medium border-transparent transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
                 aria-label="Global search across the platform"
               />
             </div>
@@ -73,7 +73,7 @@ export function ResponsiveTopbar({
             <div className="flex items-center gap-2">
               <ThemeToggle className="h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="icon"
                 className="group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
                 onClick={onOpenNotifications}
@@ -121,7 +121,7 @@ export function ResponsiveTopbar({
               placeholder="Search..."
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="h-11 w-full rounded-2xl bg-muted/40 pl-10 text-sm font-medium border-transparent transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
+              className="h-11 w-full rounded-2xl bg-muted/40 pl-11 text-sm font-medium border-transparent transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
               aria-label="Search"
             />
           </div>

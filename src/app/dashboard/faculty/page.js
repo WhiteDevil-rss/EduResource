@@ -604,7 +604,7 @@ export default function FacultyDashboard() {
           </div>
         </DialogBody>
         <DialogFooter className="p-6 pt-4 border-t border-border/40 flex gap-3">
-          <Button variant="ghost" className="flex-1 rounded-lg text-sm font-medium" onClick={() => setEditorOpen(false)}>Cancel</Button>
+          <Button variant="secondary" className="flex-1 rounded-lg text-sm font-medium" onClick={() => setEditorOpen(false)}>Cancel</Button>
           <Button className="flex-[2] rounded-lg text-sm font-bold bg-primary text-white" onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Resource'}
           </Button>

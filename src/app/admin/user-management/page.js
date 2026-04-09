@@ -365,7 +365,7 @@ export default function UserManagementPage() {
                           <p className={cn("font-mono font-bold text-sm tracking-tight", i.isSecret && "text-primary")}>{i.value}</p>
                         </div>
                         <Button
-                          variant="ghost"
+                          variant="secondary"
                           size="sm"
                           onClick={() => copyToClipboard(i.value, i.label)}
                           className="h-8 rounded-lg text-xs font-medium hover:bg-primary/10 hover:text-primary"
@@ -441,7 +441,7 @@ export default function UserManagementPage() {
           </div>
         </DialogBody>
         <DialogFooter className="p-6 border-t border-border/10 flex justify-end gap-3">
-          <Button variant="ghost" onClick={() => setCreateOpen(false)} className="h-10 px-4 rounded-lg font-medium text-xs text-muted-foreground hover:bg-muted/10">
+          <Button variant="secondary" onClick={() => setCreateOpen(false)} className="h-10 px-4 rounded-lg font-medium text-xs text-muted-foreground hover:bg-muted/10">
             Cancel
           </Button>
           <Button onClick={createUser} disabled={processing} className="h-10 px-6 rounded-lg bg-primary text-white font-semibold text-xs shadow-sm shadow-primary/20">
@@ -477,7 +477,7 @@ export default function UserManagementPage() {
           </div>
         </DialogBody>
         <DialogFooter className="p-6 border-t border-border/10 flex justify-end gap-3">
-          <Button variant="ghost" onClick={() => setResetModal(null)} className="h-10 px-4 rounded-lg font-medium text-xs text-muted-foreground">
+          <Button variant="secondary" onClick={() => setResetModal(null)} className="h-10 px-4 rounded-lg font-medium text-xs text-muted-foreground">
             Cancel
           </Button>
           <Button onClick={resetCredentials} disabled={processing} className="h-10 px-6 rounded-lg bg-amber-500 text-white font-semibold text-xs shadow-sm shadow-amber-500/20">

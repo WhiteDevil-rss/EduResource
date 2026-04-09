@@ -239,7 +239,7 @@ export default function LandingPage() {
               ))}
             </CardContent>
             <CardFooter className="p-8 pt-0">
-              <Button type="button" variant="ghost" className="w-full justify-between h-12 rounded-xl group hover:bg-primary/5" onClick={handleMeetTeamScroll}>
+              <Button type="button" variant="secondary" className="w-full justify-between h-12 rounded-xl group hover:bg-primary/5" onClick={handleMeetTeamScroll}>
                 <span>Meet the Builders</span>
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>

@@ -111,7 +111,7 @@ export function ResponsiveFilterBar({
         {onReset && (
           <div className="flex shrink-0 pt-2 lg:pt-0">
             <Button
-              variant="ghost"
+              variant="secondary"
               onClick={onReset}
               className="h-11 w-full gap-2 rounded-lg text-xs font-semibold text-muted-strong hover:bg-destructive/5 hover:text-destructive transition-all md:w-auto md:px-4"
               aria-label="Reset filters"

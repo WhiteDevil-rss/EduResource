@@ -23,7 +23,7 @@ export function ConfirmDialog({
           {description ? <p className="ui-dialog__description">{description}</p> : null}
         </div>
         <div className="modal-form__actions" style={{ marginTop: '1rem', gap: '1rem' }}>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isConfirming}>
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} disabled={isConfirming}>
             {cancelLabel}
           </Button>
           <Button

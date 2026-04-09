@@ -58,7 +58,7 @@ export const StudentResourceCard = memo(function StudentResourceCard({
         <div className="flex w-full flex-wrap gap-2 py-1">
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             className="flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-all"
             onClick={() => onPreview?.(resource)}
           >
@@ -68,7 +68,7 @@ export const StudentResourceCard = memo(function StudentResourceCard({
 
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             className="flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold hover:bg-primary/10 hover:text-primary transition-all"
             onClick={() => onReview?.(resource)}
           >
@@ -92,7 +92,7 @@ export const StudentResourceCard = memo(function StudentResourceCard({
           {allowDownload && (
             <Button
               size="sm"
-              variant="ghost"
+              variant="secondary"
               className="flex-1 min-w-[90px] h-9 gap-2 rounded-lg text-xs font-semibold hover:bg-emerald-500/10 hover:text-emerald-500 transition-all"
               onClick={() => onDownload?.(resource)}
               disabled={resource.uploadStatus === 'uploading'}

@@ -57,7 +57,7 @@ export default function RootLayout({ children }) {
                 var savedAccent = window.localStorage.getItem(accentKey);
                 var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
                 var theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : (prefersLight ? 'light' : 'dark');
-                var accent = ['blue', 'teal', 'violet'].includes(savedAccent) ? savedAccent : 'blue';
+                var accent = ['indigo', 'teal', 'violet'].includes(savedAccent) ? savedAccent : 'indigo';
 
                 document.documentElement.classList.remove('light', 'dark');
                 document.documentElement.classList.add(theme);
@@ -68,7 +68,7 @@ export default function RootLayout({ children }) {
                 document.documentElement.classList.remove('light', 'dark');
                 document.documentElement.classList.add('dark');
                 document.documentElement.setAttribute('data-theme', 'dark');
-                document.documentElement.setAttribute('data-accent', 'blue');
+                document.documentElement.setAttribute('data-accent', 'indigo');
                 document.documentElement.style.colorScheme = 'dark';
               }
             })();

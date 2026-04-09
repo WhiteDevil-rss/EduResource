@@ -378,7 +378,7 @@ export default function Login() {
 
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="secondary"
                     className="w-full h-12 rounded-2xl text-muted-foreground font-semibold"
                     onClick={() => {
                       setTwoFactorChallenge(null)

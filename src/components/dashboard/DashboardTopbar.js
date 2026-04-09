@@ -24,7 +24,7 @@ export function DashboardTopbar({
           <div className="flex items-center justify-between gap-3 min-w-0">
         <Button
           type="button"
-          variant="ghost"
+          variant="secondary"
               className="h-10 w-10 shrink-0 rounded-xl md:hidden"
           onClick={onOpenMenu}
           aria-label="Open navigation menu"
@@ -55,7 +55,7 @@ export function DashboardTopbar({
             <div className="flex items-center gap-2 md:gap-3">
               <Button
                 type="button"
-                variant="ghost"
+                variant="secondary"
                 className="relative h-11 w-11 rounded-xl"
                 onClick={onOpenNotifications}
                 aria-label="Open notifications"

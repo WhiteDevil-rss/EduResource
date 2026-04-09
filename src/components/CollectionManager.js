@@ -50,7 +50,7 @@ export function CollectionManager({ collections = [], onCreate, onToggleSave, on
                   </Button>
                 ) : null}
                 {onDelete ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => onDelete(collection)} className="h-8 rounded-lg text-[11px] font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => onDelete(collection)} className="h-8 rounded-lg text-[11px] font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10">
                     <Trash2 size={12} className="mr-1.5" />
                     Delete
                   </Button>

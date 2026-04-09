@@ -561,7 +561,7 @@ export default function StudentDashboard() {
           </div>
         </DialogBody>
         <DialogFooter className="p-6 pt-4 border-t border-border/10 flex gap-3">
-          <Button variant="ghost" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setRequestModalOpen(false)}>Cancel</Button>
+          <Button variant="secondary" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setRequestModalOpen(false)}>Cancel</Button>
           <Button className="flex-[2] rounded-lg font-semibold text-xs h-10" onClick={handleRequestSubmit} disabled={requestSubmitting}>
             {requestSubmitting ? 'Submitting...' : 'Submit Request'}
           </Button>
@@ -596,7 +596,7 @@ export default function StudentDashboard() {
           </div>
         </DialogBody>
         <DialogFooter className="p-6 pt-4 border-t border-border/10 flex gap-3">
-          <Button variant="ghost" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setReviewTarget(null)}>Cancel</Button>
+          <Button variant="secondary" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setReviewTarget(null)}>Cancel</Button>
           <Button className="flex-[2] rounded-lg font-semibold text-xs h-10" onClick={handleSubmitReview}>Submit Review</Button>
         </DialogFooter>
       </Dialog>

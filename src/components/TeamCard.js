@@ -141,13 +141,13 @@ export default function TeamCard({ name, role, image, bio, socials = {} }) {
 
         {/* Social Bar (Always visible at bottom) */}
         <div className="p-4 border-t border-border/20 bg-muted/20 mt-auto">
-          <div className="flex items-center justify-center gap-3 flex-nowrap overflow-x-auto scrollbar-hide">
+          <div className="flex items-center justify-start gap-2 flex-nowrap overflow-hidden">
             {socialLinks.map((entry) => {
               const Icon = entry.icon
               return (
                 <Button
                   key={entry.key}
-                  variant="ghost"
+                  variant="secondary"
                   size="icon"
                   asChild
                   className="w-8 h-8 shrink-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-all"
