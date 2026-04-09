@@ -22,7 +22,7 @@ import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { getPublicHeaderContent } from '@/lib/public-nav'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { getPostLoginRedirectPath } from '@/lib/admin-protection'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -68,12 +68,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user && role) {
-      let redirectPath = `/dashboard/${role}`
-      // Superadmins with 'admin' role should go to /admin instead
-      if (role === 'admin' && isSuperAdmin(user)) {
-        redirectPath = '/admin'
-      }
-      router.replace(redirectPath)
+      router.replace(getPostLoginRedirectPath(user, role))
     }
   }, [loading, role, router, user])
 

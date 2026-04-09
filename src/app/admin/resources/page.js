@@ -12,7 +12,7 @@ import { ResourceCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { BookOpen, Database } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser } from '@/lib/admin-protection'
 
 export default function AdminResourcesPage() {
   const router = useRouter()
@@ -29,13 +29,13 @@ export default function AdminResourcesPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [authLoading, user, role, router])
 
   useEffect(() => {
-    if (authLoading || !user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (authLoading || !user || !isAdminUser(user)) return
     let mounted = true
     const load = async () => {
       try {

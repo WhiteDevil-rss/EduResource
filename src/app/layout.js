@@ -1,5 +1,6 @@
 import './globals.css'
 import { AuthProvider } from '@/hooks/useAuth'
+import { GlobalErrorBoundary } from '@/components/ErrorBoundary'
 import ToastProvider from '@/components/ToastProvider'
 import Script from 'next/script'
 
@@ -62,9 +63,11 @@ export default function RootLayout({ children }) {
           </Script>
         ) : null}
         <a href="#main-content" className="skip-link">Skip to Content</a>
-        <AuthProvider>
-          <main id="main-content">{children}</main>
-        </AuthProvider>
+        <GlobalErrorBoundary>
+          <AuthProvider>
+            <main id="main-content">{children}</main>
+          </AuthProvider>
+        </GlobalErrorBoundary>
         <ToastProvider />
       </body>
     </html>

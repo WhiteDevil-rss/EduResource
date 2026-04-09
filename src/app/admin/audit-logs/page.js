@@ -32,13 +32,13 @@ export default function AdminAuditLogsPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isSuperAdmin(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [authLoading, user, role, router])
 
   const load = useCallback(async (page = 1, nextFilters = INITIAL_FILTERS) => {
-    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (!user || !isSuperAdmin(user)) return
     try {
       setLoading(true)
       setError('')

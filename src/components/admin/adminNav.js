@@ -16,49 +16,49 @@ export const ADMIN_NAV_SECTIONS = [
   {
     label: 'Security',
     items: [
-      { label: 'Security Settings', href: '/admin/security-settings', icon: Shield },
-      { label: 'Advanced Security Controls', href: '/admin/advanced-security', icon: Lock },
-      { label: 'IP Management', href: '/admin/ip-management', icon: ShieldAlert },
+      { id: 'security-settings', label: 'Security Settings', href: '/admin/security-settings', icon: Shield, allowedScopes: ['super_admin'] },
+      { id: 'advanced-security', label: 'Advanced Security Controls', href: '/admin/advanced-security', icon: Lock, allowedScopes: ['super_admin'] },
+      { id: 'ip-management', label: 'IP Management', href: '/admin/ip-management', icon: ShieldAlert, allowedScopes: ['super_admin'] },
     ],
   },
   {
     label: 'User Management',
     items: [
-      { label: 'User Management', href: '/admin/user-management', icon: Users },
-      { label: 'Activity Timeline', href: '/admin/activity-timeline', icon: Activity },
+      { id: 'user-management', label: 'User Management', href: '/admin/user-management', icon: Users, allowedScopes: ['admin', 'super_admin'] },
+      { id: 'activity-timeline', label: 'Activity Timeline', href: '/admin/activity-timeline', icon: Activity, allowedScopes: ['super_admin'] },
     ],
   },
   {
     label: 'Resources',
     items: [
-      { label: 'Resources & Publications', href: '/admin/resources', icon: FileText },
-      { label: 'Resource Requests', href: '/admin/resource-requests', icon: Library },
+      { id: 'resources', label: 'Resources & Publications', href: '/admin/resources', icon: FileText, allowedScopes: ['admin', 'super_admin'] },
+      { id: 'resource-requests', label: 'Resource Requests', href: '/admin/resource-requests', icon: Library, allowedScopes: ['admin', 'super_admin'] },
     ],
   },
   {
     label: 'Analytics',
     items: [
-      { label: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3 },
+      { id: 'analytics', label: 'Platform Analytics', href: '/admin/analytics', icon: BarChart3, allowedScopes: ['admin', 'super_admin'] },
     ],
   },
   {
     label: 'Governance',
     items: [
-      { label: 'Content Moderation', href: '/admin/moderation', icon: Shield },
+      { id: 'moderation', label: 'Content Moderation', href: '/admin/moderation', icon: Shield, allowedScopes: ['admin', 'super_admin'] },
     ],
   },
   {
     label: 'Monitoring',
     items: [
-      { label: 'Audit Logs', href: '/admin/audit-logs', icon: FileBarChart2 },
-      { label: 'Suspicious Activity', href: '/admin/suspicious-activity', icon: Radar },
+      { id: 'audit-logs', label: 'Audit Logs', href: '/admin/audit-logs', icon: FileBarChart2, allowedScopes: ['super_admin'] },
+      { id: 'suspicious-activity', label: 'Suspicious Activity', href: '/admin/suspicious-activity', icon: Radar, allowedScopes: ['super_admin'] },
     ],
   },
   {
     label: 'System Tools',
     items: [
-      { label: 'Export Reports', href: '/admin/export-reports', icon: FileBarChart2 },
-      { label: 'Backup System', href: '/admin/backup-system', icon: HardDrive },
+      { id: 'export-reports', label: 'Export Reports', href: '/admin/export-reports', icon: FileBarChart2, allowedScopes: ['super_admin'] },
+      { id: 'backup-system', label: 'Backup System', href: '/admin/backup-system', icon: HardDrive, allowedScopes: ['super_admin'] },
     ],
   },
 ]

@@ -20,7 +20,7 @@ import {
 import { CheckCircle2, XCircle, Eye, ShieldCheck, MessageSquare, Flag, Send, Trash, Clock, ShieldAlert } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser } from '@/lib/admin-protection'
 import { cn } from '@/lib/cn'
 
 export default function AdminModerationPage() {
@@ -39,13 +39,13 @@ export default function AdminModerationPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [authLoading, user, role, router])
 
   const loadData = useCallback(async (signal) => {
-    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (!user || !isAdminUser(user)) return
     try {
       setLoading(true)
       const response = await fetch('/api/admin/moderation', { cache: 'no-store', signal })

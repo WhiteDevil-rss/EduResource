@@ -7,8 +7,8 @@ import { cn } from '@/lib/cn'
 import { filterNavItemsByRole } from '@/lib/feature-access'
 import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 
-function SidebarBody({ role, title, subtitle, navItems, activeSection, onNavigate, onLogout }) {
-  const visibleNavItems = filterNavItemsByRole({ role }, navItems)
+function SidebarBody({ user, role, title, subtitle, navItems, activeSection, onNavigate, onLogout }) {
+  const visibleNavItems = filterNavItemsByRole(user || { role }, navItems)
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 bg-background/95 py-5">
@@ -29,7 +29,7 @@ function SidebarBody({ role, title, subtitle, navItems, activeSection, onNavigat
             const isActive = activeSection === item.id
             return (
               <a
-                key={item.id}
+                key={item.id || item.href}
                 href={item.href}
                 className={cn(
                   'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
@@ -59,6 +59,7 @@ function SidebarBody({ role, title, subtitle, navItems, activeSection, onNavigat
 }
 
 export function DashboardSidebar({
+  user,
   role,
   title,
   subtitle,
@@ -73,6 +74,7 @@ export function DashboardSidebar({
     <>
       <aside className="hidden md:flex md:h-dvh md:w-72 md:flex-none md:flex-col md:border-r md:border-border md:bg-background md:shadow-sm">
         <SidebarBody
+          user={user}
           role={role}
           title={title}
           subtitle={subtitle}
@@ -93,6 +95,7 @@ export function DashboardSidebar({
           Navigation menu
         </h2>
         <SidebarBody
+          user={user}
           role={role}
           title={title}
           subtitle={subtitle}

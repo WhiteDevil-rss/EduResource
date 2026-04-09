@@ -1,8 +1,30 @@
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 import { SuspiciousActivityPanel } from '@/components/SuspiciousActivityPanel'
 import { PageContainer, ContentSection } from '@/components/layout'
 import { Activity } from 'lucide-react'
 
 export default function SuspiciousActivityPage() {
+  const router = useRouter()
+  const { user, role, loading: authLoading } = useAuth()
+
+  useEffect(() => {
+    if (authLoading) return
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
+      return
+    }
+    if (!isSuperAdmin(user)) {
+      router.replace('/admin/dashboard')
+    }
+  }, [authLoading, user, role, router])
+
   return (
     <div className="space-y-8">
       <ContentSection 

@@ -9,6 +9,7 @@ import {
   signOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { getPostLoginRedirectPath } from '@/lib/admin-protection'
 import {
   Dialog,
   DialogBody,
@@ -209,10 +210,10 @@ export function AuthProvider({ children }) {
       applySession(nextSession);
       writeSessionStart(Date.now());
       if (typeof window !== "undefined") {
-        window.location.replace(`/dashboard/${nextRole}`);
+        window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
         return;
       }
-      router.replace(`/dashboard/${nextRole}`);
+      router.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
     } catch (error) {
       throw new Error(error?.message || "Google sign-in failed.");
     } finally {
@@ -295,11 +296,11 @@ export function AuthProvider({ children }) {
       applySession(nextSession);
       writeSessionStart(Date.now());
       if (typeof window !== "undefined") {
-        window.location.replace(`/dashboard/${nextRole}`);
+        window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
         return null;
       }
 
-      router.replace(`/dashboard/${nextRole}`);
+      router.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
       return null;
     } catch (error) {
       throw new Error(error?.message || "Credential sign-in failed.");
@@ -344,11 +345,11 @@ export function AuthProvider({ children }) {
       applySession(nextSession);
       writeSessionStart(Date.now());
       if (typeof window !== "undefined") {
-        window.location.replace(`/dashboard/${nextRole}`);
+        window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
         return;
       }
 
-      router.replace(`/dashboard/${nextRole}`);
+      router.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
     } catch (error) {
       throw new Error(error?.message || "2FA verification failed.");
     } finally {

@@ -10,7 +10,7 @@ import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { SecurityBlockManagement } from '@/components/SecurityBlockManagement'
 import { Terminal, RefreshCcw, Shield } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 
 export default function AdminIpManagementPage() {
   const router = useRouter()
@@ -25,13 +25,17 @@ export default function AdminIpManagementPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
+      return
+    }
+    if (!isSuperAdmin(user)) {
+      router.replace('/admin/dashboard')
     }
   }, [authLoading, user, role, router])
 
   const loadPageData = useCallback(async () => {
-    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (!user || !isAdminUser(user) || !isSuperAdmin(user)) return
     setLoading(true)
     setError('')
     try {

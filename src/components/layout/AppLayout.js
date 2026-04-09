@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn'
  * Implements a robust mobile-first layout with sidebar, sticky topbar, and main content area.
  */
 export function AppLayout({
+  user,
   role,
   userLabel,
   sidebarTitle,
@@ -32,6 +33,7 @@ export function AppLayout({
     <div className={cn('flex min-h-screen w-full flex-col bg-background text-foreground md:flex-row', className)}>
       {/* Sidebar Navigation */}
       <ResponsiveSidebar
+        user={user}
         role={role}
         title={sidebarTitle}
         subtitle={sidebarSubtitle}

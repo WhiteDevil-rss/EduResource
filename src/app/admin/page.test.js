@@ -6,9 +6,9 @@ vi.mock('next/navigation', () => ({
 }))
 
 describe('AdminIndexPage', () => {
-  it('redirects to security settings', async () => {
+  it('redirects to the admin dashboard', async () => {
     const mod = await import('@/app/admin/page')
     mod.default()
-    expect(redirect).toHaveBeenCalledWith('/admin/analytics')
+    expect(redirect).toHaveBeenCalledWith('/admin/dashboard')
   })
 })

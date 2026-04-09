@@ -10,7 +10,7 @@ import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { BarChart3, RefreshCcw, Activity } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser } from '@/lib/admin-protection'
 
 export default function AdminAnalyticsPage() {
   const router = useRouter()
@@ -25,13 +25,13 @@ export default function AdminAnalyticsPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [authLoading, user, role, router])
 
   useEffect(() => {
-    if (authLoading || !user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (authLoading || !user || !isAdminUser(user)) return
     let isActive = true
     const load = async () => {
       setLoading(true)

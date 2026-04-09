@@ -17,7 +17,7 @@ import {
 import { StandardCard, UserCard, StatCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin, getUserManagementActionPolicy } from '@/lib/admin-protection'
+import { isAdminUser, getUserManagementActionPolicy } from '@/lib/admin-protection'
 import { formatDisplayDate } from '@/lib/demo-content'
 import { cn } from '@/lib/cn'
 
@@ -48,13 +48,13 @@ export default function UserManagementPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [authLoading, user, role, router])
 
   const loadUsers = useCallback(async ({ silent = false } = {}) => {
-    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (!user || !isAdminUser(user)) return
     if (!silent) setLoading(true)
     try {
       const response = await fetch('/api/admin/users?page=1&limit=500', { cache: 'no-store' })

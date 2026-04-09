@@ -10,8 +10,8 @@ import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 /**
  * SidebarContent - Logic and rendering for navigation links
  */
-function SidebarContent({ role, title, subtitle, navItems, onLogout }) {
-  const visibleNavItems = filterNavItemsByRole({ role }, navItems)
+function SidebarContent({ user, role, title, subtitle, navItems, onLogout }) {
+  const visibleNavItems = filterNavItemsByRole(user || { role }, navItems)
 
   return (
     <div className="flex h-full flex-col bg-background/95 backdrop-blur-sm lg:bg-background lg:backdrop-blur-none">
@@ -34,7 +34,7 @@ function SidebarContent({ role, title, subtitle, navItems, onLogout }) {
             const isActive = item.active || false
 
             return (
-              <li key={item.id}>
+              <li key={item.id || item.href}>
                 <Link
                   href={item.href}
                   className={cn(
@@ -86,6 +86,7 @@ function SidebarContent({ role, title, subtitle, navItems, onLogout }) {
  * Handles both mobile drawer state and desktop persistent view.
  */
 export function ResponsiveSidebar({
+  user,
   role,
   title,
   subtitle,
@@ -122,6 +123,7 @@ export function ResponsiveSidebar({
         </button>
 
         <SidebarContent
+          user={user}
           role={role}
           title={title}
           subtitle={subtitle}
@@ -133,6 +135,7 @@ export function ResponsiveSidebar({
       {/* Desktop Persistent Sidebar */}
       <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:z-50 md:flex md:w-72 md:flex-col md:border-r md:border-border/50 md:bg-background">
         <SidebarContent
+          user={user}
           role={role}
           title={title}
           subtitle={subtitle}

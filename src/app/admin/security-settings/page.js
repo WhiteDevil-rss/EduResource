@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 import {
   PageContainer,
   ContentSection,
@@ -67,13 +67,17 @@ export default function AdminSecuritySettingsPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
+      return
+    }
+    if (!isSuperAdmin(user)) {
+      router.replace('/admin/dashboard')
     }
   }, [authLoading, user, role, router])
 
   useEffect(() => {
-    if (authLoading || !user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (authLoading || !user || !isAdminUser(user) || !isSuperAdmin(user)) return
     let mounted = true
     const load = async () => {
       try {

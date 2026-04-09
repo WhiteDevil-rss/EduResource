@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 import { getDisplayName } from '@/lib/demo-content'
 import { Button } from '@/components/ui/button'
+import { Loader2 } from 'lucide-react'
 import {
   AppLayout,
   ResponsiveNotificationPanel,
@@ -38,20 +39,17 @@ export default function AdminLayout({ children }) {
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    if (loading) return
-
-    if (!user) {
-      router.replace('/login')
+    if (loading) {
       return
     }
 
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [loading, role, router, user])
 
   useEffect(() => {
-    if (!user || role !== 'admin' || !isSuperAdmin(user)) {
+    if (loading || !isAdminUser(user)) {
       return
     }
 
@@ -77,7 +75,7 @@ export default function AdminLayout({ children }) {
     return () => {
       mounted = false
     }
-  }, [role, user])
+  }, [loading, role, user])
 
   const markNotificationRead = async (notificationId) => {
     try {
@@ -124,8 +122,17 @@ export default function AdminLayout({ children }) {
   const handleOpenNotifications = () => setNotificationsOpen(true)
   const handleCloseNotifications = () => setNotificationsOpen(false)
 
-  if (loading || !user || role !== 'admin' || !isSuperAdmin(user)) {
-    return null
+  if (loading || !user || !isAdminUser(user)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-6 text-center text-muted-foreground">
+        <div className="space-y-4">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="max-w-md text-sm font-medium leading-relaxed">
+            Preparing the admin console...
+          </p>
+        </div>
+      </div>
+    )
   }
 
   const notificationItems = notifications.map((n) => (
@@ -141,8 +148,9 @@ export default function AdminLayout({ children }) {
 
   return (
     <AppLayout
+      user={user}
       role="admin"
-      userLabel={getDisplayName(user?.email, 'Super Admin')}
+      userLabel={getDisplayName(user?.email, isSuperAdmin(user) ? 'Super Admin' : 'Admin')}
       sidebarTitle="EDUCATIONAM"
       sidebarSubtitle="System Intelligence"
       navItems={ADMIN_NAV_SECTIONS.flatMap(s => s.items)}

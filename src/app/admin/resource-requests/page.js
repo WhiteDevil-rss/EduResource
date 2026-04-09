@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/hooks/useAuth'
-import { isSuperAdmin } from '@/lib/admin-protection'
+import { isAdminUser } from '@/lib/admin-protection'
 import {
   PageContainer,
   ContentSection,
@@ -38,13 +38,13 @@ export default function ResourceRequestsPage() {
       router.replace('/login')
       return
     }
-    if (role !== 'admin' || !isSuperAdmin(user)) {
-      router.replace('/dashboard/admin')
+    if (!isAdminUser(user)) {
+      router.replace('/login?reason=unauthorized')
     }
   }, [authLoading, user, role, router])
 
   const load = useCallback(async () => {
-    if (!user || role !== 'admin' || !isSuperAdmin(user)) return
+    if (!user || !isAdminUser(user)) return
     try {
       setLoading(true)
       const response = await fetch('/api/admin/resource-requests', { cache: 'no-store' })
