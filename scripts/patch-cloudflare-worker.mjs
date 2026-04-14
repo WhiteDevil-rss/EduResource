@@ -97,7 +97,8 @@ async function runPatch() {
     writeFileSync(tempPatchedPath, workerCode);
 
     console.log('Deep Bundling everything into a single _worker.js...');
-    const banner = 'import { createRequire } from "node:module"; const require = createRequire("file:///worker.js");';
+    const bootLog = `console.log("[WORKER] Booting at: " + new Date().toISOString() + " | Platform: Cloudflare Pages");\n`;
+    const banner = `import { createRequire } from "node:module"; const require = createRequire("file:///worker.js");\n${bootLog}`;
     
     await build({
       entryPoints: [tempPatchedPath],

@@ -16,7 +16,7 @@ export const metadata = {
   keywords: ['education', 'academic resources', 'student platform', 'faculty workspace', 'SaaS'],
   authors: [{ name: 'EDUCATIONAM Team' }],
   creator: 'EDUCATIONAM',
-  metadataBase: new URL('https://edu-resource.vercel.app'), // Placeholder URL
+  metadataBase: new URL('https://edu-resource.pages.dev'), 
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -41,6 +41,9 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }) {
+  // Server-side diagnostic log to confirm the layout is rendering
+  console.log('[LAYOUT] Rendering RootLayout at:', new Date().toISOString());
+
   return (
     <html
       lang="en"

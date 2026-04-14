@@ -141,19 +141,20 @@ export async function verifyFirebaseIdToken(idToken) {
 async function getGoogleAccessToken() {
   const { client_email, private_key } = SERVICE_ACCOUNT
   
-  // Diagnostic logs for deployment troubleshooting
+  // Diagnostic logs moved inside the handler to prevent boot-time crashes
+  // These will now properly show up in request-time logs.
   if (!PROJECT_ID) {
-    console.error('[FIREBASE_EDGE] Critical error: FIREBASE_PROJECT_ID is missing from environment.')
+    console.error('[FIREBASE_EDGE] Config error: FIREBASE_PROJECT_ID is missing.')
   }
   if (!client_email) {
-    console.error('[FIREBASE_EDGE] Critical error: FIREBASE_CLIENT_EMAIL is missing from environment.')
+    console.error('[FIREBASE_EDGE] Config error: FIREBASE_CLIENT_EMAIL is missing.')
   }
   if (!private_key) {
-    console.error('[FIREBASE_EDGE] Critical error: FIREBASE_PRIVATE_KEY is missing from environment.')
+    console.error('[FIREBASE_EDGE] Config error: FIREBASE_PRIVATE_KEY is missing.')
   }
 
   if (!client_email || !private_key || !PROJECT_ID) {
-    throw new Error('Privileged Firebase access is not configured. (Missing FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, or FIREBASE_PROJECT_ID)')
+    throw new Error('Privileged Firebase access is not configured. Check Cloudflare Dashboard -> Settings -> Functions -> Environment Variables.')
   }
 
   // Import private key for signing
