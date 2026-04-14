@@ -98,7 +98,7 @@ async function runPatch() {
 
     console.log('Deep Bundling everything into a single _worker.js...');
     const bootLog = `console.log("[WORKER] Booting at: " + new Date().toISOString() + " | Platform: Cloudflare Pages");\n`;
-    const banner = `import { createRequire } from "node:module"; const require = createRequire("file:///worker.js");\n${bootLog}`;
+    const banner = bootLog;
     
     await build({
       entryPoints: [tempPatchedPath],
@@ -107,6 +107,30 @@ async function runPatch() {
       format: 'esm',
       target: 'esnext',
       platform: 'node',
+      external: [
+        'node:stream',
+        'node:buffer',
+        'node:path',
+        'node:process',
+        'node:url',
+        'node:events',
+        'node:util',
+        'node:crypto',
+        'node:module',
+        'node:async_hooks',
+        'node:stream/web',
+        'node:stream/promises',
+        'async_hooks',
+        'events',
+        'buffer',
+        'crypto',
+        'path',
+        'process',
+        'stream',
+        'url',
+        'util',
+        'module'
+      ],
       plugins: [nodeStubPlugin],
       resolveExtensions: ['.mjs', '.js', '.ts'],
       loader: {

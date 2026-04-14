@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url'
 const projectRoot = dirname(fileURLToPath(import.meta.url))
 
 const nextConfig = {
-  output: 'standalone',
-  outputFileTracingRoot: projectRoot,
   reactStrictMode: false,
   compress: true,
   images: {
