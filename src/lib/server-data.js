@@ -2212,18 +2212,23 @@ export async function createNotificationRecordsForResource(resource, facultySess
   return students.length
 }
 async function listSessionRecords() {
-  const records = await getCollectionRecords(SESSIONS_COLLECTION).catch(() => [])
-  const sanitized = records.map((document) => sanitizeSessionData(document.id, getDocumentData(document)))
-  const activeRecords = sanitized.filter(isActiveSessionRecord)
+  try {
+    const records = await getCollectionRecords(SESSIONS_COLLECTION).catch(() => [])
+    const sanitized = records.map((document) => sanitizeSessionData(document.id, getDocumentData(document)))
+    const activeRecords = sanitized.filter(isActiveSessionRecord)
 
-  const staleRecords = sanitized.filter((record) => !isActiveSessionRecord(record))
-  await Promise.all(
-    staleRecords.map((record) =>
-      firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
+    const staleRecords = sanitized.filter((record) => !isActiveSessionRecord(record))
+    await Promise.all(
+      staleRecords.map((record) =>
+        firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
+      )
     )
-  )
 
-  return activeRecords
+    return activeRecords
+  } catch (error) {
+    console.warn(`[SERVER_DATA] listSessionRecords failed: ${error.message || error}`)
+    return []
+  }
 }
 
 export async function getSessionRecordById(sessionId) {
@@ -2231,18 +2236,24 @@ export async function getSessionRecordById(sessionId) {
     return null
   }
 
-  const record = await firestore.getDoc(`${SESSIONS_COLLECTION}/${sessionId}`)
-  if (!record) {
+  try {
+    const record = await firestore.getDoc(`${SESSIONS_COLLECTION}/${sessionId}`)
+    if (!record) {
+      return null
+    }
+
+    const sanitized = sanitizeSessionData(record.id, getDocumentData(record))
+    if (!isActiveSessionRecord(sanitized)) {
+      // Background cleanup for stale session records
+      firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
+      return null
+    }
+
+    return sanitized
+  } catch (error) {
+    console.error(`[SERVER_DATA] getSessionRecordById (${sessionId}) failed:`, error.message || error)
     return null
   }
-
-  const sanitized = sanitizeSessionData(record.id, getDocumentData(record))
-  if (!isActiveSessionRecord(sanitized)) {
-    await firestore.deleteDoc(`${SESSIONS_COLLECTION}/${record.id}`).catch(() => null)
-    return null
-  }
-
-  return sanitized
 }
 
 export async function listActiveSessionRecordsByUser(uid) {
@@ -2263,9 +2274,15 @@ export async function listActiveSessionRecordsByUser(uid) {
     )
 
     return sanitized.filter(isActiveSessionRecord)
-  } catch {
-    const records = await listSessionRecords()
-    return records.filter((record) => String(record.uid || '').trim() === normalizedUid)
+  } catch (error) {
+    console.warn(`[SERVER_DATA] listActiveSessionRecordsByUser (${normalizedUid}) primary query failed:`, error.message || error)
+    try {
+      // Fallback to full list scan if query is unavailable (e.g. index missing or resource limit)
+      const records = await listSessionRecords()
+      return records.filter((record) => String(record.uid || '').trim() === normalizedUid)
+    } catch {
+      return []
+    }
   }
 }
 

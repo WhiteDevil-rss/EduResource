@@ -1,3 +1,4 @@
+import 'server-only'
 import * as jose from 'jose'
 
 /**
@@ -50,18 +51,31 @@ function extractApiErrorMessage(payload, fallback) {
 function normalizePrivateKey(privateKey) {
   if (!privateKey) return privateKey
 
-  const trimmed = String(privateKey).trim()
-  const unquoted =
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-      ? trimmed.slice(1, -1)
-      : trimmed
+  // Handle various escaping scenarios: dual-slashes \\n, literal newlines, or double quotes
+  let normalized = String(privateKey).trim()
 
-  const normalized = unquoted.replace(/\\n/g, '\n').trim()
+  // Remove potential double/single quotes wrapping the entire key from env var injection
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1)
+  }
 
-  // Some deployments store the body only (base64) without PEM guards.
+  // Convert literal \\n to actual newlines
+  normalized = normalized.replace(/\\n/g, '\n')
+
+  // Handle double-escaped newlines (sometimes happening in specific CI/CD pipelines)
+  normalized = normalized.replace(/\\\\n/g, '\n')
+
+  // Remove any space after the markers and strictly trim
+  normalized = normalized.trim()
+
+  // Some deployments (like Cloudflare Dashboard secrets) might mangle PEM guards or wrap in quotes again.
+  // Ensure we have the standard PEM markers.
   if (!normalized.includes('BEGIN PRIVATE KEY') && !normalized.includes('END PRIVATE KEY')) {
     const compact = normalized.replace(/\s+/g, '')
+    // if it's likely a raw base64 body (usually ~1600+ chars)
     if (/^[A-Za-z0-9+/=]+$/.test(compact)) {
       const lines = compact.match(/.{1,64}/g) || [compact]
       return `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`
@@ -126,8 +140,20 @@ export async function verifyFirebaseIdToken(idToken) {
  */
 async function getGoogleAccessToken() {
   const { client_email, private_key } = SERVICE_ACCOUNT
-  if (!client_email || !private_key) {
-    throw new Error('Missing service account credentials (FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY)')
+  
+  // Diagnostic logs for deployment troubleshooting
+  if (!PROJECT_ID) {
+    console.error('[FIREBASE_EDGE] Critical error: FIREBASE_PROJECT_ID is missing from environment.')
+  }
+  if (!client_email) {
+    console.error('[FIREBASE_EDGE] Critical error: FIREBASE_CLIENT_EMAIL is missing from environment.')
+  }
+  if (!private_key) {
+    console.error('[FIREBASE_EDGE] Critical error: FIREBASE_PRIVATE_KEY is missing from environment.')
+  }
+
+  if (!client_email || !private_key || !PROJECT_ID) {
+    throw new Error('Privileged Firebase access is not configured. (Missing FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, or FIREBASE_PROJECT_ID)')
   }
 
   // Import private key for signing
