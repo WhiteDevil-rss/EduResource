@@ -10,10 +10,10 @@ import {
   ResponsiveFilterBar,
   GridContainer,
 } from '@/components/layout'
-import { LogCard } from '@/components/layout/StandardCards'
+import { LogCard, StandardCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { PaginationControls } from '@/components/ui/layout'
-import { AlertCircle, Terminal, Search, Calendar, ShieldCheck, FilterX } from 'lucide-react'
+import { AlertCircle, Calendar, ShieldCheck, FilterX } from 'lucide-react'
 
 const INITIAL_FILTERS = { search: '', action: '', status: '', fromDate: '', toDate: '' }
 
@@ -77,11 +77,72 @@ export default function AdminAuditLogsPage() {
     load(1, INITIAL_FILTERS)
   }
 
+  const filterConfig = [
+    {
+      id: 'search',
+      type: 'search',
+      label: 'Search Logs',
+      placeholder: 'User, event, or module...',
+      value: filters.search,
+    },
+    {
+      id: 'action',
+      type: 'search',
+      label: 'Module / Action',
+      placeholder: 'AUTH, USERS, SECURITY...',
+      value: filters.action,
+    },
+    {
+      id: 'status',
+      type: 'select',
+      label: 'Status',
+      value: filters.status || 'all',
+      options: [
+        { label: 'All Statuses', value: 'all' },
+        { label: 'Success', value: 'success' },
+        { label: 'Warning', value: 'warning' },
+        { label: 'Error', value: 'error' },
+      ],
+    },
+  ]
+
+  const handleFilterChange = (id, value) => {
+    if (id === 'search') setFilters((prev) => ({ ...prev, search: value }))
+    if (id === 'action') setFilters((prev) => ({ ...prev, action: value }))
+    if (id === 'status') setFilters((prev) => ({ ...prev, status: value === 'all' ? '' : value }))
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <StandardCard className="overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Compliance stream
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+              Inspect admin and platform events with clearer audit visibility.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              The logs interface now follows the same card/filter architecture used across the admin redesign.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:w-[280px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Events</p>
+              <p className="mt-2 text-2xl font-semibold">{pagination.total}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Page</p>
+              <p className="mt-2 text-2xl font-semibold">{pagination.page}/{pagination.pages}</p>
+            </div>
+          </div>
+        </div>
+      </StandardCard>
+
       <ContentSection
         title="Audit Logs"
-        subtitle="Track platform activity and administrative actions for security and compliance"
+        subtitle="Filter by actor, module, status, and date range for investigation"
         noPaddingBottom
       >
         <div className="flex items-center gap-4">
@@ -94,45 +155,40 @@ export default function AdminAuditLogsPage() {
 
       <PageContainer>
         <div className="space-y-6">
-          <ResponsiveFilterBar onReset={handleResetFilters}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full">
-              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" size={14} />
-                <input
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-border/40 bg-background text-xs font-medium focus:ring-2 focus:ring-primary/10 transition-all"
-                  value={filters.search}
-                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                  placeholder="User identity or action..."
-                />
-              </div>
-              <div className="relative group">
-                <Terminal className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" size={14} />
-                <input
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-border/40 bg-background text-xs font-medium focus:ring-2 focus:ring-primary/10 transition-all"
-                  value={filters.action}
-                  onChange={(e) => setFilters(prev => ({ ...prev, action: e.target.value }))}
-                  placeholder="Module e.g. AUTH"
-                />
-              </div>
-              <div className="relative group">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" size={14} />
-                <input
-                  type="date"
-                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-border/40 bg-background text-[10px] font-semibold uppercase tracking-wider focus:ring-2 focus:ring-primary/10 transition-all"
-                  value={filters.fromDate}
-                  onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleApplyFilters}
-                  className="flex-1 h-10 bg-primary text-white text-[10px] font-bold uppercase tracking-wider rounded-lg hover:opacity-90 transition-all shadow-sm shadow-primary/20"
-                >
-                  Apply Filters
-                </button>
-              </div>
+          <ResponsiveFilterBar
+            filters={filterConfig}
+            onFilterChange={handleFilterChange}
+            onReset={handleResetFilters}
+          />
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
+            <div className="relative group">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" size={14} />
+              <input
+                type="date"
+                className="h-11 w-full rounded-xl border border-border/60 bg-background/80 pl-10 pr-4 text-xs font-medium transition-all focus:ring-2 focus:ring-primary/10"
+                value={filters.fromDate}
+                onChange={(e) => setFilters((prev) => ({ ...prev, fromDate: e.target.value }))}
+                aria-label="From date"
+              />
             </div>
-          </ResponsiveFilterBar>
+            <div className="relative group">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" size={14} />
+              <input
+                type="date"
+                className="h-11 w-full rounded-xl border border-border/60 bg-background/80 pl-10 pr-4 text-xs font-medium transition-all focus:ring-2 focus:ring-primary/10"
+                value={filters.toDate}
+                onChange={(e) => setFilters((prev) => ({ ...prev, toDate: e.target.value }))}
+                aria-label="To date"
+              />
+            </div>
+            <button
+              onClick={handleApplyFilters}
+              className="h-11 rounded-xl bg-primary px-5 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:opacity-90"
+            >
+              Apply
+            </button>
+          </div>
 
           <SkeletonWrapper name="admin-audit-logs" loading={loading}>
             {error ? (

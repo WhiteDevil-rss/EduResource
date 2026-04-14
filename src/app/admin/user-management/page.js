@@ -254,9 +254,36 @@ export default function UserManagementPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <StandardCard className="overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Identity operations
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+              Manage users, credentials, and access policies from one workspace.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              This page now uses the same admin design language as the rest of the panel with clearer filters,
+              cleaner cards, and easier account decisioning.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:w-[260px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Directory</p>
+              <p className="mt-2 text-2xl font-semibold">{stats.total}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Active</p>
+              <p className="mt-2 text-2xl font-semibold">{stats.active}</p>
+            </div>
+          </div>
+        </div>
+      </StandardCard>
+
       <ContentSection
         title="User Management"
-        subtitle="Manage academic accounts, account security, and permissions"
+        subtitle="Search the directory, provision new accounts, and enforce role-based access"
         noPaddingBottom
       >
         <ResponsiveFilterBar

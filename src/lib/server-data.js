@@ -2286,22 +2286,19 @@ export async function createSessionRecord({
     throw new Error('Session registration failed.')
   }
 
-  // Fast-path guard: check only this user's recent sessions and skip global fallbacks.
+  // Prune stale sessions and check active limit
   try {
-    const records = await firestore.runQueryMany(SESSIONS_COLLECTION, ['uid', '==', normalizedUid], 5)
-    const activeSessions = records
-      .map((entry) => sanitizeSessionData(entry.id, entry))
-      .filter(isActiveSessionRecord)
+    const activeSessions = await listActiveSessionRecordsByUser(normalizedUid)
 
     if (activeSessions.length >= 2) {
       throw new Error('You can only be signed in on 2 devices at a time. Please log out from another device first.')
     }
   } catch (error) {
-    const message = String(error?.message || '')
-    if (message.includes('You can only be signed in on 2 devices at a time')) {
+    if (String(error?.message).includes('signed in on 2 devices')) {
       throw error
     }
-    // Do not block login when the session directory query is temporarily unavailable.
+    console.error(`[SESSION_GUARD] Warning during session limit check for ${normalizedUid}:`, error?.message || error)
+    // Do not block login when the session store query is temporarily unavailable.
   }
 
   const createdAt = nowIso()
@@ -2328,8 +2325,13 @@ export async function deleteSessionRecord(sessionId) {
     return false
   }
 
-  await firestore.deleteDoc(`${SESSIONS_COLLECTION}/${normalizedSessionId}`).catch(() => null)
-  return true
+  try {
+    await firestore.deleteDoc(`${SESSIONS_COLLECTION}/${normalizedSessionId}`)
+    return true
+  } catch (error) {
+    console.error(`[SESSION_DELETE] Failed to delete session ${normalizedSessionId}:`, error?.message || error)
+    return false
+  }
 }
 
 export async function createAuditRecord({

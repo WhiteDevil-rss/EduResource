@@ -128,9 +128,35 @@ export default function ResourceRequestsPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <StandardCard className="overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Request operations
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+              Triage and fulfill student resource requests with clearer workflow states.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              Use status-driven cards and compact filters to move requests from pending to complete without clutter.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:w-[280px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Pending</p>
+              <p className="mt-2 text-2xl font-semibold">{pendingCount}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Completed</p>
+              <p className="mt-2 text-2xl font-semibold">{doneCount}</p>
+            </div>
+          </div>
+        </div>
+      </StandardCard>
+
       <ContentSection
         title="Resource Requests"
-        subtitle="Manage and fulfill student requests for academic materials"
+        subtitle="Filter by status, review details, and update lifecycle state"
         noPaddingBottom
       >
         <ResponsiveFilterBar

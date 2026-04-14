@@ -1,71 +1,79 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from 'react';
-import { MoonStar, SunMedium } from 'lucide-react';
-
-import { Button } from './ui/button';
-
-const STORAGE_KEY = 'eduresourcehub-theme';
-
-function getSystemTheme() {
-  if (typeof window === 'undefined') {
-    return 'dark';
-  }
-
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-}
-
-function applyTheme(theme) {
-  if (typeof document === 'undefined') {
-    return;
-  }
-
-  document.documentElement.classList.remove('light', 'dark');
-  document.documentElement.classList.add(theme);
-  document.documentElement.setAttribute('data-theme', theme);
-  document.documentElement.style.colorScheme = theme;
-}
+import { useEffect, useState } from 'react'
+import { MoonStar, SunMedium } from 'lucide-react'
+import { Button } from './ui/button'
+import {
+  THEME_EVENT,
+  applyTheme,
+  persistTheme,
+  readStoredAccent,
+  readStoredTheme,
+  resolveTheme,
+} from '@/lib/theme'
+import { cn } from '@/lib/cn'
 
 export function ThemeToggle({ className = '', showLabel = false }) {
-  const [theme, setTheme] = useState('dark');
-  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState('light')
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem(STORAGE_KEY);
-    const nextTheme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : getSystemTheme();
+    const syncTheme = (incomingTheme) => {
+      const nextTheme = resolveTheme(incomingTheme ?? readStoredTheme())
+      setTheme(nextTheme)
+      applyTheme(nextTheme, readStoredAccent())
+      setMounted(true)
+    }
 
-    setTheme(nextTheme);
-    applyTheme(nextTheme);
-    setMounted(true);
-  }, []);
+    syncTheme()
+
+    const handleStorage = (event) => {
+      if (!event.key || event.key === 'eduresourcehub-theme') {
+        syncTheme(event.newValue)
+      }
+    }
+
+    const handleCustomChange = (event) => {
+      syncTheme(event.detail)
+    }
+
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener(THEME_EVENT, handleCustomChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener(THEME_EVENT, handleCustomChange)
+    }
+  }, [])
 
   const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
-    applyTheme(nextTheme);
-  };
-
-  const baseClasses = showLabel
-    ? 'button button theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground'
-    : 'button button theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground h-10 w-10 rounded-full border-border/50 bg-background/90 text-foreground hover:bg-muted/70'
+    const nextTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(nextTheme)
+    persistTheme(nextTheme)
+    applyTheme(nextTheme, readStoredAccent())
+  }
 
   return (
     <Button
       type="button"
       variant="secondary"
-      size={showLabel ? 'default' : 'icon'}
       onClick={toggleTheme}
-      className={`${baseClasses} ${className}`}
+      className={cn(
+        showLabel
+          ? 'h-11 rounded-full px-4'
+          : 'size-11 rounded-xl px-0',
+        'border border-border/70 bg-card/85 text-muted-foreground hover:text-foreground',
+        className
+      )}
       aria-label={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
       title={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme` : 'Toggle theme'}
     >
       {theme === 'dark' ? (
-        <SunMedium size={16} className="text-foreground" aria-hidden="true" />
+        <SunMedium size={16} aria-hidden="true" />
       ) : (
-        <MoonStar size={16} className="text-foreground" aria-hidden="true" />
+        <MoonStar size={16} aria-hidden="true" />
       )}
       {showLabel ? <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span> : null}
     </Button>
-  );
+  )
 }

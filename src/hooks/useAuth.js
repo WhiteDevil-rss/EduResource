@@ -2,12 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-} from "firebase/auth";
+// Firebase Auth functions will be imported dynamically inside methods to avoid Turbopack instantiation errors
 import { auth } from "@/lib/firebase";
 import { getPostLoginRedirectPath } from '@/lib/admin-protection'
 import {
@@ -24,8 +19,6 @@ import { areSessionSettingsEqual, normalizeSessionSettings, SESSION_SETTINGS_DEF
 
 const AuthContext = createContext(null);
 const SESSION_START_KEY = "sps_auth_session_started_at";
-const studentGoogleProvider = new GoogleAuthProvider();
-studentGoogleProvider.setCustomParameters({ prompt: "select_account" });
 
 function mapFirebaseAuthError(error, fallbackMessage) {
   const code = String(error?.code || "").toLowerCase();
@@ -243,10 +236,10 @@ export function AuthProvider({ children }) {
   const signInWithGoogleStudent = async () => {
     try {
       setIsAuthenticating(true);
+      const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = await import("firebase/auth");
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       
-      // Try popup first, if blocked or fails, use redirect
       try {
         const result = await signInWithPopup(auth, provider);
         const idToken = await result.user.getIdToken();
@@ -446,6 +439,7 @@ export function AuthProvider({ children }) {
     try {
       clearBrowserAuthArtifacts();
       await fetch("/api/session-logout", { method: "POST" }).catch(() => {});
+      const { signOut } = await import("firebase/auth");
       await signOut(auth).catch(() => {});
     } finally {
       applySession({ user: null, role: null, status: null, authProvider: null });
@@ -539,7 +533,7 @@ export function AuthProvider({ children }) {
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <p style={{ color: "rgba(240, 240, 253, 0.75)", fontSize: "0.95rem" }}>
+          <p className="text-[0.95rem] text-muted-foreground">
             Time remaining: {autoLogout.secondsUntilInactivityLogout} seconds.
           </p>
         </DialogBody>

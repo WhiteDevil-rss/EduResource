@@ -10,8 +10,21 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "placeholder-app-id"
 };
 
-const existingApp = getApps()[0];
-const app = existingApp || initializeApp(firebaseConfig);
-const auth = getAuth(app);
+let existingApp = null;
+try {
+  existingApp = getApps()[0];
+} catch (_e) {
+  // SSR safety
+}
 
-export { auth };
+const app = existingApp || initializeApp(firebaseConfig);
+
+// Handle Auth with lazy initialization or safety
+let authInstance = null;
+try {
+  authInstance = getAuth(app);
+} catch (_e) {
+  // Silent fail for non-client environments
+}
+
+export const auth = authInstance;

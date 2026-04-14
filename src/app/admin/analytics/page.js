@@ -6,9 +6,10 @@ import {
   PageContainer,
   ContentSection,
 } from '@/components/layout'
+import { StandardCard } from '@/components/layout/StandardCards'
 import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
-import { BarChart3, RefreshCcw, Activity } from 'lucide-react'
+import { BarChart3, RefreshCcw, Activity, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { isAdminUser } from '@/lib/admin-protection'
 
@@ -56,9 +57,35 @@ export default function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-6">
+      <StandardCard className="overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Intelligence surface
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+              Monitor platform engagement and operational trends in real time.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              This analytics surface is aligned with the updated admin system for better readability on mobile and desktop.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:w-[280px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Mode</p>
+              <p className="mt-2 text-2xl font-semibold">Live</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Status</p>
+              <p className="mt-2 text-2xl font-semibold">Stable</p>
+            </div>
+          </div>
+        </div>
+      </StandardCard>
+
       <ContentSection
         title="Platform Analytics"
-        subtitle="Global insights and platform engagement metrics"
+        subtitle="Review adoption, activity, and performance health signals"
         noPaddingBottom
       >
         <div className="flex flex-col gap-4">

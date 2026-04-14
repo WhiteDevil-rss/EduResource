@@ -43,8 +43,12 @@ export default function AdminLayout({ children }) {
       return
     }
 
-    if (!isAdminUser(user, role)) {
+    // Only redirect with 'unauthorized' reason if user is present but not an admin
+    // If user is null, it's a simple unauthenticated state which is handled by AuthGuard/login redirect
+    if (user && !isAdminUser(user, role)) {
       router.replace('/login?reason=unauthorized')
+    } else if (!user) {
+      router.replace('/login')
     }
   }, [loading, role, router, user])
 
@@ -153,6 +157,7 @@ export default function AdminLayout({ children }) {
       userLabel={getDisplayName(user?.email, isSuperAdmin(user) ? 'Super Admin' : 'Admin')}
       sidebarTitle="EDUCATIONAM"
       sidebarSubtitle="System Intelligence"
+      navSections={ADMIN_NAV_SECTIONS}
       navItems={ADMIN_NAV_SECTIONS.flatMap(s => s.items)}
       topbarTitle="Admin Console"
       topbarSubtitle="Manage system security, users, and resources"

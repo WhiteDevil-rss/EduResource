@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
+import {
+  ACCENT_EVENT,
+  ACCENT_STORAGE_KEY,
+  applyTheme,
+  persistAccent,
+  readStoredTheme,
+  resolveAccent,
+} from '@/lib/theme'
 
 const ACCENTS = [
   { value: 'indigo', label: 'Blue', color: '#4f46e5' },
@@ -9,33 +17,44 @@ const ACCENTS = [
   { value: 'violet', label: 'Violet', color: '#7c3aed' },
 ]
 
-const STORAGE_KEY = 'eduresourcehub-accent'
-
-function applyAccent(accent) {
-  if (typeof document === 'undefined') {
-    return
-  }
-
-  document.documentElement.setAttribute('data-accent', accent)
-}
-
 export function AccentSelector({ className = '' }) {
   const [accent, setAccent] = useState('indigo')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const savedAccent = window.localStorage.getItem(STORAGE_KEY)
-    const nextAccent = ['indigo', 'teal', 'violet'].includes(savedAccent) ? savedAccent : 'indigo'
+    const syncAccent = (incomingAccent) => {
+      const nextAccent = resolveAccent(incomingAccent ?? window.localStorage.getItem(ACCENT_STORAGE_KEY))
+      setAccent(nextAccent)
+      applyTheme(readStoredTheme(), nextAccent)
+    }
 
-    setAccent(nextAccent)
-    applyAccent(nextAccent)
+    syncAccent()
     setMounted(true)
+
+    const handleStorage = (event) => {
+      if (!event.key || event.key === ACCENT_STORAGE_KEY) {
+        syncAccent(event.newValue)
+      }
+    }
+
+    const handleCustomAccentChange = (event) => {
+      syncAccent(event.detail)
+    }
+
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener(ACCENT_EVENT, handleCustomAccentChange)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener(ACCENT_EVENT, handleCustomAccentChange)
+    }
   }, [])
 
   const handleAccentChange = (newAccent) => {
-    setAccent(newAccent)
-    window.localStorage.setItem(STORAGE_KEY, newAccent)
-    applyAccent(newAccent)
+    const resolved = resolveAccent(newAccent)
+    setAccent(resolved)
+    persistAccent(resolved)
+    applyTheme(readStoredTheme(), resolved)
   }
 
   if (!mounted) {

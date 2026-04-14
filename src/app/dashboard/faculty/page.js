@@ -361,12 +361,32 @@ export default function FacultyDashboard() {
 
   if (loading) return <FacultyDashboardSkeleton />
 
+  const facultyNavSections = [
+    {
+      label: 'Publishing',
+      items: [
+        { id: 'overview', label: 'Dashboard', href: '#overview', icon: Library },
+        { id: 'publications', label: 'Resources', href: '#publications', icon: BookOpen },
+        { id: 'uploads', label: 'Upload Files', href: '#uploads', icon: Upload },
+      ],
+    },
+    {
+      label: 'Collaboration',
+      items: [
+        { id: 'collections', label: 'Collections', href: '#collections', icon: FileText },
+        { id: 'reviews', label: 'Reviews', href: '#reviews', icon: Shield },
+        { id: 'help', label: 'Help & Support', href: '#help', icon: HelpCircle },
+      ],
+    },
+  ]
+
   return (
     <AppLayout
       role="faculty"
       userLabel={getDisplayName(user?.email, 'Faculty Member')}
       sidebarTitle="EDUCATIONAM"
       sidebarSubtitle="Faculty Workspace"
+      navSections={facultyNavSections}
       navItems={[
         { id: 'overview', label: 'Dashboard', href: '#overview', icon: Library },
         { id: 'publications', label: 'Resources', href: '#publications', icon: BookOpen },
@@ -382,16 +402,41 @@ export default function FacultyDashboard() {
       onLogout={logout}
     >
       <PageContainer>
-        {/* Error Banner */}
         {errorMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-destructive/5 border border-destructive/10 flex items-start gap-3">
-            <AlertCircle size={18} className="text-destructive shrink-0 mt-0.5" />
-            <p className="text-sm font-medium text-destructive">{errorMessage}</p>
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-danger/15 bg-danger/10 p-4">
+            <AlertCircle size={18} className="mt-0.5 shrink-0 text-danger" />
+            <p className="text-sm font-medium text-danger">{errorMessage}</p>
           </div>
         )}
 
-        {/* Statistics Grid */}
-        <ContentSection id="overview" title="System Overview" subtitle="Key metrics and recent activity" noPaddingBottom>
+        <StandardCard className="mb-6 overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+          <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Faculty workspace
+              </p>
+              <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+                Publish faster, monitor engagement, and keep your academic catalog organized.
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+                The faculty panel now centers the publishing workflow with a calmer resource registry, cleaner upload
+                queue, and a more focused analytics surface.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:w-[280px]">
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Catalog</p>
+                <p className="mt-2 text-2xl font-semibold">{resources.length}</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Uploads</p>
+                <p className="mt-2 text-2xl font-semibold">{activeUploadCount}</p>
+              </div>
+            </div>
+          </div>
+        </StandardCard>
+
+        <ContentSection id="overview" title="System Overview" subtitle="Key publishing metrics and recent activity" noPaddingBottom>
           <GridContainer columns={4}>
             <StatCard label="Total Resources" value={resources.length} icon={BookOpen} color="primary" trend="up" trendLabel="+12%" />
             <StatCard label="Collections" value={collections.length} icon={Library} color="info" />
@@ -400,20 +445,18 @@ export default function FacultyDashboard() {
           </GridContainer>
         </ContentSection>
 
-        {/* Analytics: ENGAGEMENT_HEURISTICS */}
         {analyticsSummary && (
-          <ContentSection title="Engagement Analytics" subtitle="Track how students interact with your content">
+          <ContentSection title="Engagement Analytics" subtitle="Track how students interact with your published content">
             <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
               <LazyAnalyticsDashboard summary={analyticsSummary} />
             </Suspense>
           </ContentSection>
         )}
 
-        {/* Publications: KNOWLEDGE_REGISTRY */}
         <ContentSection
           id="publications"
           title="Resource Catalog"
-          subtitle="Manage your published academic materials"
+          subtitle="Manage your published academic materials with faster filters and cleaner cards"
           actions={
             <Button onClick={openCreateModal} className="h-10 px-4 rounded-lg bg-primary text-white font-semibold text-sm">
               <Plus size={16} className="mr-2" />
@@ -543,8 +586,7 @@ export default function FacultyDashboard() {
           </Suspense>
         </ContentSection>
 
-        {/* Support: SYSTEM_INTELLIGENCE */}
-        <ContentSection id="help" title="Resources" subtitle="Learn how to optimize your workspace">
+        <ContentSection id="help" title="Resources" subtitle="Guidance and support for better publishing workflows">
           <GridContainer columns={3}>
             <StandardCard className="border-border/40 hover:border-primary/20">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary mb-4 border border-primary/10">

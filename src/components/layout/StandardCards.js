@@ -17,9 +17,9 @@ export function StandardCard({
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-200',
-        hoverable && 'hover:bg-card/80 hover:shadow-md hover:border-border/60',
-        variant === 'glass' && 'bg-background/40 backdrop-blur-xl border-white/10',
+        'group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 backdrop-blur-xl transition-all duration-200',
+        hoverable && 'hover:-translate-y-0.5 hover:bg-card hover:shadow-xl hover:shadow-primary/5 hover:border-primary/15',
+        variant === 'glass' && 'bg-background/40',
         'p-4 md:p-5',
         'shadow-sm',
         className
@@ -62,7 +62,7 @@ export function UserCard({
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/5 text-primary border border-primary/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/15">
                 {avatar ? (
                   <span className="text-sm font-semibold">{avatar}</span>
                 ) : (
@@ -91,7 +91,7 @@ export function UserCard({
 
           <div className="flex flex-col items-end gap-1 shrink-0">
             {role && (
-              <span className="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary border border-primary/20 capitalize">
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary border border-primary/20 capitalize">
                 {role.toLowerCase().replace('_ua', '')}
               </span>
             )}
@@ -105,11 +105,11 @@ export function UserCard({
 
         {/* Details Grid */}
         <div className="grid grid-cols-2 gap-2 mt-1">
-          <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+          <div className="p-2.5 rounded-xl bg-muted/50 border border-border/50">
             <p className="text-[10px] font-medium text-muted-strong uppercase tracking-wider mb-0.5">Last Active</p>
             <p className="text-xs font-semibold text-foreground truncate">{lastActive || 'Never'}</p>
           </div>
-          <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+          <div className="p-2.5 rounded-xl bg-muted/50 border border-border/50">
             <p className="text-[10px] font-medium text-muted-strong uppercase tracking-wider mb-0.5">Auth Method</p>
             <p className="text-xs font-semibold text-foreground truncate">{authProvider || 'Standard'}</p>
           </div>
@@ -122,7 +122,7 @@ export function UserCard({
               <button
                 onClick={(e) => { e.stopPropagation(); onToggleStatus(); }}
                 className={cn(
-                  "flex-1 h-9 rounded-lg text-xs font-medium border transition-all",
+                  "flex-1 h-9 rounded-xl text-xs font-medium border transition-all",
                   status === 'disabled' ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10" : "bg-warning/5 border-warning/10 text-amber-600 hover:bg-warning/10"
                 )}
               >
@@ -132,7 +132,7 @@ export function UserCard({
             {onResetPassword && (
               <button
                 onClick={(e) => { e.stopPropagation(); onResetPassword(); }}
-                className="flex-1 h-9 rounded-lg bg-button-ghost border border-border/40 text-muted-foreground text-xs font-medium hover:bg-muted/30 transition-all"
+                className="flex-1 h-9 rounded-xl bg-button-ghost border border-border/40 text-muted-foreground text-xs font-medium hover:bg-muted/30 transition-all"
               >
                 Reset
               </button>
@@ -140,7 +140,7 @@ export function UserCard({
             {onDelete && (
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                className="h-9 w-9 rounded-lg bg-destructive/5 border border-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/10 transition-all"
+                className="h-9 w-9 rounded-xl bg-danger/10 border border-danger/15 text-danger flex items-center justify-center hover:bg-danger/15 transition-all"
               >
                 <Trash2 size={14} />
               </button>
@@ -174,6 +174,13 @@ function formatDisplayDate(date, fallback = 'NA_PROTOCOL') {
  */
 export function ResourceCard({
   resource,
+  title,
+  subtitle,
+  metadata,
+  icon: IconOverride,
+  status,
+  actions,
+  type,
   isAdmin = false,
   onDelete,
   onEdit,
@@ -181,7 +188,20 @@ export function ResourceCard({
   onClick,
   ...props
 }) {
-  const { title, summary, subject, class: classNameValue, type, downloads, createdAt } = resource || {}
+  const resourceTitle = title || resource?.title || 'Unnamed Resource'
+  const summary = subtitle || resource?.summary || 'No description provided for this resource.'
+  const subject = resource?.subject || metadata?.Subject || 'General'
+  const classNameValue = resource?.class || metadata?.Class || 'All'
+  const resourceType = type || resource?.type || resource?.format || 'File'
+  const downloads = resource?.downloads || 0
+  const createdAt = resource?.createdAt
+  const metadataEntries = metadata
+    ? Object.entries(metadata).filter(([, value]) => Boolean(value)).slice(0, 4)
+    : [
+        ['Created', formatDisplayDate(createdAt)],
+        ['Engagement', `${downloads || 0} Downloads`],
+      ]
+  const DisplayIcon = status?.icon || IconOverride || FileText
 
   return (
     <StandardCard
@@ -192,44 +212,51 @@ export function ResourceCard({
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/40 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary border border-border/40 group-hover:border-primary/20 transition-all">
-              <FileText size={20} />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary border border-border/40 group-hover:border-primary/20 transition-all">
+              <DisplayIcon size={20} />
             </div>
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                {title || 'Unnamed Resource'}
+                {resourceTitle}
               </h3>
               <p className="line-clamp-1 text-[10px] font-medium text-muted-strong uppercase tracking-wider">
-                {subject || 'General'} • Class {classNameValue || 'All'}
+                {subject} • Class {classNameValue}
               </p>
             </div>
           </div>
-          <div className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold uppercase">
-            {type || 'File'}
+          <div className="flex flex-col items-end gap-2">
+            <div className="px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold uppercase">
+              {resourceType}
+            </div>
+            {status ? (
+              <div className="rounded-full border border-border/50 bg-muted/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {status.label}
+              </div>
+            ) : null}
           </div>
         </div>
 
         <p className="text-xs text-muted-foreground/90 line-clamp-2 leading-relaxed">
-          {summary || 'No description provided for this resource.'}
+          {summary}
         </p>
 
         <div className="grid grid-cols-2 gap-2 mt-1">
-          <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
-            <p className="text-[10px] font-medium text-muted-strong uppercase tracking-wider mb-0.5">Created</p>
-            <p className="text-xs font-semibold text-foreground truncate">{formatDisplayDate(createdAt)}</p>
-          </div>
-          <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
-            <p className="text-[10px] font-medium text-muted-strong uppercase tracking-wider mb-0.5">Engagement</p>
-            <p className="text-xs font-semibold text-foreground truncate">{downloads || 0} Downloads</p>
-          </div>
+          {metadataEntries.map(([label, value]) => (
+            <div key={label} className="p-2.5 rounded-xl bg-muted/50 border border-border/50">
+              <p className="text-[10px] font-medium text-muted-strong uppercase tracking-wider mb-0.5">{label}</p>
+              <p className="text-xs font-semibold text-foreground truncate">{value}</p>
+            </div>
+          ))}
         </div>
+
+        {actions ? <div>{actions}</div> : null}
 
         {isAdmin && (onDelete || onEdit) && (
           <div className="flex items-center gap-2 pt-3 mt-1 border-t border-border/20">
             {onEdit && (
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                className="flex-1 h-9 rounded-lg bg-button-ghost border border-border/40 text-muted-foreground text-xs font-medium hover:bg-muted/30 transition-all"
+                className="flex-1 h-9 rounded-xl bg-button-ghost border border-border/40 text-muted-foreground text-xs font-medium hover:bg-muted/30 transition-all"
               >
                 Edit
               </button>
@@ -237,7 +264,7 @@ export function ResourceCard({
             {onDelete && (
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                className="h-9 w-9 rounded-lg bg-destructive/5 border border-destructive/10 text-destructive flex items-center justify-center hover:bg-destructive/10 transition-all"
+                className="h-9 w-9 rounded-xl bg-danger/10 border border-danger/15 text-danger flex items-center justify-center hover:bg-danger/15 transition-all"
               >
                 <Trash2 size={14} />
               </button>
@@ -330,14 +357,14 @@ export function StatCard({
   }[color] || { bg: 'bg-primary/5', text: 'text-primary', border: 'border-primary/10' }
 
   return (
-    <StandardCard className={cn('relative h-full gap-4 transition-all hover:border-border/60 group shadow-sm', className)} {...props}>
+    <StandardCard className={cn('relative h-full gap-4 transition-all group shadow-sm', className)} {...props}>
       <div className="flex items-start justify-between">
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border transition-all", colorConfig.bg, colorConfig.text, colorConfig.border)}>
+        <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl border transition-all", colorConfig.bg, colorConfig.text, colorConfig.border)}>
           {Icon ? <Icon size={20} /> : <Shield size={20} />}
         </div>
         {trend && (
           <div className={cn(
-            'flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold border',
+            'flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold border',
             isTrendUp ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/10' : 'bg-rose-500/5 text-rose-600 border-rose-500/10'
           )}>
             {isTrendUp ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}

@@ -544,6 +544,10 @@ export async function POST(request) {
     }
     timer.markPhase('session-creation')
 
+    if (sessionRegistryCreated) {
+      console.log(`[AUTH] Session registered successfully. SID: ${sessionId}`)
+    }
+
     const sessionCookie = await createSessionCookie({
       ...(sessionRegistryCreated ? { sid: sessionId } : {}),
       uid: result.uid,

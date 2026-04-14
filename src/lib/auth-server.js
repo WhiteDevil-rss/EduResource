@@ -45,8 +45,8 @@ export async function requireRole(allowedRoles, contextPath = '') {
   const { user, role, status } = await getSessionUser()
 
   if (!user || !role) {
-    console.warn(`Unauthorized access to ${contextPath || 'protected route'}: missing session or role`)
-    redirect('/login?reason=unauthorized')
+    console.warn(`Unauthenticated access to ${contextPath || 'protected route'}: missing session or role`)
+    redirect('/login')
   }
 
   if (status && status !== 'active') {

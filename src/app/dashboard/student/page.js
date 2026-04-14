@@ -32,6 +32,7 @@ import {
   ContentSection,
   GridContainer,
   StatCard,
+  StandardCard,
   ResponsiveFilterBar,
   ResponsiveNotificationPanel,
   NotificationItem,
@@ -361,12 +362,30 @@ export default function StudentDashboard() {
 
   if (loading) return <StudentDashboardSkeleton />
 
+  const studentNavSections = [
+    {
+      label: 'Workspace',
+      items: [
+        { id: 'overview', label: 'Overview', href: '#overview', icon: Library },
+        { id: 'resources', label: 'Library', href: '#resources', icon: BookOpen },
+      ],
+    },
+    {
+      label: 'Engagement',
+      items: [
+        { id: 'insights', label: 'Insights', href: '#insights', icon: Star },
+        { id: 'personal', label: 'Personal', href: '#personal', icon: Bookmark },
+      ],
+    },
+  ]
+
   return (
     <AppLayout
       role="student"
       userLabel={getDisplayName(user?.email, 'Student')}
       sidebarTitle="EDUCATIONAM"
       sidebarSubtitle="Student Workspace"
+      navSections={studentNavSections}
       navItems={[
         { id: 'overview', label: 'Overview', href: '#overview', icon: Library },
         { id: 'resources', label: 'Library', href: '#resources', icon: BookOpen },
@@ -380,8 +399,36 @@ export default function StudentDashboard() {
       onLogout={logout}
     >
       <PageContainer>
-        {/* Statistics Grid */}
-        <ContentSection id="overview" title="Workspace Status" subtitle="Overview of your available academic resources" noPaddingBottom>
+        <StandardCard className="mb-6 overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+          <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Student workspace
+              </p>
+              <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+                Discover course material, keep your library organized, and stay on top of requests.
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+                The student panel is now built around faster discovery, clearer resource cards, and a calmer
+                workspace hierarchy for mobile and desktop.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 md:w-[260px]">
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Resources</p>
+                <p className="mt-2 text-2xl font-semibold">{resources.length}</p>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Bookmarks</p>
+                <p className="mt-2 text-2xl font-semibold">
+                  {resources.filter((resource) => resource.isBookmarked).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </StandardCard>
+
+        <ContentSection id="overview" title="Workspace Status" subtitle="Your current study surface at a glance" noPaddingBottom>
           <GridContainer columns={4}>
             {stats.map((stat, i) => (
               <StatCard key={i} label={stat.label} value={stat.value} icon={stat.icon} color={stat.color} />
@@ -389,8 +436,7 @@ export default function StudentDashboard() {
           </GridContainer>
         </ContentSection>
 
-        {/* Main Discovery */}
-        <ContentSection id="resources" title="Resource Library" subtitle="Browse and download approved course materials">
+        <ContentSection id="resources" title="Resource Library" subtitle="Browse approved materials with a cleaner search and filter flow">
           <ResponsiveFilterBar
             filters={filterConfig}
             onFilterChange={(id, val) => {
@@ -448,7 +494,7 @@ export default function StudentDashboard() {
 
         {/* Insights & Collections */}
         {(analyticsSummary || collections.length > 0) && (
-          <ContentSection id="insights" title="Learning Insights" subtitle="Visual overview of your platform engagement">
+          <ContentSection id="insights" title="Learning Insights" subtitle="Visual signals from your recent usage and saved collections">
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
               {analyticsSummary && (
                 <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
@@ -465,7 +511,7 @@ export default function StudentDashboard() {
         )}
 
         {/* Personalization */}
-        <ContentSection id="personal" title="Workspace Management" subtitle="Customize and manage your academic workspace">
+        <ContentSection id="personal" title="Workspace Management" subtitle="Personalize alerts, saved searches, and resource requests">
           <GridContainer columns={3}>
             <Suspense fallback={<PanelSkeleton />}>
               <LazyRecommendationPanel />

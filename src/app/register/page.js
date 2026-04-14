@@ -2,7 +2,7 @@
 
 import {
   ArrowRight,
-  Chrome,
+  Globe,
   Shield,
   GraduationCap,
   Sparkles,
@@ -48,15 +48,20 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col relative">
+      {/* Premium background mesh */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(99,102,241,0.15),transparent_35%),radial-gradient(ellipse_at_80%_80%,rgba(45,212,191,0.12),transparent_35%)] dark:bg-[radial-gradient(ellipse_at_20%_20%,rgba(129,140,248,0.2),transparent_30%),radial-gradient(ellipse_at_80%_80%,rgba(45,212,191,0.2),transparent_30%)]" />
+      </div>
+
       <PublicHeader
         links={navLinks}
         actions={navActions}
       />
 
-      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8 py-16">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8 py-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="w-full max-w-xl">
-          <Card className="border-border/40 bg-card shadow-2xl rounded-[2.5rem] overflow-hidden">
+          <Card className="border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardHeader className="pt-12 pb-6 text-center px-8 space-y-4">
               <div className="w-16 h-16 bg-primary rounded-[1.5rem] flex items-center justify-center text-primary-foreground mx-auto shadow-xl shadow-primary/20 transform -rotate-3">
                 <GraduationCap size={32} />
@@ -109,7 +114,7 @@ export default function Register() {
                   onClick={handleJoin}
                   disabled={isAuthenticating}
                 >
-                  {isAuthenticating ? <Loader2 size={24} className="animate-spin mr-3" /> : <Chrome size={24} className="mr-3" />}
+                  {isAuthenticating ? <Loader2 size={24} className="animate-spin mr-3" /> : <Globe size={24} className="mr-3" />}
                   Register with Google
                 </Button>
 

@@ -16,6 +16,7 @@ export function AppLayout({
   userLabel,
   sidebarTitle,
   sidebarSubtitle,
+  navSections,
   navItems,
   topbarTitle,
   topbarSubtitle,
@@ -30,22 +31,20 @@ export function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className={cn('app-shell flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-background text-foreground md:flex-row', className)}>
-      {/* Sidebar Navigation */}
+    <div className={cn('app-shell flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-transparent text-foreground md:flex-row', className)}>
       <ResponsiveSidebar
         user={user}
         role={role}
         title={sidebarTitle}
         subtitle={sidebarSubtitle}
+        navSections={navSections}
         navItems={navItems}
         mobileOpen={sidebarOpen}
         onMobileOpenChange={setSidebarOpen}
         onLogout={onLogout}
       />
 
-      {/* Main Content Area */}
       <div className="flex min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">
-        {/* Sticky Topbar */}
         <ResponsiveTopbar
           title={topbarTitle}
           subtitle={topbarSubtitle}
@@ -55,9 +54,9 @@ export function AppLayout({
           onOpenNotifications={onOpenNotifications}
           unreadCount={unreadCount}
           userLabel={userLabel}
+          onLogout={onLogout}
         />
 
-        {/* Content Section with standardized container */}
         <main className="flex-1 w-full max-w-full overflow-x-hidden p-4 md:p-6">
           <div className="mx-auto w-full max-w-full lg:max-w-[1400px] animate-in fade-in slide-in-from-bottom-2 duration-500">
             <GlobalErrorBoundary>

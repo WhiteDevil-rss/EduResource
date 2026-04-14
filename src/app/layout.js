@@ -42,7 +42,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth" className="dark" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
@@ -55,8 +59,8 @@ export default function RootLayout({ children }) {
                 var accentKey = 'eduresourcehub-accent';
                 var savedTheme = window.localStorage.getItem(storageKey);
                 var savedAccent = window.localStorage.getItem(accentKey);
-                var prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-                var theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : (prefersLight ? 'light' : 'dark');
+                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : (prefersDark ? 'dark' : 'light');
                 var accent = ['indigo', 'teal', 'violet'].includes(savedAccent) ? savedAccent : 'indigo';
 
                 document.documentElement.classList.remove('light', 'dark');
@@ -66,10 +70,10 @@ export default function RootLayout({ children }) {
                 document.documentElement.style.colorScheme = theme;
               } catch (error) {
                 document.documentElement.classList.remove('light', 'dark');
-                document.documentElement.classList.add('dark');
-                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.classList.add('light');
+                document.documentElement.setAttribute('data-theme', 'light');
                 document.documentElement.setAttribute('data-accent', 'indigo');
-                document.documentElement.style.colorScheme = 'dark';
+                document.documentElement.style.colorScheme = 'light';
               }
             })();
           `}

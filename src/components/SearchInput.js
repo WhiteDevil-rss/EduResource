@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
 import { isAbortError, useCancelableFetch } from '@/hooks/useCancelableFetch'
+import { cn } from '@/lib/cn'
 
 export function SearchInput({
   value = '',
@@ -73,7 +75,12 @@ export function SearchInput({
   }, [cancel, debouncedQuery, execute, onSuggestionsChange, type])
 
   return (
-    <div className={`search-input-wrapper ${className}`}>
+    <div className={cn('search-input-wrapper', className)}>
+      <Search
+        size={16}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
       <Input
         type="text"
         value={value}
@@ -81,7 +88,7 @@ export function SearchInput({
         placeholder={placeholder}
         disabled={disabled}
         aria-label="Search input"
-        className="search-input"
+        className="search-input h-11 rounded-xl bg-background/80"
       />
       {loading ? <span className="search-input-spinner" title="Loading suggestions..." /> : null}
       {error ? <span className="search-input-error" title={error} /> : null}

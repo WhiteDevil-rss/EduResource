@@ -1,11 +1,19 @@
 'use client'
 
-import { Menu, Bell, Search, User } from 'lucide-react'
+import { Bell, ChevronsUpDown, LogOut, Menu, Search, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { AppIcon } from '@/components/ui/AppIcon'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { IconButton } from '@/components/ui/icon-button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/cn'
 
 /**
  * ResponsiveTopbar - Architected header system
@@ -14,114 +22,112 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 export function ResponsiveTopbar({
   title,
   subtitle,
-  searchValue,
+  searchValue = '',
   onSearchChange,
   onOpenMenu,
   onOpenNotifications,
   unreadCount,
   userLabel,
+  onLogout,
 }) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/75 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto w-full max-w-full lg:max-w-[1400px] overflow-x-hidden px-4 md:px-6">
-        <div className="flex h-16 items-center justify-between gap-4 md:h-20">
+        <div className="flex h-16 items-center justify-between gap-4 md:h-[4.75rem]">
 
-          {/* Left Section: Menu & Title */}
           <div className="flex min-w-0 items-center gap-3">
             <Button
               variant="ghost"
-              size="icon"
-              className="h-10 w-10 shrink-0 rounded-xl hover:bg-muted/50 md:hidden"
+              className="size-10 shrink-0 rounded-xl px-0 md:hidden"
               onClick={onOpenMenu}
               aria-label="Open menu"
             >
-              <AppIcon icon={Menu} size={22} interactive className="text-muted-foreground hover:text-foreground" />
+              <AppIcon icon={Menu} size={20} interactive className="text-muted-foreground hover:text-foreground" />
             </Button>
 
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold tracking-tight text-foreground md:text-xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Control Surface
+              </p>
+              <h1 className="truncate text-base font-semibold tracking-tight text-foreground md:text-xl">
                 {title}
               </h1>
               {subtitle && (
-                <p className="hidden truncate text-xs font-medium text-muted-foreground lg:block">
+                <p className="hidden truncate text-sm text-muted-foreground lg:block">
                   {subtitle}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Right Section: Search & Actions */}
-          <div className="flex items-center gap-2 md:gap-4">
-
-            {/* Contextual Search - Hidden on very small screens, visible on md+ */}
-            <div className="relative hidden w-56 items-center sm:flex lg:w-72 xl:w-80">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3.5 text-muted-foreground"
-              />
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="relative hidden w-56 items-center sm:flex lg:w-72 xl:w-[22rem]">
+              <Search size={16} className="pointer-events-none absolute left-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search resources, users, or settings..."
                 value={searchValue}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="h-11 w-full rounded-2xl bg-muted/40 pl-11 text-sm font-medium border-transparent transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                className="h-11 w-full rounded-xl border-border/60 bg-card/80 pl-11 text-sm"
                 aria-label="Global search across the platform"
               />
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              <ThemeToggle className="button button theme-toggle gap-2 rounded-full border border-border/50 bg-background/80 px-3 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-muted/60 hover:text-foreground h-10 w-10 rounded-full border-border/50 bg-background/90 text-foreground hover:bg-muted/70 h-11 w-11 rounded-xl border-border/40 bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground" />
-              <Button
-                variant="secondary"
-                size="icon"
-                className="group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
+              <ThemeToggle />
+              <IconButton
+                icon={Bell}
+                label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
                 onClick={onOpenNotifications}
-                aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
-              >
-                <AppIcon icon={Bell} size={20} active={unreadCount > 0} interactive className="mx-auto block group-hover:text-foreground" />
-                {unreadCount > 0 && (
-                  <span className="absolute right-2.5 top-2.5 flex h-4 w-4">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                    <Badge className="relative flex h-4 w-4 items-center justify-center p-0 text-[9px] font-bold bg-red-500 border-2 border-background">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </Badge>
-                  </span>
-                )}
-              </Button>
+                badge={unreadCount > 9 ? '9+' : unreadCount > 0 ? unreadCount : null}
+              />
 
-              {userLabel && (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-border/40 bg-muted/30 px-3.5 py-1.5 shadow-sm transition-all hover:bg-muted/50">
-                  <div className="hidden flex-col items-end sm:flex">
-                    <span className="max-w-[100px] truncate text-[13px] font-bold text-foreground">
-                      {userLabel}
-                    </span>
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                      Active Now
-                    </span>
-                  </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <AppIcon icon={User} size={16} active className="shrink-0" />
-                  </div>
-                </div>
-              )}
+              {userLabel ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'inline-flex items-center gap-3 rounded-xl border border-border/60 bg-card/85 px-3 py-2 text-left transition',
+                        'hover:border-primary/20 hover:bg-card'
+                      )}
+                    >
+                      <div className="hidden min-w-0 sm:block">
+                        <p className="max-w-[140px] truncate text-sm font-semibold text-foreground">{userLabel}</p>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Profile</p>
+                      </div>
+                      <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <User size={16} aria-hidden="true" />
+                      </span>
+                      <ChevronsUpDown size={14} className="hidden text-muted-foreground sm:block" aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>
+                      <User size={16} aria-hidden="true" />
+                      Signed in as {userLabel}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={onLogout}>
+                      <LogOut size={16} aria-hidden="true" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </div>
           </div>
         </div>
 
-        {/* Mobile Search Row - Visible only on mobile */}
         <div className="pb-4 sm:hidden">
           <div className="relative flex items-center">
-            <Search
-              size={16}
-              className="pointer-events-none absolute left-3.5 text-muted-foreground"
-            />
+            <Search size={16} className="pointer-events-none absolute left-3.5 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search..."
               value={searchValue}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="h-11 w-full rounded-2xl bg-muted/40 pl-11 text-sm font-medium border-transparent transition-all focus:bg-background focus:ring-2 focus:ring-primary/20"
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="h-11 w-full rounded-xl border-border/60 bg-card/80 pl-11 text-sm"
               aria-label="Search"
             />
           </div>

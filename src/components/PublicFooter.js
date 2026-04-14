@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Globe, Instagram, Linkedin, Mail } from 'lucide-react'
+import { Globe, Camera, Building2, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const COMPANY_SOCIALS = [
@@ -14,7 +14,7 @@ const COMPANY_SOCIALS = [
   {
     label: 'LinkedIn',
     href: 'https://www.linkedin.com/company/zembaa-solution',
-    icon: Linkedin,
+    icon: Building2,
     external: true,
   },
   {
@@ -26,7 +26,7 @@ const COMPANY_SOCIALS = [
   {
     label: 'Instagram',
     href: 'https://www.instagram.com/zembaa_com/',
-    icon: Instagram,
+    icon: Camera,
     external: true,
   },
 ]
@@ -36,12 +36,11 @@ export default function PublicFooter({
   tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM. Zembaa Solution.`,
 }) {
   return (
-    <footer className="w-full max-w-full overflow-x-hidden bg-card border-t border-border/40">
+    <footer className="w-full max-w-full overflow-x-hidden border-t border-border/60 bg-card/70 backdrop-blur-xl">
       <div className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-          {/* Brand Section */}
           <div className="lg:col-span-2 space-y-6">
-            <Link href="/" className="text-xl font-black tracking-tighter text-primary">
+            <Link href="/" className="text-xl font-semibold tracking-tight text-foreground">
               SPS EDUCATIONAM
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs break-words">
@@ -56,7 +55,7 @@ export default function PublicFooter({
                     variant="ghost"
                     size="icon"
                     asChild
-                    className="w-9 h-9 text-muted-foreground hover:text-primary transition-colors"
+                    className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <a
                       href={item.href}
@@ -75,13 +74,13 @@ export default function PublicFooter({
 
           {/* Quick Links */}
           <div className="space-y-6">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/70">Platform</h4>
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</h4>
             <nav className="flex flex-col gap-3">
               {links.map((link) => (
                 <Link
                   key={`${link.href}-${link.label}`}
                   href={link.href}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -91,14 +90,14 @@ export default function PublicFooter({
 
           {/* Legal / Meta */}
           <div className="space-y-6">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-foreground/70">Partnership</h4>
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Partnership</h4>
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground break-words">
                 Zembaa Solution Private Limited
               </p>
               <a
                 href="mailto:info@zembaa.com"
-                className="text-sm text-primary font-medium break-all hover:underline"
+                className="text-sm text-foreground font-medium break-all hover:underline"
               >
                 info@zembaa.com
               </a>
@@ -106,7 +105,6 @@ export default function PublicFooter({
           </div>
         </div>
 
-        {/* Bottom Bar */}
         <div className="mt-12 md:mt-16 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
           <p className="text-xs text-muted-foreground font-medium break-words">
             {tagline}

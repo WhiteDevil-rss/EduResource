@@ -2,7 +2,7 @@
 
 import {
   AlertCircle,
-  Chrome,
+  Globe,
   Clock,
   Eye,
   EyeOff,
@@ -16,7 +16,7 @@ import {
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
-import { getRedirectResult } from 'firebase/auth'
+// getRedirectResult will be imported dynamically
 import { auth } from '@/lib/firebase'
 import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
@@ -97,6 +97,7 @@ export default function Login() {
 
     const checkRedirect = async () => {
       try {
+        const { getRedirectResult } = await import('firebase/auth')
         const result = await getRedirectResult(auth)
         if (result) {
           const idToken = await result.user.getIdToken()
@@ -238,15 +239,20 @@ export default function Login() {
   }, [isAuthenticating, signInWithGoogleStudent])
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col relative">
+      {/* Premium background mesh */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(99,102,241,0.15),transparent_35%),radial-gradient(ellipse_at_80%_80%,rgba(168,85,247,0.1),transparent_35%)] dark:bg-[radial-gradient(ellipse_at_20%_20%,rgba(129,140,248,0.2),transparent_30%),radial-gradient(ellipse_at_80%_80%,rgba(168,85,247,0.15),transparent_30%)]" />
+      </div>
+
       <PublicHeader
         links={navLinks}
         actions={navActions}
       />
 
-      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         <div className="w-full max-w-xl">
-          <Card className="border-border/40 bg-card shadow-2xl rounded-[2.5rem] overflow-hidden">
+          <Card className="border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl rounded-[2.5rem] overflow-hidden">
             <div className="p-1">
               <div className="bg-muted/50 rounded-[2.25rem] p-1 flex">
                 <button
@@ -472,7 +478,7 @@ export default function Login() {
                     onClick={handleStudentLogin}
                     disabled={isAuthenticating || studentLoginInFlightRef.current}
                   >
-                    {isAuthenticating ? <Loader2 size={24} className="animate-spin" /> : <Chrome size={24} />}
+                    {isAuthenticating ? <Loader2 size={24} className="animate-spin" /> : <Globe size={24} />}
                     {isAuthenticating ? 'Processing...' : 'Continue with Google'}
                   </Button>
 

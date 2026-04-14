@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 import { Database } from 'lucide-react'
 import { PageContainer, ContentSection } from '@/components/layout'
+import { StandardCard } from '@/components/layout/StandardCards'
 import { BackupSystemSection } from '@/components/ExportBackupSection'
 
 export default function BackupSystemPage() {
@@ -29,9 +30,35 @@ export default function BackupSystemPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <StandardCard className="overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Backup resilience
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+              Manage snapshots and platform recovery readiness.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              Keep system redundancy healthy with clearer controls for backup creation and restore workflows.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:w-[260px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Recovery</p>
+              <p className="mt-2 text-2xl font-semibold">Protected</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Integrity</p>
+              <p className="mt-2 text-2xl font-semibold">Stable</p>
+            </div>
+          </div>
+        </div>
+      </StandardCard>
+
       <ContentSection 
         title="System Backups" 
-        subtitle="Manage system data snapshots and monitor platform redundancy"
+        subtitle="Manage system snapshots and monitor platform redundancy"
         noPaddingBottom
       >
         <div className="flex items-center gap-4">

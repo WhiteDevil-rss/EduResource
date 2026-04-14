@@ -6,6 +6,7 @@ import {
   PageContainer,
   ContentSection,
 } from '@/components/layout'
+import { StandardCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { SecurityBlockManagement } from '@/components/SecurityBlockManagement'
 import { Terminal, RefreshCcw, Shield } from 'lucide-react'
@@ -57,9 +58,35 @@ export default function AdminIpManagementPage() {
 
   return (
     <div className="space-y-8">
+      <StandardCard className="overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+        <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              Network enforcement
+            </p>
+            <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+              Govern IP and identity-level access boundaries.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+              Manage block rules and identity restrictions with clear operational feedback.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:w-[280px]">
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Linked Users</p>
+              <p className="mt-2 text-2xl font-semibold">{users.length}</p>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Shield</p>
+              <p className="mt-2 text-2xl font-semibold">Active</p>
+            </div>
+          </div>
+        </div>
+      </StandardCard>
+
       <ContentSection
         title="Access Restrictions"
-        subtitle="Manage network-level security and identity access protocols"
+        subtitle="Manage network-level security controls and identity access protocols"
         noPaddingBottom
       >
         <div className="flex items-center gap-4">

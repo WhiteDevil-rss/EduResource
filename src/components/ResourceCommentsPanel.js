@@ -110,24 +110,38 @@ export function ResourceCommentsPanel({ resourceId }) {
           </Button>
         </div>
 
-        <div className="space-y-0 divide-y divide-border/10 overflow-hidden rounded-lg border border-border/10">
+        <div className="space-y-3">
           {loading ? (
-            <div className="p-4 text-center">
-              <p className="text-xs text-muted-foreground animate-pulse">Retrieving messages...</p>
+            <div className="p-8 text-center space-y-3">
+              <div className="flex justify-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground animate-pulse">Syncing collaboration thread...</p>
             </div>
           ) : comments.length > 0 ? (
             comments.map((entry) => (
-              <div key={entry.id} className="p-3 bg-muted/5 transition-colors hover:bg-muted/10">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-foreground">{entry.authorName || entry.authorEmail || 'Anonymous'}</p>
-                  <p className="text-[10px] text-muted-foreground">Just now</p>
+              <div key={entry.id} className="flex gap-3 group animate-in fade-in slide-in-from-left-2 duration-300">
+                <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 transition-transform group-hover:scale-110">
+                  <span className="text-[10px] font-bold uppercase">
+                    {(entry.authorName || entry.authorEmail || 'A').charAt(0)}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{entry.body}</p>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-foreground">{entry.authorName || entry.authorEmail || 'Anonymous'}</p>
+                    <p className="text-[10px] text-muted-foreground font-medium">Recently</p>
+                  </div>
+                  <div className="p-3 rounded-2xl rounded-tl-none bg-muted/30 border border-border/10 group-hover:bg-muted/50 transition-colors">
+                    <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{entry.body}</p>
+                  </div>
+                </div>
               </div>
             ))
           ) : (
-            <div className="p-6 text-center">
-              <p className="text-xs text-muted-foreground">No discussions yet. Be the first to start!</p>
+            <div className="p-10 text-center space-y-2 bg-muted/5 rounded-2xl border border-dashed border-border/20">
+              <MessageSquare size={24} className="mx-auto text-muted-foreground/30" />
+              <p className="text-xs text-muted-foreground font-medium">No discussions yet.</p>
+              <p className="text-[10px] text-muted-foreground/60">Be the first to start a conversation about this resource.</p>
             </div>
           )}
         </div>

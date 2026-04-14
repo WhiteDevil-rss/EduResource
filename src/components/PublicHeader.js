@@ -58,11 +58,11 @@ export default function PublicHeader({
     <header
       className={cn(
         'sticky top-0 z-50 w-full max-w-full overflow-x-clip border-b transition-all duration-300',
-        scrolled ? 'border-border/40 bg-background/80 py-3 backdrop-blur-md' : 'border-transparent bg-transparent py-5'
+        scrolled ? 'border-border/60 bg-background/70 py-3 backdrop-blur-xl' : 'border-transparent bg-transparent py-5'
       )}
     >
       <nav className="mx-auto flex w-full max-w-[1400px] min-w-0 items-center justify-between gap-3 px-4" aria-label="Primary navigation">
-        <Link href="/" className="shrink min-w-0 max-w-[calc(100%-7rem)] truncate text-lg font-black tracking-tight text-primary sm:text-xl lg:max-w-[240px] xl:max-w-none" onClick={closeMenu}>
+        <Link href="/" className="shrink min-w-0 max-w-[calc(100%-7rem)] truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl lg:max-w-[240px] xl:max-w-none" onClick={closeMenu}>
           {brand}
         </Link>
 
@@ -71,7 +71,7 @@ export default function PublicHeader({
             <Link
               key={`${link.href}-${link.label}`}
               href={link.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               aria-current={link.current ? 'page' : undefined}
             >
               {link.label}
@@ -81,7 +81,7 @@ export default function PublicHeader({
 
         <div className="hidden shrink-0 min-w-0 flex-wrap items-center justify-end gap-2 lg:gap-3 md:flex">
           {showUtilityIcons ? (
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/85 px-2 py-2 shadow-lg shadow-primary/10 backdrop-blur-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/85 px-2 py-2 shadow-lg shadow-primary/5 backdrop-blur-xl">
               <ThemeToggle />
               <div className="hidden h-8 w-px bg-border/50 sm:block" aria-hidden="true" />
               <AccentSelector />
@@ -133,7 +133,7 @@ export default function PublicHeader({
             <Link
               key={`mobile-${link.href}-${link.label}`}
               href={link.href}
-              className="text-2xl font-bold tracking-tight transition-colors hover:text-primary"
+              className="text-2xl font-semibold tracking-tight transition-colors hover:text-foreground"
               onClick={closeMenu}
             >
               {link.label}

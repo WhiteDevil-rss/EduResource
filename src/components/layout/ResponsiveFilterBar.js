@@ -1,6 +1,6 @@
 'use client'
 
-import { X, Filter, RotateCcw } from 'lucide-react'
+import { Search, X, Filter, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { AppIcon } from '@/components/ui/AppIcon'
@@ -26,10 +26,9 @@ export function ResponsiveFilterBar({
       {...props}
     >
       <div className={cn(
-        'relative overflow-hidden rounded-xl border border-border/40 bg-card/60 p-4 shadow-sm backdrop-blur-md md:p-5',
+        'relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-4 shadow-sm backdrop-blur-md md:p-5',
         'flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'
       )}>
-        {/* Main Filters Section */}
         <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
           {filters.map((filter) => (
             <div key={filter.id} className="flex w-full min-w-0 flex-col gap-1.5 md:min-w-[180px] lg:w-auto">
@@ -41,12 +40,17 @@ export function ResponsiveFilterBar({
 
               {filter.type === 'search' && (
                 <div className="relative">
+                  <Search
+                    size={16}
+                    className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                  />
                   <Input
                     type="text"
                     placeholder={filter.placeholder}
                     value={filter.value}
                     onChange={(e) => onFilterChange(filter.id, e.target.value)}
-                    className="h-11 rounded-lg bg-background/50 border-border/40 transition-all focus:bg-background focus:ring-1 focus:ring-primary/40 text-sm font-medium"
+                    className="h-11 rounded-xl border-border/60 bg-background/80 pl-10 text-sm font-medium"
                     aria-label={filter.label || 'Search'}
                   />
                 </div>
@@ -58,7 +62,7 @@ export function ResponsiveFilterBar({
                     value={filter.value}
                     onChange={(e) => onFilterChange(filter.id, e.target.value)}
                     className={cn(
-                      'h-11 w-full appearance-none rounded-lg border border-border/40 bg-background/50 px-4 pr-10',
+                      'h-11 w-full appearance-none rounded-xl border border-border/60 bg-background/80 px-4 pr-10',
                       'text-sm font-medium text-foreground transition-all',
                       'hover:bg-background hover:border-primary/30 focus:outline-none focus:ring-1 focus:ring-primary/40',
                     )}
@@ -91,7 +95,7 @@ export function ResponsiveFilterBar({
                           onFilterChange(filter.id, updated)
                         }}
                         className={cn(
-                          'rounded-lg px-3 py-2 text-xs font-semibold transition-all duration-200 active:scale-95',
+                          'rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 active:scale-95',
                           isSelected
                             ? 'bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/50'
                             : 'bg-muted/40 text-muted-foreground border border-border/40 hover:bg-muted/60 hover:text-foreground'
@@ -113,7 +117,7 @@ export function ResponsiveFilterBar({
             <Button
               variant="secondary"
               onClick={onReset}
-              className="h-11 w-full gap-2 rounded-lg text-xs font-semibold text-muted-strong hover:bg-destructive/5 hover:text-destructive transition-all md:w-auto md:px-4"
+              className="h-11 w-full gap-2 rounded-xl text-xs font-semibold text-muted-strong hover:bg-danger/10 hover:text-danger transition-all md:w-auto md:px-4"
               aria-label="Reset filters"
             >
               <AppIcon icon={RotateCcw} size={14} className="text-current" />

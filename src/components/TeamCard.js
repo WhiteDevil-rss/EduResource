@@ -2,18 +2,18 @@
 
 import Image from 'next/image'
 import { useMemo, useState, useEffect } from 'react'
-import { Github, Globe, Instagram, Linkedin, Mail, MessageCircle, Youtube, Loader2 } from 'lucide-react'
+import { GitBranch, Globe, Camera, Building2, Mail, MessageCircle, PlayCircle, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 import { TEAM_FALLBACK_IMAGE } from '@/lib/team'
 
 const SOCIALS = [
-  { key: 'linkedin', label: 'LinkedIn', icon: Linkedin },
-  { key: 'github', label: 'GitHub', icon: Github },
+  { key: 'linkedin', label: 'LinkedIn', icon: Building2 },
+  { key: 'github', label: 'GitHub', icon: GitBranch },
   { key: 'website', label: 'Website', icon: Globe },
-  { key: 'instagram', label: 'Instagram', icon: Instagram },
-  { key: 'youtube', label: 'YouTube', icon: Youtube },
+  { key: 'instagram', label: 'Instagram', icon: Camera },
+  { key: 'youtube', label: 'YouTube', icon: PlayCircle },
   { key: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { key: 'email', label: 'Email', icon: Mail, isMail: true },
 ]
