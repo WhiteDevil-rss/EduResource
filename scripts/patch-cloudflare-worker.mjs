@@ -15,10 +15,10 @@ const nodeStubPlugin = {
   name: 'node-stub',
   setup(build) {
     const safeModules = new Set([
-      'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
+      'buffer', 'crypto', 'events',
       'path', 'process', 'stream', 'string_decoder', 'url',
-      'perf_hooks', 'readline', 'tty', 'zlib', 'assert',
-      'module', 'util'
+      'zlib', 'assert',
+      'util'
     ]);
 
     // Handle all node:* and bare Node modules
@@ -116,11 +116,8 @@ async function runPatch() {
         'node:events',
         'node:util',
         'node:crypto',
-        'node:module',
-        'node:async_hooks',
         'node:stream/web',
         'node:stream/promises',
-        'async_hooks',
         'events',
         'buffer',
         'crypto',
@@ -128,8 +125,7 @@ async function runPatch() {
         'process',
         'stream',
         'url',
-        'util',
-        'module'
+        'util'
       ],
       plugins: [nodeStubPlugin],
       resolveExtensions: ['.mjs', '.js', '.ts'],
