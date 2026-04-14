@@ -15,10 +15,9 @@ const nodeStubPlugin = {
   name: 'node-stub',
   setup(build) {
     const safeModules = new Set([
-      'buffer', 'crypto', 'events',
+      'async_hooks', 'buffer', 'crypto', 'diagnostics_channel', 'events',
       'path', 'process', 'stream', 'string_decoder', 'url',
-      'zlib', 'assert',
-      'util'
+      'zlib', 'assert', 'util', 'module', 'perf_hooks', 'readline'
     ]);
 
     // Handle all node:* and bare Node modules
@@ -116,8 +115,14 @@ async function runPatch() {
         'node:events',
         'node:util',
         'node:crypto',
+        'node:module',
+        'node:async_hooks',
+        'node:diagnostics_channel',
+        'node:perf_hooks',
+        'node:readline',
         'node:stream/web',
         'node:stream/promises',
+        'async_hooks',
         'events',
         'buffer',
         'crypto',
@@ -125,8 +130,27 @@ async function runPatch() {
         'process',
         'stream',
         'url',
-        'util'
+        'util',
+        'module',
+        'diagnostics_channel',
+        'perf_hooks',
+        'readline'
       ],
+      alias: {
+        'async_hooks': 'node:async_hooks',
+        'events': 'node:events',
+        'buffer': 'node:buffer',
+        'crypto': 'node:crypto',
+        'path': 'node:path',
+        'process': 'node:process',
+        'stream': 'node:stream',
+        'url': 'node:url',
+        'util': 'node:util',
+        'module': 'node:module',
+        'diagnostics_channel': 'node:diagnostics_channel',
+        'perf_hooks': 'node:perf_hooks',
+        'readline': 'node:readline'
+      },
       plugins: [nodeStubPlugin],
       resolveExtensions: ['.mjs', '.js', '.ts'],
       loader: {
