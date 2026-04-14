@@ -97,7 +97,54 @@ async function runPatch() {
 
     console.log('Deep Bundling everything into a single _worker.js...');
     const bootLog = `console.log("[WORKER] Booting at: " + new Date().toISOString() + " | Platform: Cloudflare Pages");\n`;
-    const banner = bootLog;
+    
+    // REQUIRE POLYFILL FOR EDGE
+    // This allows legacy require() calls in Next.js internals to work in an ESM environment
+    const requirePolyfill = `
+import * as _async_hooks from "node:async_hooks";
+import * as _buffer from "node:buffer";
+import * as _crypto from "node:crypto";
+import * as _diagnostics_channel from "node:diagnostics_channel";
+import * as _events from "node:events";
+import * as _path from "node:path";
+import * as _process from "node:process";
+import * as _stream from "node:stream";
+import * as _url from "node:url";
+import * as _util from "node:util";
+import * as _module from "node:module";
+
+const _node_modules = {
+  "async_hooks": _async_hooks,
+  "node:async_hooks": _async_hooks,
+  "buffer": _buffer,
+  "node:buffer": _buffer,
+  "crypto": _crypto,
+  "node:crypto": _crypto,
+  "diagnostics_channel": _diagnostics_channel,
+  "node:diagnostics_channel": _diagnostics_channel,
+  "events": _events,
+  "node:events": _events,
+  "path": _path,
+  "node:path": _path,
+  "process": _process,
+  "node:process": _process,
+  "stream": _stream,
+  "node:stream": _stream,
+  "url": _url,
+  "node:url": _url,
+  "util": _util,
+  "node:util": _util,
+  "module": _module,
+  "node:module": _module
+};
+
+globalThis.require = (name) => {
+  if (_node_modules[name]) return _node_modules[name];
+  if (_node_modules["node:" + name]) return _node_modules["node:" + name];
+  throw new Error('Dynamic require of "' + name + '" is not supported in this Edge environment');
+};
+`;
+    const banner = bootLog + requirePolyfill;
     
     await build({
       entryPoints: [tempPatchedPath],
