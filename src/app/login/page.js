@@ -451,8 +451,7 @@ export default function Login() {
 
                   <Button
                     type="button"
-                    variant="outline"
-                    className="w-full h-12 rounded-xl text-sm font-bold border-2 flex gap-3 hover:bg-muted/50 transition-all shadow-sm"
+                    className="w-full h-12 rounded-xl text-sm font-bold flex gap-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={handleStudentLogin}
                     disabled={isAuthenticating || studentLoginInFlightRef.current}
                   >

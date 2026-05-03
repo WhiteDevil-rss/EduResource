@@ -1,3 +1,5 @@
+import { initializeApp, getApps } from "firebase/app";
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-api-key",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "placeholder-auth-domain",
@@ -7,23 +9,26 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "placeholder-app-id"
 };
 
+// Initialize Firebase App instance eagerly on the client to prevent "No Firebase App" errors
 let app;
+if (typeof window !== "undefined") {
+  const existingApps = getApps();
+  app = existingApps.length === 0 ? initializeApp(firebaseConfig) : existingApps[0];
+}
 
 /**
  * getFirebaseAuth - Returns the Firebase Auth instance.
- * Initializes the Firebase app on demand if not already initialized.
- * Safe for both client-side and build-time (returns null if window is undefined).
+ * Safe for both client-side and build-time.
  */
 export const getFirebaseAuth = async () => {
   if (typeof window === 'undefined') return null;
   
   try {
-    const { initializeApp, getApps } = await import("firebase/app");
-    
-    // Initialize app if no apps currently exist
+    // If for some reason app wasn't initialized (e.g. error in module scope), try again
     if (!app) {
-      const apps = getApps();
-      app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
+      const { initializeApp: initApp, getApps: getAppsList } = await import("firebase/app");
+      const apps = getAppsList();
+      app = apps.length === 0 ? initApp(firebaseConfig) : apps[0];
     }
     
     const { getAuth } = await import('firebase/auth');

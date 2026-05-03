@@ -90,7 +90,7 @@ export default function Register() {
               <div className="space-y-4">
                 <Button
                   type="button"
-                  className="w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-primary/10 flex gap-3"
+                  className="w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-primary/20 flex gap-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-primary hover:bg-primary/90"
                   onClick={handleJoin}
                   disabled={isAuthenticating}
                 >

@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { AppIcon } from '@/components/ui/AppIcon'
 
 export default function PublicHeader({
   brand = 'SPS EDUCATIONAM',
@@ -58,15 +57,15 @@ export default function PublicHeader({
     <header
       className={cn(
         'fixed top-0 z-50 w-full transition-all duration-500',
-        scrolled 
-          ? 'border-b border-border/40 bg-background/60 py-3 backdrop-blur-xl shadow-[0_2px_20px_-10px_rgba(0,0,0,0.1)]' 
+        scrolled
+          ? 'border-b border-border/40 bg-background/60 py-3 backdrop-blur-xl shadow-[0_2px_20px_-10px_rgba(0,0,0,0.1)]'
           : 'bg-transparent py-6'
       )}
     >
       <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 lg:px-8" aria-label="Global">
         <div className="flex lg:flex-1">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="group flex items-center gap-2.5 transition-transform duration-300 active:scale-95"
             onClick={closeMenu}
           >
@@ -87,8 +86,8 @@ export default function PublicHeader({
               href={link.href}
               className={cn(
                 "relative px-4 py-2 text-sm font-semibold transition-colors rounded-full",
-                link.current 
-                  ? "bg-primary/5 text-primary" 
+                link.current
+                  ? "bg-primary/5 text-primary"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
@@ -106,22 +105,22 @@ export default function PublicHeader({
               <div className="h-9 w-[1px] bg-border/40" />
             )}
             {showUtilityIcons && <ThemeToggle />}
-            
+
             {actions.map((action) => (
               <Button
                 key={`${action.href}-${action.label}`}
                 asChild
                 variant={action.variant === 'primary' ? 'default' : 'ghost'}
                 className={cn(
-                  'rounded-full px-6 font-bold shadow-sm transition-all duration-300',
-                  action.variant === 'primary' 
-                    ? 'hover:shadow-primary/20 hover:scale-105 active:scale-95' 
+                  'rounded-full px-8 h-11 font-bold shadow-md transition-all duration-300',
+                  action.variant === 'primary'
+                    ? 'bg-primary text-primary-foreground hover:shadow-primary/30 hover:scale-105 active:scale-95'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}
               >
                 <Link href={action.href}>
                   {action.label}
-                  {action.variant === 'primary' && <ChevronRight className="ml-1 h-4 w-4" />}
+                  {action.variant === 'primary' && <ChevronRight className="ml-1.5 h-4 w-4" />}
                 </Link>
               </Button>
             ))}
@@ -132,11 +131,11 @@ export default function PublicHeader({
             <Button
               variant="ghost"
               size="icon"
-              className="relative z-50 h-10 w-10 rounded-full hover:bg-muted"
+              className="relative z-50 h-11 w-11 rounded-full hover:bg-muted transition-transform active:scale-90"
               onClick={() => setMenuOpen((open) => !open)}
               aria-label="Toggle menu"
             >
-              {menuOpen ? <X size={24} /> : <Menu size={24} />}
+              {menuOpen ? <X size={28} /> : <Menu size={28} />}
             </Button>
           </div>
         </div>
@@ -145,11 +144,11 @@ export default function PublicHeader({
       {/* Mobile Menu Overlay */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-background/95 backdrop-blur-md transition-all duration-500 ease-in-out lg:hidden',
-          menuOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-full opacity-0'
+          'fixed inset-0 z-40 flex flex-col bg-background/98 backdrop-blur-2xl transition-all duration-500 lg:hidden',
+          menuOpen ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible pointer-events-none'
         )}
       >
-        <div className="flex h-full flex-col px-6 py-24">
+        <div className="flex h-full flex-col px-8 py-24 overflow-y-auto">
           <div className="flex flex-col gap-2">
             {links.map((link, i) => (
               <Link
