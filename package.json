@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "npm@11.12.1",
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -13,6 +13,8 @@
     "bench:api:trend": "node scripts/benchmark-api-trend.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "clean": "rm -rf .next .open-next",
+    "precf:build": "npm run clean",
     "cf:build": "opennextjs-cloudflare build && node scripts/patch-cloudflare-worker.mjs",
     "preview": "npm run cf:build && wrangler pages dev .open-next/assets",
     "deploy": "npm run cf:build && wrangler pages deploy .open-next/assets",
