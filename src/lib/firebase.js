@@ -1,5 +1,4 @@
-import { initializeApp, getApps } from "firebase/app";
-
+let app;
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-api-key",
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "placeholder-auth-domain",
@@ -9,11 +8,14 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "placeholder-app-id"
 };
 
-let app;
-try {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-} catch (error) {
-  console.error('[FIREBASE] App initialization failed:', error);
+// Initialize app only on client
+if (typeof window !== 'undefined') {
+  try {
+    const { initializeApp, getApps } = require("firebase/app");
+    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  } catch (error) {
+    console.error('[FIREBASE] App initialization failed:', error);
+  }
 }
 
 // Function to get auth instance on demand to avoid module factory race conditions

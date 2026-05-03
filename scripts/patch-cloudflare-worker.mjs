@@ -6,6 +6,7 @@ const sourcePath = join(process.cwd(), '.open-next', 'worker.js');
 const tempPatchedPath = join(process.cwd(), '.open-next', 'worker-patched.js');
 const destPath = join(process.cwd(), '.open-next', 'assets', '_worker.js');
 const assetsDir = join(process.cwd(), '.open-next', 'assets');
+const outDir = join(process.cwd(), '.open-next');
 const stubPath = join(process.cwd(), 'scripts', 'node-stubs.js');
 
 /**
@@ -22,21 +23,21 @@ const nodeStubPlugin = {
 
     // Handle all node:* and bare Node modules
     build.onResolve({ filter: /^(node:)?([a-z_][a-z0-9_]*|timers\/promises)$/ }, (args) => {
-        // Normalize the module name
-        const originalPath = args.path.replace(/^node:/, '');
-        const baseName = originalPath.split('/')[0];
-        
-        const isNodeModule = args.path.startsWith('node:') || 
-          ['fs', 'os', 'vm', 'v8', 'inspector', 'child_process', 'cluster', 'dns', 'http', 'https', 'net', 'tls', 'dgram', 'readline', 'repl', 'tty', 'zlib', 'crypto', 'path', 'util', 'stream', 'events', 'buffer', 'process', 'timers', 'querystring'].includes(baseName);
+      // Normalize the module name
+      const originalPath = args.path.replace(/^node:/, '');
+      const baseName = originalPath.split('/')[0];
 
-        if (!isNodeModule) return null;
+      const isNodeModule = args.path.startsWith('node:') ||
+        ['fs', 'os', 'vm', 'v8', 'inspector', 'child_process', 'cluster', 'dns', 'http', 'https', 'net', 'tls', 'dgram', 'readline', 'repl', 'tty', 'zlib', 'crypto', 'path', 'util', 'stream', 'events', 'buffer', 'process', 'timers', 'querystring'].includes(baseName);
 
-        if (!safeModules.has(baseName)) {
-            // Redirect EVERYTHING from problematic modules (including sub-paths) to the stub
-            return { path: stubPath };
-        }
-        
-        return { path: args.path, external: true };
+      if (!isNodeModule) return null;
+
+      if (!safeModules.has(baseName)) {
+        // Redirect EVERYTHING from problematic modules (including sub-paths) to the stub
+        return { path: stubPath };
+      }
+
+      return { path: args.path, external: true };
     });
 
     build.onResolve({ filter: /^cloudflare:.*$/ }, (args) => {
@@ -97,7 +98,7 @@ async function runPatch() {
 
     console.log('Deep Bundling everything into a single _worker.js...');
     const bootLog = `console.log("[WORKER] Booting at: " + new Date().toISOString() + " | Platform: Cloudflare Pages");\n`;
-    
+
     // REQUIRE POLYFILL FOR EDGE
     // This allows legacy require() calls in Next.js internals to work in an ESM environment
     const requirePolyfill = `
@@ -131,6 +132,8 @@ const _node_modules = {
   "node:process": _process,
   "stream": _stream,
   "node:stream": _stream,
+  "worker_threads": { markAsUncloneable: (v) => v, isMainThread: true, parentPort: null },
+  "node:worker_threads": { markAsUncloneable: (v) => v, isMainThread: true, parentPort: null },
   "node:stream/web": {
     ReadableStream: globalThis.ReadableStream,
     WritableStream: globalThis.WritableStream,
@@ -173,7 +176,7 @@ globalThis.self = self;
 globalThis.global = global;
 `;
     const banner = bootLog + requirePolyfill;
-    
+
     await build({
       entryPoints: [tempPatchedPath],
       bundle: true,
@@ -246,48 +249,71 @@ globalThis.global = global;
 
     // FINAL DEFUSE: Surgical String Patching the final bundle
     console.log('Post-Processing: Defusing illegal namespace mutations and fixing handler structures...');
-    let finalBundle = readFileSync(destPath, 'utf-8');
-    
-    // FIX 1: Defuse Turbopack's 'module.require' crash by forcing globalThis lookup
-    console.log('Applying Resilience Patch: Defusing module.require...');
-    finalBundle = finalBundle.replace(/module\.require\(/g, 'globalThis.require(');
-    
-    // FIX 2: ComponentMod.handler resilience
-    // This patch ensures we always find the callable handler even if nested by Next.js 16
-    console.log('Applying Resilience Patch: Fixing ComponentMod.handler structure...');
-    finalBundle = finalBundle.replace(
-      /return await components\.ComponentMod\.handler\(/g,
-      'const _h = components.ComponentMod; const _target = (typeof _h.handler === "function" ? _h.handler : (_h.default && typeof _h.default.handler === "function" ? _h.default.handler : _h.handler));\nreturn await _target('
-    );
-
-    // FIX 3: General handler invocation resilience
-    if (finalBundle.includes('return handler(')) {
-        console.log('Applying Resilience Patch: Normalizing handler call site...');
-        finalBundle = finalBundle.replace(
-            /return handler\(/g,
-            'const _targetHandler = (typeof handler === "function" ? handler : (handler.default || handler));\nreturn _targetHandler('
-        );
-    }
-
-    // FIX 4: Defuse illegal namespace mutations (especially setImmediate which crashes on Cloudflare)
     const mutations = [
-        /\.setImmediate\s*=/g,
-        /\.clearImmediate\s*=/g,
-        /nodeTimers[a-zA-Z]*\.setImmediate\s*=/g,
-        /nodeTimers[a-zA-Z]*\.clearImmediate\s*=/g,
-        /nodeTimersPromises[a-zA-Z]*\.setImmediate\s*=/g
+      /\.setImmediate\s*=/g,
+      /\.clearImmediate\s*=/g,
+      /nodeTimers[a-zA-Z]*\.setImmediate\s*=/g,
+      /nodeTimers[a-zA-Z]*\.clearImmediate\s*=/g,
+      /nodeTimersPromises[a-zA-Z]*\.setImmediate\s*=/g
     ];
 
-    mutations.forEach(m => {
-        finalBundle = finalBundle.replace(m, '.___defused_mutation =');
-    });
-    
-    console.log('✅ Applied all surgical patches to defuse TypeErrors and handler structure issues.');
-    writeFileSync(destPath, finalBundle);
+    // UNIVERSAL PATCHER: Walk the output directory and patch EVERY .js file
+    function patchDirectory(dir) {
+      const files = readdirSync(dir);
+      for (const file of files) {
+        const fullPath = join(dir, file);
+        if (statSync(fullPath).isDirectory()) {
+          patchDirectory(fullPath);
+        } else if (file.endsWith('.js')) {
+          let content = readFileSync(fullPath, 'utf-8');
+          let changed = false;
 
-    console.log('Worker deeply patched, bundled, and sanitized successfully.');
-  } catch (error) {
-    console.error('Deep Patching process failed:', error);
+          // FIX 1: Defuse 'module.require' and 'this.require'
+          if (content.includes('module.require') || content.includes('.require(')) {
+            content = content.replace(/module\.require\(/g, 'globalThis.require(');
+            content = content.replace(/this\.require\(/g, 'globalThis.require(');
+            changed = true;
+          }
+
+          // FIX 2: ComponentMod.handler resilience (only for worker or chunks)
+          if (content.includes('components.ComponentMod.handler')) {
+            content = content.replace(
+              /return await components\.ComponentMod\.handler\(/g,
+              'const _h = components.ComponentMod; const _target = (typeof _h.handler === "function" ? _h.handler : (_h.default && typeof _h.default.handler === "function" ? _h.default.handler : _h.handler));\nreturn await _target('
+            );
+            changed = true;
+          }
+
+          // FIX 3: Mutation Defuser
+          for (const reg of mutations) {
+            if (reg.test(content)) {
+              content = content.replace(reg, '.____mut_defused =');
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            console.log(`[PATCHED] ${fullPath}`);
+            writeFileSync(fullPath, content);
+          }
+        }
+      }
+    }
+
+    console.log('Starting Universal Patching of .open-next directory...');
+    patchDirectory(outDir);
+
+    // Final special handling for _worker.js (header insertion)
+    let workerContent = readFileSync(destPath, 'utf-8');
+    if (!workerContent.includes('const _polyfilledModules =')) {
+      console.log('Injecting Polyfill Header into _worker.js...');
+      workerContent = requirePolyfill + workerContent;
+      writeFileSync(destPath, workerContent);
+    }
+
+    console.log('\u001b[32m\u001b[1m✅ SURGICAL STABILIZATION COMPLETE\u001b[22m\u001b[39m');
+  } catch (e) {
+    console.error('\u001b[31m\u001b[1m❌ PATCHING FAILED:\u001b[22m\u001b[39m', e);
     process.exit(1);
   }
 }
