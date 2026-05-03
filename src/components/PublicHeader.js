@@ -1,8 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Menu, Moon, Globe, X } from 'lucide-react'
-import { useState } from 'react'
+import { Menu, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+
+import { cn } from '@/lib/cn'
+import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { AppIcon } from '@/components/ui/AppIcon'
 
 export default function PublicHeader({
   brand = 'SPS EDUCATIONAM',
@@ -11,21 +16,61 @@ export default function PublicHeader({
   showUtilityIcons = false,
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   const closeMenu = () => setMenuOpen(false)
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden'
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [menuOpen])
+
   return (
-    <nav className={menuOpen ? 'public-nav public-nav--menu-open' : 'public-nav'}>
-      <div className="public-nav__inner">
-        <Link href="/" className="public-nav__brand" onClick={closeMenu}>
+    <header
+      className={cn(
+        'sticky top-0 z-50 w-full max-w-full overflow-x-clip border-b transition-all duration-300',
+        scrolled ? 'border-border/60 bg-background/70 py-3 backdrop-blur-xl' : 'border-transparent bg-transparent py-5'
+      )}
+    >
+      <nav className="mx-auto flex w-full max-w-[1400px] min-w-0 items-center justify-between gap-3 px-4" aria-label="Primary navigation">
+        <Link href="/" className="shrink min-w-0 max-w-[calc(100%-7rem)] truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl lg:max-w-[240px] xl:max-w-none" onClick={closeMenu}>
           {brand}
         </Link>
 
-        <div className="public-nav__links">
+        <div className="hidden min-w-0 flex-1 items-center justify-center gap-5 lg:flex">
           {links.map((link) => (
             <Link
               key={`${link.href}-${link.label}`}
               href={link.href}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               aria-current={link.current ? 'page' : undefined}
             >
               {link.label}
@@ -33,84 +78,81 @@ export default function PublicHeader({
           ))}
         </div>
 
-        <div className="public-nav__actions">
+        <div className="hidden shrink-0 min-w-0 flex-wrap items-center justify-end gap-2 lg:gap-3 md:flex">
           {showUtilityIcons ? (
-            <>
-              <span className="public-nav__icon" aria-hidden="true">
-                <Moon size={18} />
-              </span>
-              <span className="public-nav__icon" aria-hidden="true">
-                <Globe size={18} />
-              </span>
-            </>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/85 px-2 py-2 shadow-lg shadow-primary/5 backdrop-blur-xl">
+              <ThemeToggle />
+            </div>
           ) : null}
 
-          {actions.map((action) => (
+          <div className="flex items-center justify-end gap-3 flex-wrap">
+            {actions.map((action) => (
+              <Button
+                key={`${action.href}-${action.label}`}
+                asChild
+                variant={action.variant === 'primary' ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'font-semibold',
+                  action.variant === 'primary' ? 'rounded-full px-6' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Link href={action.href} aria-current={action.current ? 'page' : undefined}>
+                  {action.label}
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2 md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 text-muted-foreground hover:text-foreground"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <AppIcon icon={X} size={24} interactive /> : <AppIcon icon={Menu} size={24} interactive />}
+          </Button>
+        </div>
+      </nav>
+
+      <div
+        className={cn(
+          'fixed inset-y-0 left-0 right-0 top-[60px] z-40 w-full max-w-full overflow-x-hidden flex flex-col gap-8 bg-background px-4 py-8 transition-all duration-300 ease-in-out md:hidden',
+          menuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
+        )}
+      >
+        <div className="flex flex-col gap-6">
+          {links.map((link) => (
             <Link
-              key={`${action.href}-${action.label}`}
-              href={action.href}
-              aria-current={action.current ? 'page' : undefined}
-              className={action.variant === 'primary' ? 'button-primary' : 'button-ghost'}
+              key={`mobile-${link.href}-${link.label}`}
+              href={link.href}
+              className="text-2xl font-semibold tracking-tight transition-colors hover:text-foreground"
+              onClick={closeMenu}
             >
-              {action.label}
+              {link.label}
             </Link>
           ))}
         </div>
 
-        <button
-          type="button"
-          className="public-nav__menu-button"
-          aria-expanded={menuOpen}
-          aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-
-      {menuOpen ? (
-        <div className="public-nav__mobile-panel">
-          <div className="public-nav__mobile-links">
-            {links.map((link) => (
-              <Link
-                key={`mobile-${link.href}-${link.label}`}
-                href={link.href}
-                aria-current={link.current ? 'page' : undefined}
-                onClick={closeMenu}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
-
-          {showUtilityIcons ? (
-            <div className="public-nav__mobile-meta">
-              <span className="public-nav__icon" aria-hidden="true">
-                <Moon size={18} />
-              </span>
-              <span className="public-nav__icon" aria-hidden="true">
-                <Globe size={18} />
-              </span>
-            </div>
-          ) : null}
-
-          {actions.length > 0 ? (
-            <div className="public-nav__mobile-actions">
-              {actions.map((action) => (
-                <Link
-                  key={`mobile-action-${action.href}-${action.label}`}
-                  href={action.href}
-                  aria-current={action.current ? 'page' : undefined}
-                  className={action.variant === 'primary' ? 'button-primary button-block' : 'button-secondary button-block'}
-                  onClick={closeMenu}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
+        <div className="mt-auto space-y-4 border-t border-border/40 pt-8">
+          {actions.map((action) => (
+            <Button
+              key={`mobile-action-${action.href}-${action.label}`}
+              asChild
+              variant={action.variant === 'primary' ? 'default' : 'secondary'}
+              size="lg"
+              className="h-14 w-full rounded-2xl text-lg"
+              onClick={closeMenu}
+            >
+              <Link href={action.href}>{action.label}</Link>
+            </Button>
+          ))}
         </div>
-      ) : null}
-    </nav>
+      </div>
+    </header>
   )
 }

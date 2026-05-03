@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
-import { Globe, Instagram, Linkedin, Mail } from 'lucide-react'
+import { Globe, Camera, Building2, Mail } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const COMPANY_SOCIALS = [
   {
@@ -11,7 +14,7 @@ const COMPANY_SOCIALS = [
   {
     label: 'LinkedIn',
     href: 'https://www.linkedin.com/company/zembaa-solution',
-    icon: Linkedin,
+    icon: Building2,
     external: true,
   },
   {
@@ -23,57 +26,105 @@ const COMPANY_SOCIALS = [
   {
     label: 'Instagram',
     href: 'https://www.instagram.com/zembaa_com/',
-    icon: Instagram,
+    icon: Camera,
     external: true,
   },
 ]
 
 export default function PublicFooter({
   links = [],
-  tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM | Zembaa Solution`,
-  compact = false,
+  tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM. Zembaa Solution.`,
 }) {
   return (
-    <footer className={`public-footer-shell ${compact ? 'public-footer-shell--compact' : ''}`}>
-      <div className="public-footer">
-        <div className="public-footer__brand">
-          <span className="public-footer__logo">SPS EDUCATIONAM</span>
-          <p className="public-footer__tagline">{tagline}</p>
-          <p className="public-footer__powered">
-            Powered by{' '}
-            <a href="https://www.zembaa.com" target="_blank" rel="noopener noreferrer">
-              Zembaa Solution
-            </a>
-          </p>
-        </div>
-        <div className="public-footer__meta">
-          <div className="public-footer__links">
-            {links.map((link) => (
-              <Link key={`${link.href}-${link.label}`} href={link.href} className="public-footer__link">
-                {link.label}
-              </Link>
-            ))}
+    <footer className="w-full max-w-full overflow-x-hidden border-t border-border/60 bg-card/70 backdrop-blur-xl">
+      <div className="w-full max-w-full lg:max-w-[1400px] mx-auto px-4 py-12 md:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
+          <div className="lg:col-span-2 space-y-6">
+            <Link href="/" className="text-xl font-semibold tracking-tight text-foreground">
+              SPS EDUCATIONAM
+            </Link>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs break-words">
+              Providing premier academic support and coaching classes to help students achieve excellence in their board exams and beyond.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {COMPANY_SOCIALS.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Button
+                    key={item.label}
+                    variant="ghost"
+                    size="icon"
+                    asChild
+                    className="h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <a
+                      href={item.href}
+                      aria-label={item.label}
+                      title={item.label}
+                      target={item.external ? '_blank' : undefined}
+                      rel={item.external ? 'noopener noreferrer' : undefined}
+                    >
+                      <Icon size={18} />
+                    </a>
+                  </Button>
+                )
+              })}
+            </div>
           </div>
 
-          <div className="public-footer__socials" aria-label="Company Socials">
-            {COMPANY_SOCIALS.map((item) => {
-              const Icon = item.icon
-              return (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="public-footer__social"
-                  aria-label={item.label}
-                  title={item.label}
-                  target={item.external ? '_blank' : undefined}
-                  rel={item.external ? 'noopener noreferrer' : undefined}
+          {/* Quick Links */}
+          <div className="space-y-6">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Platform</h4>
+            <nav className="flex flex-col gap-3">
+              {links.map((link) => (
+                <Link
+                  key={`${link.href}-${link.label}`}
+                  href={link.href}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <Icon size={14} />
-                  <span className="sr-only">{item.label}</span>
-                </a>
-              )
-            })}
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
           </div>
+
+          {/* Legal Section */}
+          <div className="space-y-6">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Legal</h4>
+            <nav className="flex flex-col gap-3">
+              <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Terms of Service
+              </Link>
+            </nav>
+          </div>
+
+          {/* Partnership / Meta */}
+          <div className="space-y-6">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Partnership</h4>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground break-words">
+                Zembaa Solution Private Limited
+              </p>
+              <a
+                href="mailto:info@zembaa.com"
+                className="text-sm text-foreground font-medium break-all hover:underline"
+              >
+                info@zembaa.com
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-12 md:mt-16 pt-8 border-t border-border/20 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+          <p className="text-xs text-muted-foreground font-medium break-words">
+            {tagline}
+          </p>
+          <p className="text-xs text-muted-foreground/60 break-words">
+            Precision engineered for faster learning outcomes.
+          </p>
         </div>
       </div>
     </footer>

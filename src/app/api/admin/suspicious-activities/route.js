@@ -15,6 +15,7 @@ import {
   logSuspiciousActivity,
   markSuspiciousActivityReviewed,
 } from '@/lib/suspicious-activity'
+import { sanitizePlainText, validatePagination } from '@/lib/request-validation'
 
 async function requireSuperAdmin(request) {
   const session = await requireApiSession(request, ['admin'])
@@ -42,14 +43,16 @@ export async function GET(request) {
     const session = await requireSuperAdmin(request)
 
     const url = new URL(request.url)
-    const page = Number(url.searchParams.get('page') || 1)
-    const limit = Number(url.searchParams.get('limit') || 20)
-    const severity = String(url.searchParams.get('severity') || '')
-    const user = String(url.searchParams.get('user') || '')
-    const from = String(url.searchParams.get('from') || '')
-    const to = String(url.searchParams.get('to') || '')
-    const search = String(url.searchParams.get('search') || '')
-    const format = String(url.searchParams.get('format') || '').trim().toLowerCase()
+    const { page, limit } = validatePagination(
+      url.searchParams.get('page'),
+      url.searchParams.get('limit')
+    )
+    const severity = sanitizePlainText(url.searchParams.get('severity') || '', { maxLength: 20, collapseWhitespace: true }).toLowerCase()
+    const user = sanitizePlainText(url.searchParams.get('user') || '', { maxLength: 160, collapseWhitespace: true })
+    const from = sanitizePlainText(url.searchParams.get('from') || '', { maxLength: 40, collapseWhitespace: true })
+    const to = sanitizePlainText(url.searchParams.get('to') || '', { maxLength: 40, collapseWhitespace: true })
+    const search = sanitizePlainText(url.searchParams.get('search') || '', { maxLength: 160, collapseWhitespace: true })
+    const format = sanitizePlainText(url.searchParams.get('format') || '', { maxLength: 12, collapseWhitespace: true }).toLowerCase()
     const exportCsv = format === 'csv'
 
     const result = await listSuspiciousActivities({
@@ -106,7 +109,7 @@ export async function PATCH(request) {
     assertSameOrigin(request)
     const session = await requireSuperAdmin(request)
     const body = await request.json().catch(() => ({}))
-    const activityId = String(body?.activityId || '').trim()
+    const activityId = sanitizePlainText(body?.activityId || '', { maxLength: 128, collapseWhitespace: true })
 
     if (!activityId) {
       throw new ApiError(400, 'Activity ID is required.')

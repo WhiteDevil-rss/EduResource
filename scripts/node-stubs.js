@@ -201,11 +201,7 @@ const createStub = (name = 'Stub') => {
       
       // AsyncLocalStorage mock
       if (prop === 'AsyncLocalStorage') {
-        return class { 
-          enterWith() {} 
-          run(s, f) { return f(); } 
-          getStore() { return {}; } 
-        };
+        return AsyncLocalStorage;
       }
 
       // For everything else, return a recursion of the stub
@@ -219,7 +215,25 @@ const createStub = (name = 'Stub') => {
   return new Proxy(noop, handler);
 };
 
-const universalStub = createStub('UniversalStub');
+export class AsyncLocalStorage {
+  enterWith() {}
+  run(s, f) { return f(); }
+  getStore() { return {}; }
+}
+
+export const performance = {
+  now: () => Date.now(),
+  timeOrigin: Date.now(),
+  mark: () => {},
+  measure: () => {},
+  clearMarks: () => {},
+  clearMeasures: () => {},
+  getEntries: () => [],
+  getEntriesByName: () => [],
+  getEntriesByType: () => []
+};
+
+export const universalStub = createStub('UniversalStub');
 
 // Explicitly export common names to satisfy both CJS and ESM consumers
 // Timers (Standard APIs)

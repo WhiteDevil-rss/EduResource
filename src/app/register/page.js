@@ -2,10 +2,11 @@
 
 import {
   ArrowRight,
-  Chrome,
+  Globe,
   Shield,
   GraduationCap,
   Sparkles,
+  Loader2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -14,11 +15,14 @@ import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { getPublicHeaderContent } from '@/lib/public-nav'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 const footerLinks = [
-  { label: 'Privacy Policy', href: '/login' },
-  { label: 'Terms of Service', href: '/login' },
-  { label: 'Support', href: '/#archive' },
+  { label: 'Privacy Policy', href: '/privacy-policy' },
+  { label: 'Terms of Service', href: '/terms-of-service' },
+  { label: 'Support', href: '/#team' },
 ]
 
 export default function Register() {
@@ -44,87 +48,101 @@ export default function Register() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground flex flex-col relative">
+      {/* Premium background mesh */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(99,102,241,0.15),transparent_35%),radial-gradient(ellipse_at_80%_80%,rgba(45,212,191,0.12),transparent_35%)] dark:bg-[radial-gradient(ellipse_at_20%_20%,rgba(129,140,248,0.2),transparent_30%),radial-gradient(ellipse_at_80%_80%,rgba(45,212,191,0.2),transparent_30%)]" />
+      </div>
+
       <PublicHeader
         links={navLinks}
         actions={navActions}
       />
 
-      <main className="auth-main">
-        <div className="auth-card auth-card--register" style={{ maxWidth: '480px' }}>
-          <div className="auth-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <div className="auth-icon-badge" style={{ 
-              width: '64px', 
-              height: '64px', 
-              borderRadius: '20px', 
-              background: 'rgba(var(--secondary-rgb), 0.1)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              margin: '0 auto 1.5rem',
-              color: 'var(--secondary)'
-            }}>
-              <GraduationCap size={32} />
-            </div>
-            <h1>Student Registration</h1>
-            <p style={{ fontSize: '1.1rem', opacity: 0.8 }}>
-              Join the academic community and access verified research resources instantly.
-            </p>
-          </div>
+      <main className="flex-1 w-full max-w-full overflow-x-hidden flex flex-col items-center justify-center p-4 md:p-8 py-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="w-full max-w-xl">
+          <Card className="border-border/40 bg-card/60 backdrop-blur-xl shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <CardHeader className="pt-12 pb-6 text-center px-8 space-y-4">
+              <div className="w-16 h-16 bg-primary rounded-[1.5rem] flex items-center justify-center text-primary-foreground mx-auto shadow-xl shadow-primary/20 transform -rotate-3">
+                <GraduationCap size={32} />
+              </div>
+              <div className="space-y-2">
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                  Join the Community
+                </Badge>
+                <CardTitle className="text-3xl font-extrabold tracking-tight">
+                  One Step Registration
+                </CardTitle>
+                <CardDescription className="text-base">
+                  Instant workspace access for verified students.
+                </CardDescription>
+              </div>
+            </CardHeader>
 
-          <div className="auth-content">
-            <div className="auth-benefit-list" style={{ marginBottom: '2.5rem' }}>
-              <div className="auth-benefit-item" style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ color: 'var(--primary)', marginTop: '2px' }}><Sparkles size={18} /></div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Instant Access</h4>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.7 }}>No password required. Secure sign-on via your Gmail ID.</p>
+            <CardContent className="px-8 pb-12 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-muted/30 p-5 rounded-2xl border border-border/20 space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm">Instant Access</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">No complex forms. Your Gmail account is your workspace key.</p>
+                  </div>
+                </div>
+                <div className="bg-muted/30 p-5 rounded-2xl border border-border/20 space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <Shield size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm">Safe Environment</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">Encrypted data protection for your academic journey.</p>
+                  </div>
                 </div>
               </div>
-              <div className="auth-benefit-item" style={{ display: 'flex', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ color: 'var(--primary)', marginTop: '2px' }}><Shield size={18} /></div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1rem' }}>Verified Resources</h4>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', opacity: 0.7 }}>Gain exclusive access to peer-reviewed archives.</p>
+
+              {error && (
+                <div className="p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-sm font-medium">
+                  {error}
                 </div>
+              )}
+
+              <div className="space-y-4">
+                <Button
+                  type="button"
+                  className="w-full h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20"
+                  onClick={handleJoin}
+                  disabled={isAuthenticating}
+                >
+                  {isAuthenticating ? <Loader2 size={24} className="animate-spin mr-3" /> : <Globe size={24} className="mr-3" />}
+                  Register with Google
+                </Button>
+
+                <p className="text-center text-xs text-muted-foreground px-4 leading-relaxed">
+                  By joining, you agree to our{' '}
+                  <Link href="/terms-of-service" className="text-foreground font-semibold hover:underline">Terms of Service</Link>{' '}
+                  and{' '}
+                  <Link href="/privacy-policy" className="text-foreground font-semibold hover:underline">Privacy Policy</Link>.
+                </p>
               </div>
-            </div>
 
-            {error && (
-              <div className="auth-alert auth-alert--error" style={{ marginBottom: '1.5rem' }}>
-                <span>{error}</span>
+              <div className="pt-4 border-t border-border/40 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Already registered?{' '}
+                  <Link href="/login" className="text-primary font-bold inline-flex items-center hover:underline">
+                    Sign In <ArrowRight size={16} className="ml-1" />
+                  </Link>
+                </p>
               </div>
-            )}
+            </CardContent>
+          </Card>
 
-            <button
-              type="button"
-              className="button-primary button-block"
-              onClick={handleJoin}
-              disabled={isAuthenticating}
-              style={{ height: '3.75rem', fontSize: '1.1rem', fontWeight: 600 }}
-            >
-              <Chrome size={22} />
-              {isAuthenticating ? 'Authenticating...' : 'Register as a Student'}
-            </button>
-
-            <div className="auth-terms-notice" style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', opacity: 0.6, lineHeight: 1.6 }}>
-              By clicking "Register as a Student", you agree to our{' '}
-              <Link href="/login" style={{ textDecoration: 'underline' }}>Terms of Service</Link> and{' '}
-              <Link href="/login" style={{ textDecoration: 'underline' }}>Privacy Policy</Link>.
-            </div>
-          </div>
-
-          <div className="auth-footer" style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <p style={{ textAlign: 'center' }}>
-              Already registered?{' '}
-              <Link href="/login" style={{ color: 'var(--foreground)', fontWeight: 700 }}>
-                Sign In <ArrowRight size={14} style={{ display: 'inline', marginLeft: '4px' }} />
-              </Link>
-            </p>
+          <div className="mt-8 flex justify-center items-center gap-6">
+            <span className="w-8 h-px bg-border/40" />
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Secure Student Network</span>
+            <span className="w-8 h-px bg-border/40" />
           </div>
         </div>
-
-        <div className="auth-footer__trust">Single Sign-On Secure Network</div>
       </main>
 
       <PublicFooter

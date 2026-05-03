@@ -1,3 +1,5 @@
+'use client'
+
 import { cn } from '@/lib/cn'
 
 const buttonVariants = {
@@ -10,8 +12,11 @@ const buttonVariants = {
 
 export function Button({ className = '', variant = 'default', asChild = false, children, ...props }) {
   const Component = asChild ? 'span' : 'button'
+  const normalizedProps = !asChild && !props.type
+    ? { ...props, type: 'button' }
+    : props
   return (
-    <Component className={cn(buttonVariants[variant] || buttonVariants.default, className)} {...props}>
+    <Component className={cn(buttonVariants[variant] || buttonVariants.default, className)} {...normalizedProps}>
       {children}
     </Component>
   )

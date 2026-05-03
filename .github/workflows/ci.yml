@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run production build
+        run: npm run build
+
+  security-gate-review:
+    name: security-gate-review
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - test
+      - build
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Validate PR security gate checklist
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || ''
+            const requiredGates = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8']
+
+            const missing = []
+            const failed = []
+
+            for (const gate of requiredGates) {
+              const checkedLine = new RegExp(`-\\s*\\[x\\]\\s*${gate}\\b`, 'i')
+              if (!checkedLine.test(body)) {
+                missing.push(gate)
+                continue
+              }
+
+              const failLine = new RegExp(`${gate}[^\\n]*FAIL`, 'i')
+              if (failLine.test(body)) {
+                failed.push(gate)
+              }
+            }
+
+            if (missing.length > 0 || failed.length > 0) {
+              core.setFailed(
+                [
+                  missing.length ? `Missing checked gates: ${missing.join(', ')}` : null,
+                  failed.length ? `Gates marked FAIL: ${failed.join(', ')}` : null,
+                ].filter(Boolean).join(' | ')
+              )
+              return
+            }
+
+            core.info('All required security gates are checked and not marked FAIL.')

@@ -11,6 +11,7 @@ import {
   validateRole,
   validateDisplayName,
   validatePagination,
+  sanitizePlainText,
 } from '@/lib/request-validation'
 import { logAction } from '@/lib/audit-log'
 import { logActivity } from '@/lib/activity-log'
@@ -116,9 +117,18 @@ export async function GET(request) {
     requireRole(session, ['admin'])
 
     const url = new URL(request.url)
-    const role = url.searchParams.get('role')
-    const status = url.searchParams.get('status')
-    const search = url.searchParams.get('search')
+    const role = sanitizePlainText(url.searchParams.get('role') || '', {
+      maxLength: 20,
+      collapseWhitespace: true,
+    }).toLowerCase()
+    const status = sanitizePlainText(url.searchParams.get('status') || '', {
+      maxLength: 20,
+      collapseWhitespace: true,
+    }).toLowerCase()
+    const search = sanitizePlainText(url.searchParams.get('search') || '', {
+      maxLength: 160,
+      collapseWhitespace: true,
+    }).toLowerCase()
     const { page, limit } = validatePagination(
       url.searchParams.get('page'),
       url.searchParams.get('limit')
@@ -142,12 +152,11 @@ export async function GET(request) {
     }
 
     if (search) {
-      const searchLower = search.toLowerCase()
       users = users.filter(
         (u) =>
-          u.email.includes(searchLower) ||
-          u.displayName.toLowerCase().includes(searchLower) ||
-          (u.loginId && u.loginId.includes(searchLower))
+          String(u.email || '').toLowerCase().includes(search) ||
+          String(u.displayName || '').toLowerCase().includes(search) ||
+          String(u.loginId || '').toLowerCase().includes(search)
       )
     }
 

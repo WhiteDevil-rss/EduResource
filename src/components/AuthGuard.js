@@ -1,35 +1,81 @@
 'use client'
-import { useAuth } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
 
-export default function AuthGuard({ children, allowedRoles }) {
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
+
+function AuthLoadingState({ message = 'Verifying your secure session and preparing your dashboard...' }) {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center px-6 text-center text-muted-foreground">
+      <div className="space-y-4">
+        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+        <p className="max-w-md text-sm font-medium leading-relaxed">{message}</p>
+      </div>
+    </div>
+  )
+}
+
+export function ProtectedRoute({
+  children,
+  allowedRoles,
+  adminOnly = false,
+  superAdminOnly = false,
+  redirectTo = '/login',
+  loadingMessage,
+}) {
   const { user, role, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading) {
-      if (!user || !role) {
-        router.replace('/login')
-      } else if (allowedRoles && !allowedRoles.includes(role)) {
-        router.replace('/login?reason=unauthorized')
-      }
+    if (loading) {
+      return
     }
-  }, [user, role, loading, router, allowedRoles])
+
+    if (!user || !role) {
+      router.replace(redirectTo)
+      return
+    }
+
+    if (adminOnly && !isAdminUser(user, role)) {
+      router.replace(redirectTo)
+      return
+    }
+
+    if (superAdminOnly && !isSuperAdmin(user)) {
+      router.replace('/admin/dashboard')
+      return
+    }
+
+    if (allowedRoles && !allowedRoles.includes(role)) {
+      router.replace(`${redirectTo}?reason=unauthorized`)
+    }
+  }, [adminOnly, allowedRoles, loading, redirectTo, role, router, superAdminOnly, user])
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', color: '#aaaab7' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid var(--glass-border)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 1rem' }} />
-          Verifying your secure SPS EDUCATIONAM session and preparing your personalized dashboard...
-        </div>
-      </div>
-    )
+    return <AuthLoadingState message={loadingMessage} />
   }
 
-  if (!user || !role) return null
-  if (allowedRoles && !allowedRoles.includes(role)) return null
+  if (!user || !role) {
+    return <AuthLoadingState message={loadingMessage} />
+  }
+
+  if (adminOnly && !isAdminUser(user, role)) {
+    return <AuthLoadingState message={loadingMessage} />
+  }
+
+  if (superAdminOnly && !isSuperAdmin(user)) {
+    return <AuthLoadingState message={loadingMessage} />
+  }
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <AuthLoadingState message={loadingMessage} />
+  }
 
   return children
+}
+
+export default function AuthGuard(props) {
+  return <ProtectedRoute {...props} />
 }

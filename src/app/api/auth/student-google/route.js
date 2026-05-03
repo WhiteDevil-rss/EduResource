@@ -6,17 +6,24 @@ import { auth } from '@/lib/firebase-edge'
 import { createSessionCookie } from '@/lib/session-cookie'
 import { detectNewDeviceAndAlert, getSecurityControlsRecord } from '@/lib/auth-security'
 import { createAuditRecord, createSessionRecord, resolveStudentGoogleUser } from '@/lib/server-data'
+import { sanitizePlainText } from '@/lib/request-validation'
 
 export async function POST(request) {
   try {
     assertSameOrigin(request)
     await assertRequestNotBlocked(request)
 
-    const body = await request.json()
-    const idToken = String(body?.idToken || '').trim()
+    const body = await request.json().catch(() => ({}))
+    const idToken = sanitizePlainText(body?.idToken, { maxLength: 4096 })
     if (!idToken) {
       return withNoStore(
         NextResponse.json({ error: 'Google identity token is required.' }, { status: 400 })
+      )
+    }
+
+    if (!/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(idToken)) {
+      return withNoStore(
+        NextResponse.json({ error: 'Invalid Google token format.' }, { status: 400 })
       )
     }
 

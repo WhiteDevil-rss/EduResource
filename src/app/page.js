@@ -1,9 +1,9 @@
 import LandingPage from '@/components/LandingPage'
 
 export const metadata = {
-  title: 'SPS EDUCATIONAM | Study Resources for Students, Faculty, and Admins',
+  title: 'SPS Educationam | Academic Excellence & Coaching Classes',
   description:
-    'Discover curated academic resources, faculty publishing tools, and secure admin workflows in one education platform built for faster learning outcomes.',
+    'Empowering students with top-tier academic support, coaching materials, and personalized learning insights. Join SPS Educationam for a structured path to success.',
 }
 
 export default function Page() {

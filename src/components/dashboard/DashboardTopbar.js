@@ -18,50 +18,68 @@ export function DashboardTopbar({
   sessionIndicator,
 }) {
   return (
-    <header className="student-topbar">
-      <div className="student-topbar__left">
+    <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+      <div className="w-full px-4 py-3 md:px-6 md:py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center justify-between gap-3 min-w-0">
         <Button
           type="button"
           variant="ghost"
-          className="student-topbar__menu"
+              className="h-10 w-10 shrink-0 rounded-xl md:hidden"
           onClick={onOpenMenu}
           aria-label="Open navigation menu"
         >
           <Menu size={18} />
         </Button>
-        <div>
-          <h1 className="student-topbar__title">{title}</h1>
-          <p className="student-topbar__subtitle">{subtitle}</p>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold text-foreground md:text-xl">{title}</h1>
+            <p className="hidden truncate text-sm text-muted-foreground sm:block">{subtitle}</p>
+          </div>
         </div>
-      </div>
 
-      <div className="student-topbar__right">
-        <label className="student-search" aria-label="Search">
-          <Search size={16} />
-          <Input
-            value={searchValue}
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search"
-            className="student-search__input"
-          />
-        </label>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+            <div className="relative w-full lg:w-[22rem]">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                value={searchValue}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Search"
+                className="h-11 rounded-xl pl-11 text-sm"
+                aria-label="Search"
+              />
+            </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="student-topbar__icon"
-          onClick={onOpenNotifications}
-          aria-label="Open notifications"
-        >
-          <Bell size={16} />
-          {unreadCount > 0 ? <span className="student-topbar__badge">{unreadCount}</span> : null}
-        </Button>
+            <div className="flex items-center gap-2 md:gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                className="button group relative h-11 w-11 rounded-xl text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-all active:scale-95"
+                onClick={onOpenNotifications}
+                aria-label="Open notifications"
+              >
+                <Bell size={16} className="mx-auto block" />
+                {unreadCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
+                    {unreadCount}
+                  </span>
+                ) : null}
+              </Button>
 
-        {sessionIndicator ? <div className="student-topbar__session">{sessionIndicator}</div> : null}
+              {sessionIndicator ? (
+                <div className="hidden items-center rounded-xl border border-border/60 bg-card px-3 py-2 text-sm text-foreground sm:flex">
+                  {sessionIndicator}
+                </div>
+              ) : null}
 
-        <div className="student-topbar__profile" role="img" aria-label={`${role} user profile`}>
-          <RoleAvatar role={role} size="sm" label={`${role} profile icon`} />
-          <span>{userLabel}</span>
+              <div className="hidden items-center gap-2 rounded-xl border border-border/60 bg-muted/40 px-3 py-2 sm:flex" role="img" aria-label={`${role} user profile`}>
+                <RoleAvatar role={role} size="sm" label={`${role} profile icon`} />
+                <span className="max-w-[12rem] truncate text-sm font-medium text-foreground">{userLabel}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </header>

@@ -13,6 +13,20 @@ function readConfiguredSuperAdminEmail() {
 
 export const PROTECTED_ADMIN_EMAIL = readConfiguredSuperAdminEmail()
 
+export const ADMIN_DASHBOARD_PATH = '/admin/dashboard'
+
+const ADMIN_PANEL_SHARED_ROLES = ['admin', 'super_admin']
+const ADMIN_PANEL_SUPER_ADMIN_ONLY_FEATURES = new Set([
+  'security-settings',
+  'advanced-security',
+  'ip-management',
+  'audit-logs',
+  'suspicious-activity',
+  'activity-timeline',
+  'export-reports',
+  'backup-system',
+])
+
 export function getSuperAdminEmail() {
   return PROTECTED_ADMIN_EMAIL
 }
@@ -33,6 +47,45 @@ export function requiresProtectedAdminPasswordForExport(currentUserEmail) {
 export function isSuperAdmin(user) {
   if (!user) return false
   return isProtectedAdminEmail(user.email)
+}
+
+export function isAdminUser(user, roleOverride = null) {
+  const role = String(roleOverride || user?.role || '').trim().toLowerCase()
+  return role === 'admin' || isSuperAdmin(user)
+}
+
+export function getPostLoginRedirectPath(user, role = user?.role) {
+  const normalizedRole = String(role || '').trim().toLowerCase()
+
+  if (normalizedRole === 'admin' || isSuperAdmin(user)) {
+    return ADMIN_DASHBOARD_PATH
+  }
+
+  if (!normalizedRole) {
+    return '/login'
+  }
+
+  return `/dashboard/${normalizedRole}`
+}
+
+export function getAdminNavAllowedScopes(featureId) {
+  if (ADMIN_PANEL_SUPER_ADMIN_ONLY_FEATURES.has(featureId)) {
+    return ['super_admin']
+  }
+
+  return ADMIN_PANEL_SHARED_ROLES
+}
+
+export function canAccessAdminFeature(user, featureId) {
+  if (!isAdminUser(user)) {
+    return false
+  }
+
+  if (ADMIN_PANEL_SUPER_ADMIN_ONLY_FEATURES.has(featureId)) {
+    return isSuperAdmin(user)
+  }
+
+  return true
 }
 
 export function isSameUser(currentUser, targetUser) {

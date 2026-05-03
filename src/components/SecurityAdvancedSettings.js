@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { AlertCircle, Shield } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { AlertCircle, Shield, ShieldCheck, Lock, Bell, ShieldAlert, KeyRound, Save, Clock } from 'lucide-react'
+import { StandardCard, StatCard } from '@/components/layout/StandardCards'
+import { cn } from '@/lib/cn'
 
 const DEFAULTS = {
   enable2FA: false,
@@ -22,41 +21,31 @@ export function SecurityAdvancedSettings() {
 
   const weakConfigWarning = useMemo(() => {
     if (settings.maxLoginAttempts > 8) {
-      return 'High login attempt threshold may weaken brute-force protection.'
+      return 'High threshold weakens brute-force resistance.'
     }
-
     if (!settings.enable2FA) {
-      return '2FA is disabled. Consider enabling it for stronger account protection.'
+      return 'Critical: Multi-factor authentication is inactive.'
     }
-
     return ''
   }, [settings.enable2FA, settings.maxLoginAttempts])
 
-  useEffect(() => {
-    let mounted = true
-
-    const load = async () => {
-      try {
-        const response = await fetch('/api/admin/security-controls', { cache: 'no-store' })
-        const payload = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          throw new Error(payload?.error || 'Could not load advanced security settings.')
-        }
-
-        if (!mounted) return
-        setSettings((current) => ({ ...current, ...(payload?.settings || {}) }))
-      } catch (error) {
-        toast.error(error.message || 'Could not load advanced security settings.')
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-
-    load()
-    return () => {
-      mounted = false
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/admin/security-controls', { cache: 'no-store' })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Registry sync failure.')
+      setSettings((current) => ({ ...current, ...(payload?.settings || {}) }))
+    } catch (error) {
+      toast.error(error.message || 'HEURISTIC_LOAD_ERROR')
+    } finally {
+      setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const save = async () => {
     setSaving(true)
@@ -68,111 +57,200 @@ export function SecurityAdvancedSettings() {
       })
 
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not save advanced security settings.')
-      }
+      if (!response.ok) throw new Error(payload?.error || 'Registry update failed.')
 
       setSettings((current) => ({ ...current, ...(payload?.settings || {}) }))
-      toast.success('Advanced security settings saved.')
+      toast.success('Security settings updated.')
     } catch (error) {
-      toast.error(error.message || 'Could not save advanced security settings.')
+      toast.error(error.message || 'Failed to update settings.')
     } finally {
       setSaving(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="py-20 text-center space-y-4">
+        <div className="w-12 h-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin mx-auto" />
+        <p className="text-xs font-medium text-muted-foreground/60">Loading security settings...</p>
+      </div>
+    )
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Advanced Security Controls</CardTitle>
-        <CardDescription>
-          Configure global 2FA, brute-force protection, and suspicious activity alerts.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="student-request-form" style={{ gap: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-          <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={Boolean(settings.enable2FA)}
-              onChange={(event) => setSettings((current) => ({ ...current, enable2FA: event.target.checked }))}
-              disabled={loading || saving}
-            />
-            <span>Enable Global 2FA</span>
-          </label>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Risk Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          label="2FA Status"
+          value={settings.enable2FA ? "Active" : "Disabled"}
+          description={settings.enable2FA ? "Global protection enabled" : "Vulnerable to impersonation"}
+          icon={ShieldCheck}
+          color={settings.enable2FA ? "success" : "destructive"}
+        />
+        <StatCard
+          label="Brute-Force Threshold"
+          value={settings.maxLoginAttempts}
+          description="Max failed attempts"
+          icon={ShieldAlert}
+          color={settings.maxLoginAttempts > 8 ? "warning" : "primary"}
+        />
+        <StatCard
+          label="Lockout Buffer"
+          value={`${settings.lockDurationMinutes}m`}
+          description="Duration of system suspension"
+          icon={Clock}
+          color="primary"
+        />
+      </div>
 
-          <label>
-            <span>2FA Method</span>
-            <select
-              className="ui-input"
-              value={settings.twoFAMethod}
-              onChange={(event) => setSettings((current) => ({ ...current, twoFAMethod: event.target.value }))}
-              disabled={loading || saving || !settings.enable2FA}
-            >
-              <option value="email">OTP via Email</option>
-              <option value="authenticator">Authenticator App</option>
-            </select>
-          </label>
+      <div className="grid gap-8 lg:grid-cols-12 items-start">
+        {/* Settings Form */}
+        <div className="lg:col-span-8 space-y-6">
+          <StandardCard title="Authentication Policy" icon={Shield}>
+            <div className="space-y-8 py-4">
+              {/* 2FA Toggle */}
+              <div className="flex items-start justify-between p-4 rounded-2xl border border-border/40 bg-muted/5 hover:bg-muted/10 transition-colors group">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                    <KeyRound size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Multi-Factor Authentication</h3>
+                    <p className="text-xs text-muted-foreground">Enforce secondary verification for all administrative accounts</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, enable2FA: !s.enable2FA }))}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+                    settings.enable2FA ? "bg-emerald-500" : "bg-muted-foreground/20"
+                  )}
+                >
+                  <span className={cn(
+                    "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+                    settings.enable2FA ? "translate-x-5" : "translate-x-0"
+                  )} />
+                </button>
+              </div>
 
-          <label>
-            <span>Max Login Attempts</span>
-            <Input
-              type="number"
-              min="3"
-              max="12"
-              value={settings.maxLoginAttempts}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  maxLoginAttempts: Number(event.target.value || 0),
-                }))
-              }
-              disabled={loading || saving}
-            />
-          </label>
+              {/* Thresholds */}
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert size={14} className="text-primary" />
+                    <label className="text-xs font-medium text-muted-foreground">Retry Limit</label>
+                  </div>
+                  <input
+                    type="number"
+                    className="w-full h-11 px-4 rounded-xl border border-border/40 bg-background font-medium text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                    value={settings.maxLoginAttempts}
+                    onChange={(e) => setSettings(s => ({ ...s, maxLoginAttempts: parseInt(e.target.value) }))}
+                    min={3}
+                    max={15}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Lock size={14} className="text-primary" />
+                    <label className="text-xs font-medium text-muted-foreground">Lockout Duration (Min)</label>
+                  </div>
+                  <input
+                    type="number"
+                    className="w-full h-11 px-4 rounded-xl border border-border/40 bg-background font-medium text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                    value={settings.lockDurationMinutes}
+                    onChange={(e) => setSettings(s => ({ ...s, lockDurationMinutes: parseInt(e.target.value) }))}
+                    min={5}
+                    max={1440}
+                  />
+                </div>
+              </div>
 
-          <label>
-            <span>Lock Duration (minutes)</span>
-            <Input
-              type="number"
-              min="5"
-              max="120"
-              value={settings.lockDurationMinutes}
-              onChange={(event) =>
-                setSettings((current) => ({
-                  ...current,
-                  lockDurationMinutes: Number(event.target.value || 0),
-                }))
-              }
-              disabled={loading || saving}
-            />
-          </label>
+              {/* Notification Toggle */}
+              <div className="flex items-start justify-between p-4 rounded-2xl border border-border/40 bg-muted/5 hover:bg-muted/10 transition-colors group">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                    <Bell size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold">Security Notifications</h3>
+                    <p className="text-xs text-muted-foreground">Get instant alerts for failed logins and security events</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, enableAlerts: !s.enableAlerts }))}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none items-center",
+                    settings.enableAlerts ? "bg-orange-500" : "bg-muted-foreground/20"
+                  )}
+                >
+                  <span className={cn(
+                    "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+                    settings.enableAlerts ? "translate-x-5" : "translate-x-0"
+                  )} />
+                </button>
+              </div>
+            </div>
 
-          <label style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={Boolean(settings.enableAlerts)}
-              onChange={(event) => setSettings((current) => ({ ...current, enableAlerts: event.target.checked }))}
-              disabled={loading || saving}
-            />
-            <span>Enable Suspicious Activity Alerts</span>
-          </label>
+            <div className="pt-6 border-t border-border/40 flex justify-end gap-3">
+              <button
+                onClick={load}
+                className="h-10 px-5 rounded-lg border border-border/40 hover:bg-muted/10 font-medium text-xs transition-all"
+              >
+                Reset
+              </button>
+              <button
+                onClick={save}
+                disabled={saving}
+                className="h-10 px-6 rounded-lg bg-primary text-white font-semibold text-xs hover:bg-primary-strong shadow-lg shadow-primary/20 flex items-center gap-2 transition-all disabled:opacity-50"
+              >
+                <Save size={14} />
+                {saving ? "Saving..." : "Save Settings"}
+              </button>
+            </div>
+          </StandardCard>
         </div>
 
-        {weakConfigWarning ? (
-          <div className="student-inline-message" style={{ marginTop: '1rem' }}>
-            <AlertCircle size={16} />
-            <span>{weakConfigWarning}</span>
+        {/* Intelligence Side Pane */}
+        <div className="lg:col-span-4 space-y-6">
+          {weakConfigWarning && (
+            <div className="p-6 rounded-2xl border border-destructive/20 bg-destructive/5 space-y-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle size={16} />
+                <h4 className="text-xs font-semibold">Security Advice</h4>
+              </div>
+              <p className="text-xs text-destructive/80 leading-relaxed font-medium">{weakConfigWarning}</p>
+            </div>
+          )}
+
+          <StandardCard title="Audit Summary" icon={Clock} className="bg-muted/5">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-border/20">
+                <span className="text-xs font-medium text-muted-foreground">Version</span>
+                <span className="text-xs font-semibold text-foreground">2.4.0</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-border/20">
+                <span className="text-xs font-medium text-muted-foreground">Status</span>
+                <span className="text-xs font-bold text-emerald-500">Active</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-xs font-medium text-muted-foreground">Auth Method</span>
+                <span className="text-xs font-semibold text-foreground">{settings.twoFAMethod.toUpperCase()}</span>
+              </div>
+            </div>
+          </StandardCard>
+
+          <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-2 text-primary mb-3">
+              <Shield size={16} />
+              <h4 className="text-xs font-semibold">Platform Security</h4>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Security settings are synchronized across the global infrastructure. Changes are logged and audited in the system ledger.
+            </p>
           </div>
-        ) : null}
-
-        <div className="student-filter-actions" style={{ marginTop: '1rem' }}>
-          <Button type="button" onClick={save} disabled={loading || saving}>
-            <Shield size={14} />
-            {saving ? 'Saving...' : 'Save Security Controls'}
-          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

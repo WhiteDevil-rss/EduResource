@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Trash2, Download, X } from 'lucide-react'
+import { Trash2, Download, X, CheckCircle2, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 /**
  * BulkActionBar Component
@@ -15,7 +16,7 @@ export function BulkActionBar({
   onExport = async () => {},
   onClear = () => {},
   isLoading = false,
-  itemType = 'items', // "users", "resources", etc.
+  itemType = 'items',
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -50,88 +51,86 @@ export function BulkActionBar({
 
   return (
     <>
-      <div className="bulk-action-bar">
-        <div className="bulk-action-bar__inner">
+      <div className="fixed bottom-6 left-1/2 z-50 w-full max-w-2xl -translate-x-1/2 px-4 animate-in fade-in slide-in-from-bottom-8 duration-500">
+        <div className="flex items-center justify-between gap-4 rounded-3xl border border-primary/20 bg-primary/90 p-4 text-primary-foreground shadow-2xl backdrop-blur-xl md:px-6">
           {/* Left section: info and count */}
-          <div className="bulk-action-bar__info">
-            <span className="bulk-action-bar__icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 12a9 9 0 1 0 18 0A9 9 0 0 0 3 12Z" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-            </span>
-            <span className="bulk-action-bar__text">
-              <strong>{selectedCount}</strong> {itemType} selected
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20">
+              <CheckCircle2 size={20} className="text-white" />
+            </div>
+            <div className="hidden flex-col sm:flex">
+                <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Selection active</p>
+                <p className="text-sm font-bold">
+                    {selectedCount} {itemType} selected
+                </p>
+            </div>
+            <div className="flex flex-col sm:hidden">
+                <p className="text-sm font-bold">
+                    {selectedCount} sel.
+                </p>
+            </div>
           </div>
 
           {/* Right section: action buttons */}
-          <div className="bulk-action-bar__actions">
-            <button
-              className="bulk-action-bar__btn bulk-action-bar__btn--export"
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-10 rounded-xl bg-white/10 px-4 font-bold text-white hover:bg-white/20 border-transparent transition-all"
               onClick={handleExport}
               disabled={isExporting || isDeleting || isLoading}
-              title="Export selected items"
             >
-              <Download size={18} />
-              <span className="bulk-action-bar__btn-text">Export</span>
-            </button>
+              {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} className="mr-2" />}
+              <span className="hidden md:inline">Export</span>
+            </Button>
 
-            <button
-              className="bulk-action-bar__btn bulk-action-bar__btn--delete"
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-10 rounded-xl bg-red-500 font-bold text-white hover:bg-red-600 shadow-sm border-transparent transition-all"
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting || isExporting || isLoading}
-              title="Delete selected items"
             >
-              <Trash2 size={18} />
-              <span className="bulk-action-bar__btn-text">Delete</span>
-            </button>
+              <Trash2 size={16} className="mr-2" />
+              <span className="hidden md:inline">Delete</span>
+            </Button>
 
-            <button
-              className="bulk-action-bar__btn bulk-action-bar__btn--clear"
+            <div className="mx-1 h-6 w-px bg-white/20" />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-xl text-white/70 hover:bg-white/10 hover:text-white"
               onClick={onClear}
               disabled={isDeleting || isExporting || isLoading}
-              title="Clear selection"
               aria-label="Clear selection"
             >
-              <X size={18} />
-              <span className="bulk-action-bar__btn-text sr-only">Clear</span>
-            </button>
+              <X size={20} />
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm} labelledBy="bulk-action-delete-title">
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogBody>
           <DialogHeader>
-            <DialogTitle id="bulk-action-delete-title">Delete {selectedCount} {itemType}?</DialogTitle>
+            <DialogTitle>Delete {selectedCount} {itemType}?</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The selected {itemType} will be permanently deleted along with all associated data.
+              This action cannot be undone. The selected {itemType} will be permanently removed.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-3">
-            <button type="button" className="button-secondary" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
               Cancel
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="destructive"
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="button-destructive"
             >
-              {isDeleting ? (
-                <>
-                  <svg className="inline-block animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </button>
+              {isDeleting ? <Loader2 size={16} className="animate-spin mr-2" /> : <Trash2 size={16} className="mr-2" />}
+              Confirm Delete
+            </Button>
           </div>
         </DialogBody>
       </Dialog>

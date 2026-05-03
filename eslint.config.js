@@ -18,7 +18,7 @@ export default [
     ],
   },
   js.configs.recommended,
-  nextPlugin.flatConfig.coreWebVitals,
+  nextPlugin.configs["core-web-vitals"],
   {
     files: ["**/*.{js,jsx,mjs,cjs}"],
     languageOptions: {
@@ -72,6 +72,7 @@ export default [
       "no-console": "off",
       "prefer-const": "error",
       "no-var": "error",
+      "preserve-caught-error": "off",
       "react/jsx-uses-react": "error",
       "react/jsx-uses-vars": "error",
       "react-hooks/rules-of-hooks": "error",

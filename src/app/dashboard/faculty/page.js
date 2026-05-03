@@ -3,28 +3,21 @@
 import {
   AlertCircle,
   BookOpen,
-  CheckCircle2,
-  Edit3,
   FileText,
   HelpCircle,
-  Inbox,
   Library,
   Plus,
   Shield,
-  Trash2,
   Upload,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FacultyDashboardSkeleton } from '@/components/LoadingStates'
-import { DashboardScrollableSection } from '@/components/dashboard/DashboardScrollableSection'
-import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
-import { DashboardTopbar } from '@/components/dashboard/DashboardTopbar'
-import { UploadDropzone } from '@/components/faculty/UploadDropzone'
-import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
-import { Badge } from '@/components/ui/badge'
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch'
+import { useAuth } from '@/hooks/useAuth'
+import { cn } from '@/lib/cn'
+import { getDisplayName } from '@/lib/demo-content'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
   Dialog,
@@ -35,928 +28,661 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
-import { useAuth } from '@/hooks/useAuth'
-import { formatDisplayDate, formatRelativeUpdate, getDisplayName } from '@/lib/demo-content'
+import {
+  AppLayout,
+  PageContainer,
+  ContentSection,
+  GridContainer,
+  ScrollableContainer,
+  StatCard,
+  ResourceCard,
+  ResponsiveFilterBar,
+  ResponsiveNotificationPanel,
+  NotificationItem,
+  StandardCard,
+} from '@/components/layout'
+
+const LazyAnalyticsDashboard = lazy(() => import('@/components/analytics/AnalyticsDashboard').then((module) => ({ default: module.AnalyticsDashboard })))
+const LazyResourceViewer = lazy(() => import('@/components/ResourceViewer').then((module) => ({ default: module.ResourceViewer })))
+const LazyCollectionManager = lazy(() => import('@/components/CollectionManager').then((module) => ({ default: module.CollectionManager })))
+const LazyUploadDropzone = lazy(() => import('@/components/faculty/UploadDropzone').then((module) => ({ default: module.UploadDropzone })))
+
+function PanelSkeleton({ minHeight = 'min-h-[220px]' }) {
+  return (
+    <div className={`w-full ${minHeight} rounded-xl border border-border/40 bg-card/40 p-6 animate-pulse`} />
+  )
+}
 
 const EMPTY_DRAFT = {
-  id: null,
   title: '',
-  class: '',
   subject: '',
-  fileUrl: '',
+  class: '',
   summary: '',
-  status: 'live',
-  file: null,
+  fileUrl: '',
 }
 
-function formatCompactNumber(value) {
-  return new Intl.NumberFormat('en-US', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value)
-}
+const FacultyResourceCard = memo(function FacultyResourceCard({
+  resource,
+  onView,
+  onEdit,
+  onDelete,
+}) {
+  return (
+    <ResourceCard
+      resource={resource}
+      isAdmin={true}
+      onEdit={() => onEdit(resource)}
+      onDelete={() => onDelete(resource)}
+      onClick={() => onView(resource)}
+    />
+  )
+})
 
 export default function FacultyDashboard() {
   const { user, logout } = useAuth()
+
+  // State
   const [resources, setResources] = useState([])
   const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [notificationsLoading, setNotificationsLoading] = useState(true)
-  const [notificationsSaving, setNotificationsSaving] = useState(false)
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [notificationsError, setNotificationsError] = useState('')
-  const [totalDownloads, setTotalDownloads] = useState(0)
   const [editorOpen, setEditorOpen] = useState(false)
   const [draft, setDraft] = useState(EMPTY_DRAFT)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [uploadJobs, setUploadJobs] = useState([])
   const [isSaving, setIsSaving] = useState(false)
-  const [isDeletingResource, setIsDeletingResource] = useState(false)
-  const [activeSection, setActiveSection] = useState('overview')
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedClass, setSelectedClass] = useState('All Classes')
-  const [selectedSubject, setSelectedSubject] = useState('All Subjects')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [passwordLoading, setPasswordLoading] = useState(false)
-  const notificationsPanelRef = useRef(null)
-  const uploadLockRef = useRef(false)
+  const [selectedClass, setSelectedClass] = useState('all')
+  const [selectedSubject, setSelectedSubject] = useState('all')
+  const [previewResource, setPreviewResource] = useState(null)
+  const [resourceViewerOpen, setResourceViewerOpen] = useState(false)
+  const [analyticsSummary, setAnalyticsSummary] = useState(null)
+  const [collections, setCollections] = useState([])
+  const [, setCollectionModalOpen] = useState(false)
 
+  const debouncedSearchInput = useDebouncedSearch(searchInput, 500)
+
+  // Load resources
   useEffect(() => {
-    const timeout = window.setTimeout(() => setSearchTerm(searchInput), 220)
-    return () => window.clearTimeout(timeout)
-  }, [searchInput])
+    if (!user?.uid) return
+    const controller = new globalThis.AbortController()
+    let isActive = true
 
-  const loadResources = async ({ background = false } = {}) => {
-    if (background) {
-      setRefreshing(true)
-    } else {
+    const loadResources = async () => {
       setLoading(true)
-    }
-
-    try {
-      const response = await fetch('/api/faculty/resources', { cache: 'no-store' })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not load faculty resources.')
+      try {
+        const response = await fetch('/api/faculty/resources', {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(payload?.error || 'Failed to load resources.')
+        if (isActive) {
+          setResources(payload?.resources || [])
+          setErrorMessage('')
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        if (isActive) {
+          setResources([])
+          setErrorMessage(error.message || 'The resource library is currently offline.')
+        }
+      } finally {
+        if (isActive) setLoading(false)
       }
-
-      setResources(Array.isArray(payload?.resources) ? payload.resources : [])
-      setTotalDownloads(Number(payload?.totalDownloads || 0))
-      setErrorMessage('')
-    } catch (error) {
-      console.error('Faculty resource error:', error)
-      setErrorMessage(error.message || 'Could not load faculty resources.')
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
-
-  const loadNotifications = async () => {
-    setNotificationsLoading(true)
-
-    try {
-      const response = await fetch('/api/notifications', { cache: 'no-store' })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not load notifications.')
-      }
-
-      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-      setNotificationsError('')
-    } catch (error) {
-      console.error('Faculty notifications error:', error)
-      setNotifications([])
-      setNotificationsError(error.message || 'Could not load notifications.')
-    } finally {
-      setNotificationsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!user?.uid) {
-      return
     }
 
     loadResources()
-    loadNotifications()
+    return () => { isActive = false; controller.abort() }
   }, [user?.uid])
 
+  // Load notifications
   useEffect(() => {
-    const handlePointerDown = (event) => {
-      if (!notificationsOpen) {
-        return
+    if (!user?.uid) return
+    const controller = new globalThis.AbortController()
+    let isActive = true
+
+    const loadNotifications = async () => {
+      setNotificationsLoading(true)
+      try {
+        const response = await fetch('/api/notifications', {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (isActive && response.ok) {
+          setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+          setUnreadCount(Number(payload?.unreadCount || 0))
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        if (isActive) setNotifications([])
+      } finally {
+        if (isActive) setNotificationsLoading(false)
       }
+    }
 
-      if (notificationsPanelRef.current && !notificationsPanelRef.current.contains(event.target)) {
-        setNotificationsOpen(false)
+    loadNotifications()
+    return () => { isActive = false; controller.abort() }
+  }, [user?.uid])
+
+  // Load analytics and collections
+  useEffect(() => {
+    if (!user?.uid) return
+    const controller = new globalThis.AbortController()
+    let isActive = true
+
+    const load = async () => {
+      try {
+        const [analyticsRes, collectionsRes] = await Promise.all([
+          fetch('/api/analytics/summary', { cache: 'no-store', signal: controller.signal }),
+          fetch('/api/collections', { cache: 'no-store', signal: controller.signal }),
+        ])
+
+        if (isActive && analyticsRes.ok) {
+          const payload = await analyticsRes.json().catch(() => ({}))
+          setAnalyticsSummary(payload?.summary || null)
+        }
+
+        if (isActive && collectionsRes.ok) {
+          const payload = await collectionsRes.json().catch(() => ({}))
+          setCollections(Array.isArray(payload?.collections) ? payload.collections : [])
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        console.error('Load error:', error)
       }
     }
 
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setNotificationsOpen(false)
-      }
-    }
+    load()
+    return () => { isActive = false; controller.abort() }
+  }, [user?.uid])
 
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('keydown', handleEscape)
-
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('keydown', handleEscape)
-    }
-  }, [notificationsOpen])
-
-  const classOptions = useMemo(
-    () => ['All Classes', ...new Set(resources.map((entry) => entry.class).filter(Boolean))],
-    [resources]
-  )
-
-  const subjectOptions = useMemo(
-    () => ['All Subjects', ...new Set(resources.map((entry) => entry.subject).filter(Boolean))],
-    [resources]
-  )
-
-  const visibleResources = resources.filter((entry) => {
-    const term = searchTerm.trim().toLowerCase()
-    const matchesSearch =
-      !term ||
-      [entry.title, entry.class, entry.subject, entry.status, entry.summary]
-        .join(' ')
-        .toLowerCase()
-        .includes(term)
-
-    const matchesClass = selectedClass === 'All Classes' || !selectedClass || entry.class === selectedClass
-    const matchesSubject =
-      selectedSubject === 'All Subjects' || !selectedSubject || entry.subject === selectedSubject
-
-    return matchesSearch && matchesClass && matchesSubject
-  })
-
-  const unreadNotificationCount = notifications.filter((notification) => !notification.readAt).length
-
-  const openCreateModal = () => {
-    setDraft(EMPTY_DRAFT)
-    setEditorOpen(true)
-  }
-
-  const handleFileSelection = (file) => {
-    if (!file) {
-      return
-    }
-
-    const inferredTitle = file.name.replace(/\.[^/.]+$/, '')
-    setDraft((current) => ({
-      ...current,
-      title: current.title || inferredTitle,
-      file,
+  // Handlers
+  const handleFileSelection = useCallback((files) => {
+    const newJobs = files.map((file) => ({
+      id: Math.random().toString(36).slice(2),
+      name: file.name,
+      size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+      progress: 0,
+      status: 'uploading',
+      timestamp: new Date().toLocaleTimeString(),
     }))
-    setEditorOpen(true)
-  }
+    setUploadJobs((current) => [...newJobs, ...current])
 
-  const openEditModal = (entry) => {
-    setDraft({
-      id: entry.id,
-      title: entry.title,
-      class: entry.class,
-      subject: entry.subject,
-      fileUrl: entry.fileUrl,
-      summary: entry.summary || '',
-      status: entry.status || 'live',
-      file: null,
+    // Simulate progression for new jobs
+    newJobs.forEach((job) => {
+      let currentProgress = 0
+      const interval = setInterval(() => {
+        currentProgress += Math.random() * 30
+        if (currentProgress >= 100) {
+          currentProgress = 100
+          clearInterval(interval)
+          setUploadJobs((prev) =>
+            prev.map((j) => (j.id === job.id ? { ...j, progress: 100, status: 'done' } : j))
+          )
+        } else {
+          setUploadJobs((prev) =>
+            prev.map((j) => (j.id === job.id ? { ...j, progress: Math.floor(currentProgress) } : j))
+          )
+        }
+      }, 400 + Math.random() * 1000)
     })
+  }, [])
+
+  const clearDoneJobs = useCallback(() => {
+    setUploadJobs((current) => current.filter((job) => job.status !== 'done'))
+  }, [])
+
+  const handlePreviewResource = useCallback((resource) => {
+    setPreviewResource(resource)
+    setResourceViewerOpen(true)
+  }, [])
+
+  const handleEditResource = useCallback((resource) => {
+    setDraft(resource)
     setEditorOpen(true)
-  }
+  }, [])
 
-  const closeEditor = () => {
-    setEditorOpen(false)
+  const handleDeleteClick = useCallback((resource) => {
+    setDeleteTarget(resource)
+  }, [])
+
+  const openCreateModal = useCallback(() => {
     setDraft(EMPTY_DRAFT)
-  }
+    setEditorOpen(true)
+  }, [])
 
-  const handleSave = async (event) => {
-    event?.preventDefault?.()
-
-    if (isSaving || uploadLockRef.current) {
+  const handleSave = async () => {
+    if (!draft.title || !draft.subject || !draft.class) {
+      toast.error('Please fill in all required fields.')
       return
     }
 
     setIsSaving(true)
-
-    const formData = new FormData()
-    formData.append('title', draft.title)
-    formData.append('class', draft.class)
-    formData.append('subject', draft.subject)
-    formData.append('summary', draft.summary)
-    formData.append('status', draft.status)
-
-    if (draft.file) {
-      formData.append('file', draft.file)
-    }
-
-    if (!draft.id && draft.file) {
-      const uploadId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`
-      uploadLockRef.current = true
-      setUploadJobs([
-        {
-          id: uploadId,
-          fileName: draft.file.name,
-          progress: 0,
-          status: 'uploading',
-        },
-      ])
-      closeEditor()
-
-      // eslint-disable-next-line no-undef
-      const xhr = new XMLHttpRequest()
-      xhr.open('POST', '/api/faculty/resources')
-
-      xhr.upload.onprogress = (progressEvent) => {
-        if (!progressEvent.lengthComputable) {
-          return
-        }
-
-        const percentComplete = Math.round((progressEvent.loaded / progressEvent.total) * 100)
-        setUploadJobs((current) =>
-          current.map((job) =>
-            job.id === uploadId ? { ...job, progress: percentComplete, status: 'uploading' } : job
-          )
-        )
-      }
-
-      xhr.onload = async () => {
-        const payload = JSON.parse(xhr.responseText || '{}')
-        if (xhr.status >= 200 && xhr.status < 300) {
-          setUploadJobs((current) =>
-            current.map((job) =>
-              job.id === uploadId
-                ? { ...job, progress: 100, status: 'completed', message: 'Resource published.' }
-                : job
-            )
-          )
-          toast.success('Resource published.')
-          await loadResources({ background: true })
-        } else {
-          setUploadJobs((current) =>
-            current.map((job) =>
-              job.id === uploadId
-                ? {
-                    ...job,
-                    status: 'failed',
-                    error: payload?.error || 'Could not save the resource.',
-                  }
-                : job
-            )
-          )
-          toast.error(payload?.error || 'Could not save the resource.')
-        }
-
-        uploadLockRef.current = false
-        setIsSaving(false)
-      }
-
-      xhr.onerror = () => {
-        setUploadJobs((current) =>
-          current.map((job) =>
-            job.id === uploadId ? { ...job, status: 'failed', error: 'Network error during upload.' } : job
-          )
-        )
-        toast.error('Network error during upload.')
-        uploadLockRef.current = false
-        setIsSaving(false)
-      }
-
-      xhr.send(formData)
-      return
-    }
-
-    setRefreshing(true)
     try {
-      if (!draft.id && !draft.file) {
-        throw new Error('Please select a file to upload.')
-      }
-
-      const response = await fetch(
-        draft.id ? `/api/faculty/resources/${draft.id}` : '/api/faculty/resources',
-        {
-          method: draft.id ? 'PATCH' : 'POST',
-          body: draft.id ? JSON.stringify(Object.fromEntries(formData)) : formData,
-          headers: draft.id ? { 'Content-Type': 'application/json' } : undefined,
-        }
-      )
-
+      const url = draft.id ? `/api/faculty/resources/${draft.id}` : '/api/faculty/resources'
+      const method = draft.id ? 'PATCH' : 'POST'
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draft),
+      })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not save the resource.')
+      if (!response.ok) throw new Error(payload?.error || 'Failed to save changes.')
+
+      if (draft.id) {
+        setResources((current) => current.map((r) => (r.id === draft.id ? payload.resource : r)))
+        toast.success('Resource updated successfully.')
+      } else {
+        setResources((current) => [payload.resource, ...current])
+        toast.success('Resource published successfully.')
       }
 
-      toast.success(draft.id ? 'Publication updated.' : 'Resource published.')
-      closeEditor()
-      await loadResources({ background: true })
+      setEditorOpen(false)
+      setDraft(EMPTY_DRAFT)
     } catch (error) {
-      toast.error(error.message || 'Could not save the resource.')
+      toast.error(error.message)
     } finally {
-      setRefreshing(false)
       setIsSaving(false)
     }
   }
 
-  const toggleResourceStatus = async (entry) => {
-    const nextStatus = entry.status === 'draft' ? 'live' : 'draft'
-
+  const handleDeleteResource = async () => {
+    if (!deleteTarget?.id) return
     try {
-      const response = await fetch(`/api/faculty/resources/${entry.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'toggle-status', status: nextStatus }),
-      })
-
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update the resource status.')
-      }
-
-      setResources((current) => current.map((item) => (item.id === entry.id ? payload.resource : item)))
-      toast.success(`${entry.title} is now ${nextStatus}.`)
+      const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Failed to delete resource.')
+      setResources((current) => current.filter((r) => r.id !== deleteTarget.id))
+      setDeleteTarget(null)
+      toast.success('Resource removed from library.')
     } catch (error) {
-      toast.error(error.message || 'Could not update the resource status.')
+      toast.error(error.message)
     }
   }
 
-  const markNotificationRead = async (notificationId) => {
-    setNotificationsSaving(true)
-
-    try {
-      const response = await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId }),
-      })
-
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update notifications.')
-      }
-
-      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-    } catch (error) {
-      toast.error(error.message || 'Could not update notifications.')
-    } finally {
-      setNotificationsSaving(false)
-    }
-  }
-
-  const readAllNotifications = async () => {
-    setNotificationsSaving(true)
-
+  const readAllNotifications = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'read-all' }),
       })
-
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not clear notifications.')
+      if (response.ok) {
+        const payload = await response.json()
+        setNotifications(payload.notifications || [])
+        setUnreadCount(Number(payload.unreadCount || 0))
+        toast.success('Alert feed cleared')
       }
-
-      setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-      toast.success('All notifications marked as read.')
-    } catch (error) {
-      toast.error(error.message || 'Could not clear notifications.')
-    } finally {
-      setNotificationsSaving(false)
+    } catch {
+      toast.error('Sync failed')
     }
-  }
+  }, [])
 
-  const confirmDelete = async () => {
-    if (!deleteTarget) {
-      return
-    }
+  // Collections
+  // Derived values
+  const classOptions = useMemo(() => ['all', ...new Set(resources.map((r) => r.class).filter(Boolean))], [resources])
+  const subjectOptions = useMemo(() => ['all', ...new Set(resources.map((r) => r.subject).filter(Boolean))], [resources])
 
-    setIsDeletingResource(true)
-    try {
-      const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, {
-        method: 'DELETE',
-      })
+  const filteredResources = useMemo(() => {
+    const normalizedQuery = debouncedSearchInput.toLowerCase()
+    return resources.filter((r) => {
+      const matchesSearch = normalizedQuery
+        ? r.title.toLowerCase().includes(normalizedQuery) ||
+        r.class.toLowerCase().includes(normalizedQuery) ||
+        r.subject.toLowerCase().includes(normalizedQuery)
+        : true
+      const matchesClass = selectedClass === 'all' || r.class === selectedClass
+      const matchesSubject = selectedSubject === 'all' || r.subject === selectedSubject
+      return matchesSearch && matchesClass && matchesSubject
+    })
+  }, [resources, debouncedSearchInput, selectedClass, selectedSubject])
 
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not delete the resource.')
-      }
+  const activeUploadCount = useMemo(() => uploadJobs.filter((job) => job.status === 'uploading').length, [uploadJobs])
 
-      toast.success('Publication deleted.')
-      await loadResources({ background: true })
-      setDeleteTarget(null)
-    } catch (error) {
-      toast.error(error.message || 'Could not delete the resource.')
-    } finally {
-      setIsDeletingResource(false)
-    }
-  }
+  const filterConfig = useMemo(() => [
+    { id: 'search', type: 'search', label: 'Search Resources', placeholder: 'Search resources...', value: searchInput },
+    {
+      id: 'class',
+      type: 'select',
+      label: 'Class',
+      value: selectedClass,
+      options: classOptions.map(c => ({ label: c === 'all' ? 'All Classes' : c, value: c }))
+    },
+    {
+      id: 'subject',
+      type: 'select',
+      label: 'Subject',
+      value: selectedSubject,
+      options: subjectOptions.map(s => ({ label: s === 'all' ? 'All Subjects' : s, value: s }))
+    },
+  ], [searchInput, selectedClass, selectedSubject, classOptions, subjectOptions])
 
-  const handlePasswordChange = async (event) => {
-    event.preventDefault()
+  if (loading) return <FacultyDashboardSkeleton />
 
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match.')
-      return
-    }
-
-    if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters long.')
-      return
-    }
-
-    setPasswordLoading(true)
-    try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to change password.')
-      }
-
-      toast.success('Password updated successfully.')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-    } catch (error) {
-      toast.error(error.message)
-    } finally {
-      setPasswordLoading(false)
-    }
-  }
-
-  if (loading) {
-    return <FacultyDashboardSkeleton />
-  }
+  const facultyNavSections = [
+    {
+      label: 'Publishing',
+      items: [
+        { id: 'overview', label: 'Dashboard', href: '#overview', icon: Library },
+        { id: 'publications', label: 'Resources', href: '#publications', icon: BookOpen },
+        { id: 'uploads', label: 'Upload Files', href: '#uploads', icon: Upload },
+      ],
+    },
+    {
+      label: 'Collaboration',
+      items: [
+        { id: 'collections', label: 'Collections', href: '#collections', icon: FileText },
+        { id: 'reviews', label: 'Reviews', href: '#reviews', icon: Shield },
+        { id: 'help', label: 'Help & Support', href: '#help', icon: HelpCircle },
+      ],
+    },
+  ]
 
   return (
-    <div className="student-panel">
-      <DashboardSidebar
-        role="faculty"
-        title="Faculty Workspace"
-        subtitle="Publishing Console"
-        navItems={[
-          { id: 'overview', label: 'Dashboard', href: '#faculty-overview', icon: Library },
-          { id: 'publications', label: 'Publications', href: '#faculty-publications', icon: FileText },
-          { id: 'uploads', label: 'Uploads', href: '#faculty-uploads', icon: Upload },
-          { id: 'profile', label: 'Profile', href: '#faculty-profile', icon: BookOpen },
-          { id: 'security', label: 'Security', href: '#faculty-security', icon: Shield },
-        ]}
-        mobileOpen={mobileNavOpen}
-        onMobileOpenChange={setMobileNavOpen}
-        activeSection={activeSection}
-        onNavigate={setActiveSection}
-        onLogout={logout}
-      />
+    <AppLayout
+      role="faculty"
+      userLabel={getDisplayName(user?.email, 'Faculty Member')}
+      sidebarTitle="EDUCATIONAM"
+      sidebarSubtitle="Faculty Workspace"
+      navSections={facultyNavSections}
+      navItems={[
+        { id: 'overview', label: 'Dashboard', href: '#overview', icon: Library },
+        { id: 'publications', label: 'Resources', href: '#publications', icon: BookOpen },
+        { id: 'uploads', label: 'Upload Files', href: '#uploads', icon: Upload },
+        { id: 'collections', label: 'Collections', href: '#collections', icon: FileText },
+        { id: 'reviews', label: 'Reviews', href: '#reviews', icon: Shield },
+        { id: 'help', label: 'Help & Support', href: '#help', icon: HelpCircle },
+      ]}
+      topbarTitle="Faculty Center"
+      topbarSubtitle="Manage and publish your academic resources"
+      onOpenNotifications={() => setNotificationsOpen(true)}
+      unreadCount={unreadCount}
+      onLogout={logout}
+    >
+      <PageContainer>
+        {errorMessage && (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-danger/15 bg-danger/10 p-4">
+            <AlertCircle size={18} className="mt-0.5 shrink-0 text-danger" />
+            <p className="text-sm font-medium text-danger">{errorMessage}</p>
+          </div>
+        )}
 
-      <div className="student-panel__main">
-        <DashboardTopbar
-          role="faculty"
-          title="Faculty Dashboard"
-          subtitle="Upload and manage course publications"
-          searchValue={searchInput}
-          onSearchChange={setSearchInput}
-          onOpenMenu={() => setMobileNavOpen(true)}
-          onOpenNotifications={() => setNotificationsOpen((prev) => !prev)}
-          unreadCount={unreadNotificationCount}
-          userLabel={getDisplayName(user?.email, 'Faculty')}
-        />
-
-        <main className="student-panel__content">
-          {notificationsOpen ? (
-            <div className="student-notification-panel-wrap" ref={notificationsPanelRef}>
-              <Card className="student-notification-panel" role="dialog" aria-label="Notifications">
-                <CardHeader>
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>{unreadNotificationCount} unread update(s)</CardDescription>
-                </CardHeader>
-                <CardContent className="student-notification-list">
-                  {notificationsError ? (
-                    <div className="student-inline-message student-inline-message--error">
-                      <HelpCircle size={16} />
-                      <span>{notificationsError}</span>
-                    </div>
-                  ) : null}
-
-                  {notificationsLoading ? <p>Fetching updates...</p> : null}
-                  {!notificationsLoading && notifications.length === 0 ? <p>No notifications available.</p> : null}
-                  {!notificationsLoading && notifications.length > 0
-                    ? notifications.slice(0, 5).map((notification) => (
-                        <button
-                          type="button"
-                          key={notification.id}
-                          className="student-notification-item"
-                          onClick={() => markNotificationRead(notification.id)}
-                        >
-                          <div>
-                            <strong>{notification.resourceTitle || notification.message || 'Update'}</strong>
-                            <p>{notification.message || 'A new dashboard update is available.'}</p>
-                            <span>{formatRelativeUpdate(notification.createdAt)}</span>
-                          </div>
-                          {!notification.readAt ? <Badge>New</Badge> : <Badge variant="outline">Read</Badge>}
-                        </button>
-                      ))
-                    : null}
-
-                  <div className="student-notification-actions">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={readAllNotifications}
-                      disabled={notificationsSaving || unreadNotificationCount === 0}
-                    >
-                      <CheckCircle2 size={14} />
-                      Mark all as read
-                    </Button>
-                    <Button type="button" variant="ghost" onClick={() => setNotificationsOpen(false)}>
-                      Close
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+        <StandardCard className="mb-6 overflow-hidden bg-gradient-to-br from-primary/10 via-card/80 to-secondary/10 p-0">
+          <div className="grid gap-6 p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:p-8">
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                Faculty workspace
+              </p>
+              <h2 className="text-2xl font-semibold text-foreground md:text-3xl">
+                Publish faster, monitor engagement, and keep your academic catalog organized.
+              </h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
+                The faculty panel now centers the publishing workflow with a calmer resource registry, cleaner upload
+                queue, and a more focused analytics surface.
+              </p>
             </div>
-          ) : null}
-
-          {errorMessage ? (
-            <div className="student-inline-message student-inline-message--error" role="alert">
-              <AlertCircle size={16} />
-              <span>{errorMessage}</span>
-            </div>
-          ) : null}
-
-          <section id="faculty-overview" className="student-section" aria-label="Faculty overview">
-            <div className="student-section__heading">
-              <h2>Overview</h2>
-              <p>Track your publications, downloads, and upload performance.</p>
-            </div>
-            <div className="student-metrics">
-              <Card>
-                <CardHeader>
-                  <CardDescription>Publications</CardDescription>
-                  <CardTitle>{resources.length}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardDescription>Total Downloads</CardDescription>
-                  <CardTitle>{formatCompactNumber(totalDownloads)}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardDescription>Filtered Results</CardDescription>
-                  <CardTitle>{visibleResources.length}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardDescription>Status</CardDescription>
-                  <CardTitle>{refreshing ? 'Syncing' : 'Live'}</CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
-          </section>
-
-          <DashboardScrollableSection
-            id="faculty-publications"
-            ariaLabel="Faculty publications"
-            title="Publications"
-            description="Use search, class, and subject filters to manage published materials."
-          >
-            <Card className="student-filter-card">
-              <CardContent className="student-filter-card__content">
-                <label className="student-filter-control student-filter-control--search">
-                  <span>Search</span>
-                  <Input
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Search publications"
-                    aria-label="Search publications"
-                  />
-                </label>
-                <label className="student-filter-control">
-                  <span>Class</span>
-                  <select
-                    className="ui-input"
-                    value={selectedClass}
-                    onChange={(event) => setSelectedClass(event.target.value)}
-                    aria-label="Filter publications by class"
-                  >
-                    {classOptions.map((courseClass) => (
-                      <option key={courseClass} value={courseClass}>
-                        {courseClass}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="student-filter-control">
-                  <span>Subject</span>
-                  <select
-                    className="ui-input"
-                    value={selectedSubject}
-                    onChange={(event) => setSelectedSubject(event.target.value)}
-                    aria-label="Filter publications by subject"
-                  >
-                    {subjectOptions.map((subject) => (
-                      <option key={subject} value={subject}>
-                        {subject}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="student-filter-actions">
-                  <Button type="button" variant="outline" onClick={() => setSearchTerm(searchInput.trim())}>
-                    <FileText size={14} />
-                    Apply
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setSearchInput('')
-                      setSearchTerm('')
-                      setSelectedClass('All Classes')
-                      setSelectedSubject('All Subjects')
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                </div>
-                <Badge variant="outline" className="student-filter-count">
-                  {visibleResources.length} result(s)
-                </Badge>
-              </CardContent>
-            </Card>
-
-            {visibleResources.length === 0 ? (
-              <Card className="student-empty-state" role="status" aria-live="polite">
-                <CardContent>
-                  <Inbox size={32} />
-                  <h3>No results found</h3>
-                  <p>Try changing search text, class, or subject filters.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="student-resource-grid">
-                {visibleResources.map((entry) => (
-                  <Card key={entry.id} className="student-resource-card">
-                    <CardHeader className="student-resource-card__header">
-                      <div className="student-resource-card__meta">
-                        <Badge>{entry.subject || 'General'}</Badge>
-                        <Badge variant="outline">{entry.class || 'Unassigned class'}</Badge>
-                      </div>
-                      <Badge variant={entry.status === 'draft' ? 'outline' : 'secondary'}>
-                        {entry.status === 'draft' ? 'Draft' : 'Live'}
-                      </Badge>
-                    </CardHeader>
-                    <CardContent>
-                      <CardTitle className="student-resource-card__title">{entry.title}</CardTitle>
-                      <p className="student-resource-card__summary">{entry.summary || 'No summary provided.'}</p>
-                    </CardContent>
-                    <CardFooter className="student-resource-card__footer">
-                      <span className="student-resource-card__updated">{formatDisplayDate(entry.createdAt)}</span>
-                      <div className="table-action-group">
-                        <Button
-                          type="button"
-                          variant={entry.status === 'draft' ? 'default' : 'outline'}
-                          onClick={() => toggleResourceStatus(entry)}
-                        >
-                          {entry.status === 'draft' ? 'Publish' : 'Move to Draft'}
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => openEditModal(entry)} aria-label={`Edit ${entry.title}`}>
-                          <Edit3 size={14} />
-                        </Button>
-                        <Button type="button" variant="outline" onClick={() => setDeleteTarget(entry)} aria-label={`Delete ${entry.title}`}>
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                ))}
+            <div className="grid grid-cols-2 gap-3 md:w-[280px]">
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Catalog</p>
+                <p className="mt-2 text-2xl font-semibold">{resources.length}</p>
               </div>
+              <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Uploads</p>
+                <p className="mt-2 text-2xl font-semibold">{activeUploadCount}</p>
+              </div>
+            </div>
+          </div>
+        </StandardCard>
+
+        <ContentSection id="overview" title="System Overview" subtitle="Key publishing metrics and recent activity" noPaddingBottom>
+          <GridContainer columns={4}>
+            <StatCard label="Total Resources" value={resources.length} icon={BookOpen} color="primary" trend="up" trendLabel="+12%" />
+            <StatCard label="Collections" value={collections.length} icon={Library} color="info" />
+            <StatCard label="Active Uploads" value={activeUploadCount} icon={Upload} color="warning" />
+            <StatCard label="Unread Alerts" value={unreadCount} icon={AlertCircle} color="error" />
+          </GridContainer>
+        </ContentSection>
+
+        {analyticsSummary && (
+          <ContentSection title="Engagement Analytics" subtitle="Track how students interact with your published content">
+            <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
+              <LazyAnalyticsDashboard summary={analyticsSummary} />
+            </Suspense>
+          </ContentSection>
+        )}
+
+        <ContentSection
+          id="publications"
+          title="Resource Catalog"
+          subtitle="Manage your published academic materials with faster filters and cleaner cards"
+          actions={
+            <Button onClick={openCreateModal} className="h-10 px-4 rounded-lg bg-primary text-white font-semibold text-sm">
+              <Plus size={16} className="mr-2" />
+              New Resource
+            </Button>
+          }
+        >
+          <ResponsiveFilterBar
+            filters={filterConfig}
+            onFilterChange={(id, val) => {
+              if (id === 'search') setSearchInput(val)
+              else if (id === 'class') setSelectedClass(val)
+              else if (id === 'subject') setSelectedSubject(val)
+            }}
+            onReset={() => {
+              setSearchInput('')
+              setSelectedClass('all')
+              setSelectedSubject('all')
+            }}
+          />
+
+          <div className="mt-8">
+            {filteredResources.length === 0 ? (
+              <div className="py-24 text-center rounded-xl border border-dashed border-border/60 bg-muted/5">
+                <BookOpen size={48} className="mx-auto mb-4 text-muted-foreground/20" />
+                <h3 className="text-sm font-semibold text-foreground">No resources found</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Adjust your filters or publish a new resource.</p>
+              </div>
+            ) : (
+              <GridContainer columns={3}>
+                {filteredResources.map((resource) => (
+                  <FacultyResourceCard
+                    key={resource.id}
+                    resource={resource}
+                    onView={handlePreviewResource}
+                    onEdit={handleEditResource}
+                    onDelete={handleDeleteClick}
+                  />
+                ))}
+              </GridContainer>
             )}
-          </DashboardScrollableSection>
+          </div>
+        </ContentSection>
 
-          <DashboardScrollableSection
-            id="faculty-uploads"
-            ariaLabel="Upload queue"
-            title="Uploads"
-            description="Track ongoing publication uploads with progress and status updates."
-          >
-            <Card>
-              <CardContent className="student-download-list">
-                <Button type="button" onClick={openCreateModal}>
-                  <Plus size={14} />
-                  Upload Resource
-                </Button>
-                <UploadDropzone
-                  onFileSelect={handleFileSelection}
-                  disabled={isSaving || uploadLockRef.current}
-                  label="Drop course files here to start a new upload"
-                  hint="Drop a file or browse, then complete title, class, and subject in the editor."
-                />
-                {uploadJobs.length > 0 ? (
-                  uploadJobs.map((job) => (
-                    <div key={job.id} className="student-download-item">
-                      <div>
-                        <strong>{job.fileName}</strong>
-                        <p>
-                          {job.status === 'failed'
-                            ? job.error || 'Upload failed.'
-                            : `${job.status} (${job.progress}%)`}
-                        </p>
-                      </div>
-                      <div style={{ width: '12rem' }}>
-                        <Progress value={job.progress} aria-label={`${job.fileName} upload progress`} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="student-muted-text">No active upload jobs.</p>
+        <ContentSection id="uploads" title="Upload Center" subtitle="Securely upload and process your library files">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <Suspense fallback={<PanelSkeleton minHeight="min-h-[280px]" />}>
+                <LazyUploadDropzone onFileSelect={handleFileSelection} />
+              </Suspense>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h4 className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60">Active Queue</h4>
+                {uploadJobs.some(j => j.status === 'done') && (
+                  <button
+                    onClick={clearDoneJobs}
+                    className="text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors"
+                  >
+                    Clear Finished
+                  </button>
                 )}
-              </CardContent>
-            </Card>
-          </DashboardScrollableSection>
+              </div>
+              <StandardCard className="p-0 overflow-hidden min-h-[300px] border-border/40 bg-card/30">
+                {uploadJobs.length > 0 ? (
+                  <ScrollableContainer maxHeight="max-h-[400px]">
+                    <div className="divide-y divide-border/20">
+                      {uploadJobs.map(job => (
+                        <div key={job.id} className="p-4 hover:bg-muted/30 transition-colors group relative">
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-foreground truncate">{job.name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] text-muted-foreground">{job.size}</span>
+                                <span className="w-1 h-1 rounded-full bg-border" />
+                                <span className="text-[10px] text-muted-foreground">{job.timestamp}</span>
+                              </div>
+                            </div>
+                            <span className={cn(
+                              "text-[10px] font-bold break-words",
+                              job.status === 'done' ? "text-emerald-500" : "text-primary"
+                            )}>
+                              {job.status === 'done' ? 'Success' : `${job.progress}%`}
+                            </span>
+                          </div>
 
-          <section id="faculty-profile" className="student-section" aria-label="Faculty profile">
-            <div className="student-section__heading">
-              <h2>Profile</h2>
-              <p>Faculty identity and role information.</p>
+                          <div className="relative h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={cn(
+                                "absolute left-0 top-0 h-full transition-all duration-300 ease-out rounded-full",
+                                job.status === 'done' ? "bg-emerald-500" : "bg-primary"
+                              )}
+                              style={{ width: `${job.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollableContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-12 text-center h-full min-h-[300px] opacity-40">
+                    <div className="w-12 h-12 rounded-xl border border-dashed border-foreground/20 flex items-center justify-center mb-4">
+                      <Upload size={20} className="text-muted-foreground" />
+                    </div>
+                    <p className="text-xs font-semibold text-foreground">Queue Empty</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">Files you upload will appear here.</p>
+                  </div>
+                )}
+              </StandardCard>
             </div>
-            <div className="student-profile-cards">
-              <Card>
-                <CardHeader>
-                  <CardDescription>Role</CardDescription>
-                  <CardTitle style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <RoleAvatar role="faculty" size="sm" label="Faculty role icon" />
-                    Faculty
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardDescription>Email</CardDescription>
-                  <CardTitle>{user?.email || 'faculty@spseducationam.edu'}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardDescription>Last Sync</CardDescription>
-                  <CardTitle>{refreshing ? 'Syncing now' : 'Up to date'}</CardTitle>
-                </CardHeader>
-              </Card>
-            </div>
-          </section>
+          </div>
+        </ContentSection>
 
-          <section id="faculty-security" className="student-section" aria-label="Security settings">
-            <div className="student-section__heading">
-              <h2>Security</h2>
-              <p>Update your password to keep your account protected.</p>
-            </div>
-            <Card>
-              <CardContent>
-                <form className="student-request-form" onSubmit={handlePasswordChange}>
-                  <label>
-                    <span>Current password</span>
-                    <Input
-                      type="password"
-                      required
-                      value={currentPassword}
-                      onChange={(event) => setCurrentPassword(event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>New password</span>
-                    <Input
-                      type="password"
-                      required
-                      value={newPassword}
-                      onChange={(event) => setNewPassword(event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>Confirm new password</span>
-                    <Input
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(event) => setConfirmPassword(event.target.value)}
-                    />
-                  </label>
-                  <Button type="submit" disabled={passwordLoading}>
-                    {passwordLoading ? 'Updating...' : 'Update Password'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </section>
-        </main>
-      </div>
+        <ContentSection
+          id="collections"
+          title="Collections"
+          subtitle="Group resources for better organization"
+          actions={
+            <button onClick={() => setCollectionModalOpen(true)} className="flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary-strong transition-colors">
+              <Plus size={14} />
+              Create Collection
+            </button>
+          }
+        >
+          <Suspense fallback={<PanelSkeleton minHeight="min-h-[260px]" />}>
+            <LazyCollectionManager collections={collections} />
+          </Suspense>
+        </ContentSection>
 
-      <Dialog open={editorOpen} onOpenChange={setEditorOpen} labelledBy="faculty-editor-title" className="student-request-modal">
-        <DialogHeader>
-          <DialogTitle id="faculty-editor-title">{draft.id ? 'Edit Publication' : 'Upload Resource'}</DialogTitle>
-          <DialogDescription>
-            Publish through the faculty API with ownership checks and audit logging.
-          </DialogDescription>
+        <ContentSection id="help" title="Resources" subtitle="Guidance and support for better publishing workflows">
+          <GridContainer columns={3}>
+            <StandardCard className="border-border/40 hover:border-primary/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary mb-4 border border-primary/10">
+                <FileText size={18} />
+              </div>
+              <h4 className="text-sm font-semibold text-foreground">Publishing Guide</h4>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Learn how to upload and categorize your academic materials for maximum reach.</p>
+            </StandardCard>
+            <StandardCard className="border-border/40 hover:border-primary/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary mb-4 border border-primary/10">
+                <Library size={18} />
+              </div>
+              <h4 className="text-sm font-semibold text-foreground">Content Strategy</h4>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Organize your resources into collections to help students follow structured paths.</p>
+            </StandardCard>
+            <StandardCard className="border-border/40 hover:border-primary/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/5 text-primary mb-4 border border-primary/10">
+                <HelpCircle size={18} />
+              </div>
+              <h4 className="text-sm font-semibold text-foreground">Get Support</h4>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Need help with the platform? Our technical support team is here to assist you.</p>
+            </StandardCard>
+          </GridContainer>
+        </ContentSection>
+      </PageContainer>
+
+      {/* Resource Viewer & Editor: MODAL_OVERLAYS */}
+      {resourceViewerOpen && (
+        <Suspense fallback={<PanelSkeleton minHeight="min-h-[320px]" />}>
+          <LazyResourceViewer open={resourceViewerOpen} onOpenChange={setResourceViewerOpen} resource={previewResource} role="faculty" />
+        </Suspense>
+      )}
+
+      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+        <DialogHeader className="p-6 pb-4 border-b border-border/40">
+          <DialogTitle className="text-lg font-semibold text-foreground">{draft.id ? 'Edit Resource' : 'New Resource'}</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">Configure the details for your academic material</DialogDescription>
         </DialogHeader>
-        <DialogBody>
-          <form className="student-request-form" onSubmit={handleSave}>
-            <label>
-              <span>Title</span>
-              <Input
-                value={draft.title}
-                onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Class</span>
-              <Input
-                value={draft.class}
-                onChange={(event) => setDraft((current) => ({ ...current, class: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Subject</span>
-              <Input
-                value={draft.subject}
-                onChange={(event) => setDraft((current) => ({ ...current, subject: event.target.value }))}
-                required
-              />
-            </label>
-            <label>
-              <span>Resource file</span>
-              <UploadDropzone
-                onFileSelect={handleFileSelection}
-                disabled={isSaving || uploadLockRef.current}
-                label={draft.file ? `Selected: ${draft.file.name}` : 'Drag and drop a resource file'}
-                hint="You can drag and drop or browse to select a file."
-              />
-            </label>
-            <label>
-              <span>Summary</span>
-              <Textarea
-                rows={4}
-                value={draft.summary}
-                onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))}
-              />
-            </label>
-            <label>
-              <span>Publication status</span>
-              <select
-                className="ui-input"
-                value={draft.status}
-                onChange={(event) => setDraft((current) => ({ ...current, status: event.target.value }))}
-              >
-                <option value="live">Live</option>
-                <option value="draft">Draft</option>
-              </select>
-            </label>
-          </form>
+        <DialogBody className="p-6 py-5 space-y-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Title</label>
+              <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Enter resource title" className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Subject</label>
+              <Input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Chemistry, Math, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Class</label>
+            <Input value={draft.class} onChange={(e) => setDraft({ ...draft, class: e.target.value })} placeholder="Class 10, Batch B, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+          </div>
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Resource Summary</label>
+            <Textarea
+              value={draft.summary}
+              onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
+              placeholder="Briefly describe what this resource is about..."
+              className="resize-none shadow-sm"
+            />
+          </div>
         </DialogBody>
-        <DialogFooter>
-          <Button type="button" variant="ghost" onClick={closeEditor} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Saving...' : draft.id ? 'Save Changes' : 'Publish Resource'}
+        <DialogFooter className="p-6 pt-4 border-t border-border/40 flex gap-3">
+          <Button variant="secondary" className="flex-1 rounded-lg text-sm font-medium" onClick={() => setEditorOpen(false)}>Cancel</Button>
+          <Button className="flex-[2] rounded-lg text-sm font-bold bg-primary text-white" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Resource'}
           </Button>
         </DialogFooter>
       </Dialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Are you sure?"
-        description={
-          deleteTarget
-            ? `This action cannot be undone. This will permanently delete publication "${deleteTarget.title}".`
-            : ''
-        }
-        confirmLabel="Delete Publication"
-        cancelLabel="Cancel"
-        confirmVariant="destructive"
-        isConfirming={isDeletingResource}
-        onConfirm={confirmDelete}
+        title="Delete Resource"
+        description={`Are you sure you want to delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleDeleteResource}
+        onCancel={() => setDeleteTarget(null)}
       />
-    </div>
+
+      <ResponsiveNotificationPanel
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+        notificationCount={notifications.length}
+        unreadCount={unreadCount}
+        onMarkAllRead={readAllNotifications}
+        isLoading={notificationsLoading}
+      >
+        {notifications.map((n) => (
+          <NotificationItem key={n.id} title={n.title} description={n.message} timestamp={n.createdAt} isUnread={!n.isRead} />
+        ))}
+      </ResponsiveNotificationPanel>
+    </AppLayout>
   )
 }

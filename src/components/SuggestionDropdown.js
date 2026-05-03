@@ -65,21 +65,31 @@ export function SuggestionDropdown({
   }
 
   return (
-    <div ref={dropdownRef} className="suggestion-dropdown">
-      <ul className="suggestion-dropdown__list" role="listbox">
+    <div 
+      ref={dropdownRef} 
+      className="absolute top-full left-0 right-0 z-50 mt-2 max-h-[280px] overflow-auto rounded-2xl border border-border/40 bg-card/95 p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
+    >
+      <ul className="space-y-1" role="listbox">
         {isLoading ? (
-          <li className="suggestion-dropdown__item suggestion-dropdown__item--loading">
-            <span>Loading suggestions...</span>
+          <li className="flex items-center justify-center p-8 text-sm text-muted-foreground italic">
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+              <span>Scanning academic cloud...</span>
+            </div>
           </li>
         ) : suggestions.length === 0 ? (
-          <li className="suggestion-dropdown__item suggestion-dropdown__item--empty">
-            <span>No suggestions found</span>
+          <li className="p-4 text-center text-sm text-muted-foreground">
+            No verified matches found
           </li>
         ) : (
           suggestions.map((suggestion, index) => (
             <li
               key={`${suggestion}-${index}`}
-              className={`suggestion-dropdown__item ${highlightedIndex === index ? 'suggestion-dropdown__item--highlighted' : ''}`}
+              className={`group flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                highlightedIndex === index 
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]' 
+                  : 'text-foreground hover:bg-muted/80'
+              }`}
               onClick={() => {
                 onSelect?.(suggestion)
                 onOpenChange?.(false)
@@ -88,7 +98,7 @@ export function SuggestionDropdown({
               role="option"
               aria-selected={highlightedIndex === index}
             >
-              <span className="suggestion-dropdown__text">
+              <span className={`block truncate ${highlightedIndex === index ? 'text-primary-foreground' : 'text-foreground'}`}>
                 {highlightMatch(suggestion, searchTerm)}
               </span>
             </li>
@@ -109,7 +119,7 @@ function highlightMatch(text, searchTerm) {
     <span>
       {parts.map((part, index) =>
         regex.test(part) ? (
-          <mark key={index} style={{ backgroundColor: 'rgba(255, 193, 7, 0.3)', fontWeight: 500 }}>
+          <mark key={index} className="bg-warning/30 font-medium text-foreground">
             {part}
           </mark>
         ) : (

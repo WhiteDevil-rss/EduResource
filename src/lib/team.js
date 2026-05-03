@@ -47,7 +47,7 @@ export const TEAM_MEMBERS = [
   },
   {
     name: 'Rajput Shivam Singh',
-    role: 'CEO & Fullstack Developer',
+    role: 'Founder & CEO at Zembaa Solution | Fullstack Developer',
     image: rajputShivamSinghImage,
     bio:
       'Founder of Zembaa Solution. Architecting resilient product systems with a focus on speed, clarity, and measurable student outcomes.',

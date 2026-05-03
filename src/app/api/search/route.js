@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { jsonError, requireApiSession, withNoStore } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
-import { listResourceRecords, listUserRecords } from '@/lib/server-data'
+import { listResourceRecordsWithLimit, listUserRecords } from '@/lib/server-data'
 import { detectRapidRepeatedActions } from '@/lib/suspicious-activity'
+import { sanitizePlainText, validateSearchTerm } from '@/lib/request-validation'
 
 function normalizeSearchTerm(term) {
   return String(term || '').trim().toLowerCase()
@@ -89,21 +90,29 @@ export async function GET(request) {
     const session = await requireApiSession(request)
     const { searchParams } = new URL(request.url)
 
-    const q = String(searchParams.get('q') || '')
-    const type = String(searchParams.get('type') || 'resources').toLowerCase()
-    const resourceClass = String(searchParams.get('class') || '')
-    const resourceSubject = String(searchParams.get('subject') || '')
-    const userRole = String(searchParams.get('role') || '')
-    const userStatus = String(searchParams.get('status') || '')
-    const sortBy = String(searchParams.get('sort') || 'newest')
+    const q = validateSearchTerm(searchParams.get('q') || '', 160)
+    const requestedType = sanitizePlainText(searchParams.get('type') || 'resources', { maxLength: 20, collapseWhitespace: true }).toLowerCase()
+    const type = ['resources', 'users', 'all'].includes(requestedType) ? requestedType : 'resources'
+    const resourceClass = sanitizePlainText(searchParams.get('class') || '', { maxLength: 80, collapseWhitespace: true })
+    const resourceSubject = sanitizePlainText(searchParams.get('subject') || '', { maxLength: 80, collapseWhitespace: true })
+    const userRole = sanitizePlainText(searchParams.get('role') || '', { maxLength: 20, collapseWhitespace: true }).toLowerCase()
+    const userStatus = sanitizePlainText(searchParams.get('status') || '', { maxLength: 20, collapseWhitespace: true }).toLowerCase()
+    const requestedSortBy = sanitizePlainText(searchParams.get('sort') || 'newest', { maxLength: 30, collapseWhitespace: true }).toLowerCase()
+    const sortBy = ['newest', 'oldest', 'a-z', 'z-a', 'most-downloaded'].includes(requestedSortBy)
+      ? requestedSortBy
+      : 'newest'
     const page = Number(searchParams.get('page') || 1)
     const limit = Number(searchParams.get('limit') || 20)
+    const scanLimit = Math.min(600, Math.max(50, Number(searchParams.get('scanLimit') || 250)))
 
     const items = []
     const suggestions = []
 
     if (['resources', 'all'].includes(type)) {
-      const resources = await listResourceRecords()
+      const resources = await listResourceRecordsWithLimit({
+        limit: scanLimit,
+        fieldMask: ['title', 'titleLower', 'subject', 'class', 'summary', 'status', 'createdAt', 'updatedAt', 'uploadedBy', 'facultyId', 'facultyName', 'facultyEmail', 'fileUrl'],
+      })
       const filtered = resources.filter((entry) => {
         // Role-based visibility
         if (session.role === 'student' && entry.status !== 'live') {
@@ -135,7 +144,7 @@ export async function GET(request) {
     if (['users', 'all'].includes(type)) {
       // Only admins can search users
       if (session.role === 'admin') {
-        const users = await listUserRecords()
+        const users = await listUserRecords({ limit: scanLimit })
         const filtered = users.filter((entry) => {
           // Search term matching
           if (!matchesSearchTerm(q, entry.displayName, entry.email, entry.loginId, entry.role)) {
@@ -192,6 +201,7 @@ export async function GET(request) {
         results: entries,
         suggestions: Array.from(new Set(suggestions)).slice(0, 10),
         pagination,
+        meta: { scanLimit },
       })
     )
   } catch (error) {

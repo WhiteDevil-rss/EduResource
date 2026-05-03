@@ -1,6 +1,30 @@
 import 'server-only'
 import { ApiError } from '@/lib/api-security'
 
+const HTML_TAG_REGEX = /<[^>]*>/g
+const COLLAPSE_WHITESPACE_REGEX = /\s+/g
+const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/
+
+function removeControlCharacters(value) {
+  return String(value || '')
+    .split('')
+    .map((char) => {
+      const code = char.charCodeAt(0)
+      return code <= 31 || code === 127 ? ' ' : char
+    })
+    .join('')
+}
+
+export function sanitizePlainText(value, { maxLength = 2000, collapseWhitespace = false } = {}) {
+  const withoutControls = removeControlCharacters(value)
+  const withoutTags = withoutControls.replace(HTML_TAG_REGEX, ' ')
+  const base = collapseWhitespace
+    ? withoutTags.replace(COLLAPSE_WHITESPACE_REGEX, ' ').trim()
+    : withoutTags.trim()
+
+  return base.slice(0, Math.max(0, Number(maxLength) || 0))
+}
+
 /**
  * Request Validation Utilities
  * Provides input validation and sanitization for API endpoints
@@ -88,12 +112,19 @@ export function validatePassword(password, required = true) {
     return true
   }
 
-  if (pwd.length < 6) {
-    throw new ApiError(400, 'Password must be at least 6 characters.')
+  if (pwd.length < 8) {
+    throw new ApiError(400, 'Password must be at least 8 characters.')
   }
 
   if (pwd.length > 256) {
     throw new ApiError(400, 'Password is too long.')
+  }
+
+  if (!PASSWORD_COMPLEXITY_REGEX.test(pwd)) {
+    throw new ApiError(
+      400,
+      'Password must include uppercase, lowercase, number, and special character.'
+    )
   }
 
   return true
@@ -106,7 +137,10 @@ export function validatePassword(password, required = true) {
  * @returns {string|null} Sanitized name or null
  */
 export function validateDisplayName(displayName, required = false) {
-  const trimmed = String(displayName || '').trim()
+  const trimmed = sanitizePlainText(displayName, {
+    maxLength: 100,
+    collapseWhitespace: true,
+  })
 
   if (!trimmed && required) {
     throw new ApiError(400, 'Display name is required.')
@@ -114,10 +148,6 @@ export function validateDisplayName(displayName, required = false) {
 
   if (!trimmed) {
     return null
-  }
-
-  if (trimmed.length > 100) {
-    throw new ApiError(400, 'Display name must not exceed 100 characters.')
   }
 
   // Allow letters, numbers, spaces, and common special characters
@@ -234,7 +264,10 @@ export function validateTextField(
     fieldName = 'Text',
   } = options
 
-  const trimmed = String(text || '').trim()
+  const trimmed = sanitizePlainText(text, {
+    maxLength,
+    collapseWhitespace: true,
+  })
 
   if (!trimmed && required) {
     throw new ApiError(400, `${fieldName} is required.`)
@@ -251,14 +284,42 @@ export function validateTextField(
     )
   }
 
-  if (trimmed.length > maxLength) {
-    throw new ApiError(
-      400,
-      `${fieldName} must not exceed ${maxLength} characters.`
-    )
-  }
-
   return trimmed
+}
+
+export function validateSearchTerm(term, maxLength = 160) {
+  return sanitizePlainText(term, {
+    maxLength,
+    collapseWhitespace: true,
+  }).toLowerCase()
+}
+
+export function validateOtpCode(value) {
+  const otp = String(value || '').trim()
+  if (!/^\d{4,8}$/.test(otp)) {
+    throw new ApiError(400, 'OTP must be a 4 to 8 digit code.')
+  }
+  return otp
+}
+
+export function validateChallengeId(value) {
+  const challengeId = String(value || '').trim()
+  if (!/^[a-zA-Z0-9_-]{16,128}$/.test(challengeId)) {
+    throw new ApiError(400, 'Invalid challenge identifier.')
+  }
+  return challengeId
+}
+
+export function sanitizeFileName(fileName) {
+  const normalized = sanitizePlainText(fileName, {
+    maxLength: 120,
+    collapseWhitespace: true,
+  })
+  const safe = normalized
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return safe || 'upload'
 }
 
 /**

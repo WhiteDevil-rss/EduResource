@@ -11,12 +11,13 @@ import {
   updateResourceRecord,
   updateResourceStatusRecord,
 } from '@/lib/server-data'
+import { sanitizePlainText } from '@/lib/request-validation'
 
 export async function PATCH(request, { params }) {
   try {
     assertSameOrigin(request)
     const session = await requireApiSession(request, ['faculty'])
-    const body = await request.json()
+    const body = await request.json().catch(() => ({}))
     const routeParams = await params
     const resourceId = String(routeParams?.resourceId || '').trim()
 
@@ -26,7 +27,10 @@ export async function PATCH(request, { params }) {
       )
     }
 
-    const action = String(body?.action || '').trim().toLowerCase()
+    const action = sanitizePlainText(body?.action || '', {
+      maxLength: 40,
+      collapseWhitespace: true,
+    }).toLowerCase()
     const statusOnlyUpdate = action === 'toggle-status' || (body?.status && !body?.title && !body?.subject && !body?.class)
 
     const resource = statusOnlyUpdate

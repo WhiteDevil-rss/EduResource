@@ -22,33 +22,35 @@ node_modules/
 firebase-functions/node_modules/
 *-debug.log*
 .firebaserc
-eduresourcehub-73f9b-firebase-adminsdk-fbsvc-ce5cd52668.json
 
-# Local env files
-.env*.local
-.env
-.dev.vars
-.dev.vars.*
-!.dev.vars.example
+# Credentials & Secrets
+secrets/
+.env*
+!.env.example
+*.json
+!package.json
+!package-lock.json
+!jsconfig.json
+!firestore.indexes.json
+!wrangler.json
+!eslint.config.js
+!postcss.config.mjs
+!tailwind.config.js
+!open-next.config.ts
+!pages.toml
+!vitest*.config.js
+!next.config.js
 
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# Misc
+# Misc / Build Artifacts
 .DS_Store
-*.pem
-*.log
-.gemini/
 .wrangler/
-.github/
+.gemini/
+*.log
+*.pem
+*.backup
 .scripts/
 .env.example
 
 # Keep documentation logs versioned
 !Documents/*.log
 !Documents/**/*.log
-
-# Google Drive
-client_secret_834792094975-vlaen0i3rcd87udlflogr5skj3u11n1n.apps.googleusercontent.com.json
-helical-clock-454307-p9-7337ef3575f6.json

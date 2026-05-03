@@ -2,20 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Ban, ShieldOff, Shield, RefreshCcw } from 'lucide-react'
+import { Ban, ShieldOff, Shield, RefreshCcw, Search, Fingerprint, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { StandardCard, StatCard } from '@/components/layout/StandardCards'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/cn'
 import { isProtectedAdminEmail } from '@/lib/admin-protection'
-
-function formatDate(value) {
-  if (!value) return 'Unknown'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Unknown'
-  return date.toLocaleString()
-}
 
 export function SecurityBlockManagement({ users = [], onChanged }) {
   const [blockedIps, setBlockedIps] = useState([])
@@ -34,13 +25,10 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
     try {
       const response = await fetch('/api/admin/blocked-ips', { cache: 'no-store' })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not load blocked IPs.')
-      }
-
+      if (!response.ok) throw new Error(payload?.error || 'Could not load blocked IPs.')
       setBlockedIps(Array.isArray(payload?.blockedIps) ? payload.blockedIps : [])
     } catch (error) {
-      toast.error(error.message || 'Could not load blocked IPs.')
+      toast.error(error.message || 'IP retrieval failed.')
       setBlockedIps([])
     } finally {
       setLoadingIps(false)
@@ -69,10 +57,10 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
       })
   }, [users, userSearch])
 
-  const submitIpBlock = async (event) => {
-    event.preventDefault()
+  const submitIpBlock = async (e) => {
+    e.preventDefault()
     if (!ipInput.trim()) {
-      toast.error('Enter an IP address.')
+      toast.error('IP address is required.')
       return
     }
 
@@ -90,27 +78,22 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
       })
 
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not block IP.')
-      }
+      if (!response.ok) throw new Error(payload?.error || 'Failed to block IP.')
 
-      toast.success('IP blocked successfully.')
+      toast.success('IP address blocked.')
       setIpInput('')
       setIpReason('')
       setIpDuration('permanent')
       await loadBlockedIps()
     } catch (error) {
-      toast.error(error.message || 'Could not block IP.')
+      toast.error(error.message || 'Block failed.')
     } finally {
       setSavingIp(false)
     }
   }
 
   const submitUserToggle = async (targetUser) => {
-    if (!targetUser) {
-      return
-    }
-
+    if (!targetUser) return
     setUserSavingId(targetUser.id)
     try {
       const endpoint = targetUser.isBlocked ? '/api/admin/unblock-user' : '/api/admin/block-user'
@@ -125,18 +108,14 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
       })
 
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not update user block state.')
-      }
+      if (!response.ok) throw new Error(payload?.error || 'Identity update failed.')
 
-      toast.success(targetUser.isBlocked ? 'User unblocked.' : 'User blocked.')
+      toast.success(targetUser.isBlocked ? 'Access restored.' : 'Access revoked.')
       await onChanged?.()
-      if (!targetUser.isBlocked) {
-        setUserDuration('permanent')
-      }
+      if (!targetUser.isBlocked) setUserDuration('permanent')
       setConfirmState(null)
     } catch (error) {
-      toast.error(error.message || 'Could not update user block state.')
+      toast.error(error.message || 'Update failed.')
     } finally {
       setUserSavingId('')
     }
@@ -144,209 +123,270 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
 
   const submitIpToggle = async (targetIp) => {
     if (!targetIp) return
-
     setSavingIp(true)
     try {
       const response = await fetch(`/api/admin/unblock-ip/${encodeURIComponent(targetIp)}`, {
         method: 'DELETE',
       })
       const payload = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(payload?.error || 'Could not unblock IP.')
-      }
+      if (!response.ok) throw new Error(payload?.error || 'Failed to unblock IP.')
 
-      toast.success('IP unblocked.')
+      toast.success('IP address unblocked.')
       await loadBlockedIps()
       setConfirmState(null)
     } catch (error) {
-      toast.error(error.message || 'Could not unblock IP.')
+      toast.error(error.message || 'Unblock failed.')
     } finally {
       setSavingIp(false)
     }
   }
 
-  const activeUsers = filteredUsers.filter((entry) => !entry.isBlocked)
-  const blockedUsers = filteredUsers.filter((entry) => entry.isBlocked)
+  const blockedUsersCount = users.filter(u => u.isBlocked).length
+  const activeUsersCount = users.length - blockedUsersCount
 
   return (
-    <div className="security-block-management">
-      <Card>
-        <CardHeader>
-          <CardTitle className="suspicious-title">
-            <Shield size={18} />
-            IP Management
-          </CardTitle>
-          <CardDescription>Block or unblock IP addresses that should not access the platform.</CardDescription>
-        </CardHeader>
-        <CardContent className="security-block-management__content">
-          <form className="security-block-form" onSubmit={submitIpBlock}>
-            <Input
-              value={ipInput}
-              onChange={(event) => setIpInput(event.target.value)}
-              placeholder="Enter IP address"
-              aria-label="IP address"
-            />
-            <Input
-              value={ipReason}
-              onChange={(event) => setIpReason(event.target.value)}
-              placeholder="Reason (optional)"
-              aria-label="Reason"
-            />
-            <label className="student-filter-control security-block-form__select">
-              <span>Duration</span>
-              <select className="ui-input" value={ipDuration} onChange={(event) => setIpDuration(event.target.value)} aria-label="Block duration">
-                <option value="permanent">Permanent</option>
-                <option value="15">15 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="240">4 hours</option>
-                <option value="1440">24 hours</option>
-                <option value="10080">7 days</option>
-              </select>
-            </label>
-            <Button type="submit" disabled={savingIp}>
-              <Ban size={14} />
-              {savingIp ? 'Blocking...' : ipDuration === 'permanent' ? 'Block IP' : 'Block Temporarily'}
-            </Button>
-          </form>
+    <div className="space-y-12">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Active IP Blocks"
+          value={blockedIps.length}
+          description="Network layer security"
+          icon={Shield}
+          color="primary"
+        />
+        <StatCard
+          label="Revoked Access"
+          value={blockedUsersCount}
+          description="User account restrictions"
+          icon={ShieldOff}
+          color="destructive"
+        />
+        <StatCard
+          label="Active Users"
+          value={activeUsersCount}
+          description="Authorized accounts"
+          icon={ShieldCheck}
+          color="success"
+        />
+        <StatCard
+          label="Unique IPs"
+          value={Array.from(new Set(users.map(u => u.lastIp))).filter(Boolean).length}
+          description="Distinct access points"
+          icon={Fingerprint}
+          color="secondary"
+        />
+      </div>
 
-          <div className="suspicious-summary">
-            <Badge variant="outline">{blockedIps.length} blocked IP(s)</Badge>
-            <Button type="button" variant="outline" onClick={loadBlockedIps} disabled={loadingIps}>
-              <RefreshCcw size={14} />
-              Refresh
-            </Button>
+      <div className="grid gap-8 lg:grid-cols-2">
+        <StandardCard className="p-0 overflow-hidden border-border/40 bg-background/50 backdrop-blur-sm">
+          <div className="p-6 border-b border-border/40 bg-muted/20 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">IP Restrictions</h3>
+              <p className="text-[10px] font-medium text-muted-foreground">Manage network level access</p>
+            </div>
+            <button
+              onClick={loadBlockedIps}
+              disabled={loadingIps}
+              className="text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+            >
+              <RefreshCcw size={14} className={cn(loadingIps && "animate-spin")} />
+            </button>
           </div>
 
-          <div className="security-block-scroll">
-            {loadingIps ? (
-              <p className="student-muted-text">Loading blocked IPs...</p>
-            ) : blockedIps.length === 0 ? (
-              <p className="student-muted-text">No IPs are currently blocked.</p>
-            ) : (
-              blockedIps.map((entry) => (
-                <div key={entry.id} className="security-block-row">
-                  <div>
-                    <strong>{entry.ipAddress}</strong>
-                    <p>{entry.reason || 'No reason provided.'}</p>
-                    <span>{formatDate(entry.blockedAt)}</span>
-                    {entry.expiresAt ? <span className="security-block-row__expires">Expires {formatDate(entry.expiresAt)}</span> : <span className="security-block-row__expires">Permanent block</span>}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setConfirmState({ kind: 'ip', mode: 'unblock', entry })}
-                  >
-                    Unblock
-                  </Button>
+          <div className="p-6 border-b border-border/40">
+            <form className="grid gap-4" onSubmit={submitIpBlock}>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground ml-1">IP Address</label>
+                  <input
+                    className="w-full h-10 px-4 rounded-xl border border-border/40 bg-background font-medium text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                    value={ipInput}
+                    onChange={(e) => setIpInput(e.target.value)}
+                    placeholder="e.g. 192.168.1.1"
+                  />
                 </div>
-              ))
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-medium text-muted-foreground ml-1">Duration</label>
+                  <select
+                    className="w-full h-10 px-4 rounded-xl border border-border/40 bg-background font-medium text-xs focus:ring-2 focus:ring-primary/20 transition-all"
+                    value={ipDuration}
+                    onChange={(e) => setIpDuration(e.target.value)}
+                  >
+                    <option value="permanent">Permanent Block</option>
+                    <option value="15">15 Minutes</option>
+                    <option value="60">1 Hour</option>
+                    <option value="240">4 Hours</option>
+                    <option value="1440">24 Hours</option>
+                    <option value="10080">7 Days</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-muted-foreground ml-1">Reason for block</label>
+                <input
+                  className="w-full h-10 px-4 rounded-xl border border-border/40 bg-background font-medium text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+                  value={ipReason}
+                  onChange={(e) => setIpReason(e.target.value)}
+                  placeholder="Reason for restriction..."
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={savingIp}
+                className="w-full h-10 bg-primary text-white font-semibold text-xs rounded-xl hover:bg-primary-strong transition-all flex items-center justify-center gap-2"
+              >
+                <Ban size={14} />
+                {savingIp ? 'Blocking...' : 'Block IP Address'}
+              </button>
+            </form>
+          </div>
+
+          <div className="max-h-[320px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
+            {loadingIps ? (
+              <div className="py-20 text-center text-xs font-medium text-muted-foreground/40 italic">Syncing IP logs...</div>
+            ) : blockedIps.length === 0 ? (
+              <div className="py-20 text-center text-xs font-medium text-muted-foreground/40 italic">No blocked IP addresses</div>
+            ) : (
+              <div className="space-y-2">
+                {blockedIps.map((entry) => (
+                  <div key={entry.id} className="p-3 rounded-xl border border-border/40 bg-muted/5 flex items-center justify-between hover:bg-muted/10 transition-colors">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold">{entry.ipAddress}</span>
+                        {entry.expiresAt ? (
+                          <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">Temporary</span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">Permanent</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-medium text-muted-foreground/60 truncate">{entry.reason || 'No reason provided'}</p>
+                    </div>
+                    <button
+                      onClick={() => setConfirmState({ kind: 'ip', mode: 'unblock', entry })}
+                      className="text-[10px] font-semibold px-3 py-1.5 rounded-lg border border-border/40 hover:bg-primary hover:text-white transition-all"
+                    >
+                      Unblock
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </StandardCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="suspicious-title">
-            <ShieldOff size={18} />
-            User Blocking
-          </CardTitle>
-          <CardDescription>Disable or re-enable specific user accounts. Protected admin accounts are hidden from blocking.</CardDescription>
-        </CardHeader>
-        <CardContent className="security-block-management__content">
-          <label className="student-filter-control student-filter-control--search">
-            <span>Search users</span>
-            <Input
-              value={userSearch}
-              onChange={(event) => setUserSearch(event.target.value)}
-              placeholder="Search by name, email, or role"
-              aria-label="Search users"
-            />
-          </label>
-
-          <div className="suspicious-summary">
-            <Badge variant="outline">{blockedUsers.length} blocked</Badge>
-            <Badge variant="outline">{activeUsers.length} active</Badge>
+        <StandardCard className="p-0 overflow-hidden border-border/40 bg-background/50 backdrop-blur-sm">
+          <div className="p-6 border-b border-border/40 bg-muted/20">
+            <h3 className="text-sm font-semibold">User Restrictions</h3>
+            <p className="text-[10px] font-medium text-muted-foreground">Manage account-level access</p>
           </div>
 
-          <label className="student-filter-control security-block-form__select">
-            <span>User block duration</span>
-            <select className="ui-input" value={userDuration} onChange={(event) => setUserDuration(event.target.value)} aria-label="User block duration">
-              <option value="permanent">Permanent</option>
-              <option value="15">15 minutes</option>
-              <option value="60">1 hour</option>
-              <option value="240">4 hours</option>
-              <option value="1440">24 hours</option>
-              <option value="10080">7 days</option>
-            </select>
-          </label>
+          <div className="p-6 border-b border-border/40 space-y-4">
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors h-4 w-4" size={16} />
+              <input
+                className="w-full h-10 pl-11 pr-4 rounded-xl border border-border/40 bg-background font-medium text-xs focus:ring-2 focus:ring-primary/20 transition-all"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Search name or email..."
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-medium text-muted-foreground ml-1">Default Suspension Duration</label>
+              <select
+                className="w-full h-10 px-4 rounded-xl border border-border/40 bg-background font-medium text-xs focus:ring-2 focus:ring-primary/20 transition-all"
+                value={userDuration}
+                onChange={(e) => setUserDuration(e.target.value)}
+              >
+                <option value="permanent">Permanent Lock</option>
+                <option value="15">15 Minutes</option>
+                <option value="60">1 Hour</option>
+                <option value="240">4 Hours</option>
+                <option value="1440">24 Hours</option>
+                <option value="10080">7 Days</option>
+              </select>
+            </div>
+          </div>
 
-          <div className="security-block-scroll">
+          <div className="max-h-[320px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
             {filteredUsers.length === 0 ? (
-              <p className="student-muted-text">No users matched your search.</p>
+              <div className="py-20 text-center text-xs font-medium text-muted-foreground/40 italic">No users found</div>
             ) : (
-              filteredUsers.map((entry) => {
-                const protectedUser = isProtectedAdminEmail(entry.email)
-                const blocked = Boolean(entry.isBlocked)
-                return (
-                  <div key={entry.id} className={`security-block-row ${blocked ? 'security-block-row--blocked' : ''}`}>
-                    <div>
-                      <strong>{entry.displayName || entry.email}</strong>
-                      <p>{entry.email}</p>
-                      <span>{entry.role || 'user'}</span>
-                      {blocked && entry.blockedExpiresAt ? <span className="security-block-row__expires">Expires {formatDate(entry.blockedExpiresAt)}</span> : null}
-                    </div>
-                    <div className="security-block-row__actions">
-                      {protectedUser ? (
-                        <Badge variant="outline">Protected</Badge>
-                      ) : (
-                        <>
-                          <Badge className={blocked ? 'suspicious-severity suspicious-severity--high' : 'suspicious-severity suspicious-severity--low'}>
-                            {blocked ? 'Blocked' : 'Active'}
-                          </Badge>
-                          <Button
-                            type="button"
-                            variant={blocked ? 'outline' : 'destructive'}
+              <div className="space-y-2">
+                {filteredUsers.map((entry) => {
+                  const protectedUser = isProtectedAdminEmail(entry.email)
+                  const blocked = Boolean(entry.isBlocked)
+                  return (
+                    <div key={entry.id} className={cn("p-3 rounded-xl border border-border/40 transition-all flex items-center justify-between", blocked ? "bg-destructive/5" : "bg-muted/5")}>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-semibold truncate">{entry.displayName || entry.email}</span>
+                          <span className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-tight px-2 rounded border border-border/40">{entry.role || 'USER'}</span>
+                        </div>
+                        <p className={cn("text-[9px] font-bold", blocked ? "text-destructive" : "text-emerald-500")}>
+                          {blocked ? 'Access Revoked' : 'Active Account'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {protectedUser ? (
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold text-primary px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5">
+                            <ShieldCheck size={12} />
+                            Protected
+                          </div>
+                        ) : (
+                          <button
                             onClick={() => setConfirmState({ kind: 'user', mode: blocked ? 'unblock' : 'block', entry })}
+                            className={cn(
+                              "text-[10px] font-semibold px-3 py-1.5 rounded-lg border transition-all",
+                              blocked ? "border-border/40 hover:bg-emerald-500 hover:text-white" : "border-destructive/20 text-destructive hover:bg-destructive hover:text-white"
+                            )}
                             disabled={userSavingId === entry.id}
                           >
-                            {userSavingId === entry.id ? 'Updating...' : blocked ? 'Unblock' : 'Block'}
-                          </Button>
-                        </>
-                      )}
+                            {userSavingId === entry.id ? 'Saving...' : blocked ? 'Unblock' : 'Block'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+              </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </StandardCard>
+      </div>
 
       <ConfirmDialog
         open={Boolean(confirmState)}
         onOpenChange={(open) => !open && setConfirmState(null)}
         title={
-          confirmState?.kind === 'ip'
-            ? `${confirmState.mode === 'unblock' ? 'Unblock' : 'Block'} IP`
-            : `${confirmState?.mode === 'unblock' ? 'Unblock' : 'Block'} User`
+          <div className="flex items-center gap-2">
+            <AlertTriangle className={cn(confirmState?.mode === 'block' ? "text-destructive" : "text-primary")} size={18} />
+            <span className="text-sm font-semibold">
+              {confirmState?.kind === 'ip' ? 'Network Security' : 'User Access Control'}
+            </span>
+          </div>
         }
         description={
-          confirmState?.kind === 'ip'
-            ? confirmState?.entry
-              ? `${confirmState.mode === 'unblock' ? 'Remove the block for' : 'Confirm block for'} IP ${confirmState.entry.ipAddress}.`
-              : ''
-            : confirmState?.entry
-              ? `${confirmState.mode === 'unblock' ? 'Remove the block for' : 'Confirm block for'} ${confirmState.entry.displayName || confirmState.entry.email}.`
-              : ''
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to {confirmState?.mode === 'unblock' ? 'restore' : 'revoke'} access for:
+            </p>
+            <div className="p-3 rounded-xl bg-muted/20 border border-border/40">
+              <span className="text-sm font-semibold">
+                {confirmState?.kind === 'ip' ? confirmState?.entry?.ipAddress : (confirmState?.entry?.displayName || confirmState?.entry?.email)}
+              </span>
+            </div>
+            {confirmState?.mode === 'block' && (
+              <p className="text-xs text-destructive/80 font-medium">
+                Warning: This action will immediately terminate all active sessions for this {confirmState?.kind === 'ip' ? 'IP address' : 'user account'}.
+              </p>
+            )}
+          </div>
         }
-        confirmLabel={confirmState?.mode === 'unblock' ? 'Unblock' : 'Block'}
+        confirmLabel={confirmState?.mode === 'unblock' ? 'Restore Access' : 'Revoke Access'}
         confirmVariant={confirmState?.mode === 'unblock' ? 'outline' : 'destructive'}
         isConfirming={savingIp || Boolean(userSavingId)}
         onConfirm={() => {
-          if (confirmState?.kind === 'ip') {
-            return submitIpToggle(confirmState.entry.ipAddress)
-          }
+          if (confirmState?.kind === 'ip') return submitIpToggle(confirmState.entry.ipAddress)
           return submitUserToggle(confirmState.entry)
         }}
       />

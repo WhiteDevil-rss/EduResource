@@ -13,7 +13,13 @@ export async function POST(request) {
     if (sessionCookie) {
       const session = await readSessionCookie(sessionCookie)
       if (session?.sid) {
-        await deleteSessionRecord(session.sid)
+        console.log(`[LOGOUT] Invalidating session SID: ${session.sid} for user: ${session.email}`)
+        const deleted = await deleteSessionRecord(session.sid)
+        if (!deleted) {
+          console.warn(`[LOGOUT] Warning: Failed to delete session record ${session.sid} from database.`)
+        }
+      } else {
+        console.warn('[LOGOUT] No SID found in session cookie payload.')
       }
 
       await logAction({
@@ -29,6 +35,8 @@ export async function POST(request) {
         status: 'SUCCESS',
         request,
       })
+    } else {
+      console.log('[LOGOUT] No active session cookie found during logout request.')
     }
 
     const response = withNoStore(NextResponse.json({ ok: true }))

@@ -22,6 +22,15 @@ export function useAutoLogout({
   const warnedRef = useRef(false);
   const logoutTriggeredRef = useRef(false);
   const lastPassiveActivityAtRef = useRef(0);
+  
+  // Use refs for callbacks and props that shouldn't trigger local re-schedulings
+  const onInactivityLogoutRef = useRef(onInactivityLogout);
+  const onSessionLogoutRef = useRef(onSessionLogout);
+
+  useEffect(() => {
+    onInactivityLogoutRef.current = onInactivityLogout;
+    onSessionLogoutRef.current = onSessionLogout;
+  }, [onInactivityLogout, onSessionLogout]);
 
   const [warningVisible, setWarningVisible] = useState(false);
   const [secondsUntilInactivityLogout, setSecondsUntilInactivityLogout] = useState(
@@ -62,8 +71,8 @@ export function useAutoLogout({
     logoutTriggeredRef.current = true;
     clearTimers();
     setWarningVisible(false);
-    await onInactivityLogout?.();
-  }, [clearTimers, enabled, onInactivityLogout]);
+    await onInactivityLogoutRef.current?.();
+  }, [clearTimers, enabled]);
 
   const triggerSessionLogout = useCallback(async () => {
     if (!enabled || logoutTriggeredRef.current) {
@@ -73,8 +82,8 @@ export function useAutoLogout({
     logoutTriggeredRef.current = true;
     clearTimers();
     setWarningVisible(false);
-    await onSessionLogout?.();
-  }, [clearTimers, enabled, onSessionLogout]);
+    await onSessionLogoutRef.current?.();
+  }, [clearTimers, enabled]);
 
   const scheduleInactivityTimers = useCallback(
     (fromTimestamp = Date.now()) => {
@@ -223,7 +232,7 @@ export function useAutoLogout({
       window.removeEventListener("pageshow", handleVisibilityOrFocus);
       clearTimers();
     };
-  }, [clearTimers, enabled, evaluateDeadlines, resetInactivityTimer, scheduleInactivityTimers, scheduleSessionTimer]);
+  }, [enabled, clearTimers, evaluateDeadlines, resetInactivityTimer, scheduleInactivityTimers, scheduleSessionTimer]);
 
   useEffect(() => {
     if (!enabled || !warningVisible) {

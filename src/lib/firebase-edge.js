@@ -1,3 +1,4 @@
+import 'server-only'
 import * as jose from 'jose'
 
 /**
@@ -50,18 +51,31 @@ function extractApiErrorMessage(payload, fallback) {
 function normalizePrivateKey(privateKey) {
   if (!privateKey) return privateKey
 
-  const trimmed = String(privateKey).trim()
-  const unquoted =
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-      ? trimmed.slice(1, -1)
-      : trimmed
+  // Handle various escaping scenarios: dual-slashes \\n, literal newlines, or double quotes
+  let normalized = String(privateKey).trim()
 
-  const normalized = unquoted.replace(/\\n/g, '\n').trim()
+  // Remove potential double/single quotes wrapping the entire key from env var injection
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1)
+  }
 
-  // Some deployments store the body only (base64) without PEM guards.
+  // Convert literal \\n to actual newlines
+  normalized = normalized.replace(/\\n/g, '\n')
+
+  // Handle double-escaped newlines (sometimes happening in specific CI/CD pipelines)
+  normalized = normalized.replace(/\\\\n/g, '\n')
+
+  // Remove any space after the markers and strictly trim
+  normalized = normalized.trim()
+
+  // Some deployments (like Cloudflare Dashboard secrets) might mangle PEM guards or wrap in quotes again.
+  // Ensure we have the standard PEM markers.
   if (!normalized.includes('BEGIN PRIVATE KEY') && !normalized.includes('END PRIVATE KEY')) {
     const compact = normalized.replace(/\s+/g, '')
+    // if it's likely a raw base64 body (usually ~1600+ chars)
     if (/^[A-Za-z0-9+/=]+$/.test(compact)) {
       const lines = compact.match(/.{1,64}/g) || [compact]
       return `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`
@@ -126,8 +140,21 @@ export async function verifyFirebaseIdToken(idToken) {
  */
 async function getGoogleAccessToken() {
   const { client_email, private_key } = SERVICE_ACCOUNT
-  if (!client_email || !private_key) {
-    throw new Error('Missing service account credentials (FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY)')
+  
+  // Diagnostic logs moved inside the handler to prevent boot-time crashes
+  // These will now properly show up in request-time logs.
+  if (!PROJECT_ID) {
+    console.error('[FIREBASE_EDGE] Config error: FIREBASE_PROJECT_ID is missing.')
+  }
+  if (!client_email) {
+    console.error('[FIREBASE_EDGE] Config error: FIREBASE_CLIENT_EMAIL is missing.')
+  }
+  if (!private_key) {
+    console.error('[FIREBASE_EDGE] Config error: FIREBASE_PRIVATE_KEY is missing.')
+  }
+
+  if (!client_email || !private_key || !PROJECT_ID) {
+    throw new Error('Privileged Firebase access is not configured. Check Cloudflare Dashboard -> Settings -> Functions -> Environment Variables.')
   }
 
   // Import private key for signing
@@ -246,7 +273,10 @@ function fromFirestore(fields) {
 function toFirestore(obj) {
   const fields = {}
   for (const [key, value] of Object.entries(obj)) {
-    if (value === null || value === undefined) continue
+    if (value === null || value === undefined) {
+      fields[key] = { nullValue: 'NULL_VALUE' }
+      continue
+    }
     
     if (typeof value === 'string') fields[key] = { stringValue: value }
     else if (typeof value === 'boolean') fields[key] = { booleanValue: value }
@@ -336,8 +366,30 @@ export const firestore = {
     return { id: data.name.split('/').pop(), ...fromFirestore(data.fields) }
   },
   
-  listDocs: async (collectionPath) => {
-    const data = await firestoreRequest('GET', collectionPath)
+  listDocs: async (collectionPath, options = {}) => {
+    const queryParams = new URLSearchParams()
+    const pageSize = Number(options?.pageSize || 0)
+    if (Number.isFinite(pageSize) && pageSize > 0) {
+      queryParams.set('pageSize', String(Math.min(1000, Math.max(1, Math.floor(pageSize)))))
+    }
+
+    if (options?.orderBy) {
+      queryParams.set('orderBy', String(options.orderBy))
+    }
+
+    const fieldMask = Array.isArray(options?.fieldMask) ? options.fieldMask : []
+    fieldMask
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+      .forEach((fieldPath) => {
+        queryParams.append('mask.fieldPaths', fieldPath)
+      })
+
+    const pathWithQuery = queryParams.toString()
+      ? `${collectionPath}?${queryParams.toString()}`
+      : collectionPath
+
+    const data = await firestoreRequest('GET', pathWithQuery)
     if (!data || !data.documents) return []
     return (data.documents).map(doc => ({
       id: doc.name.split('/').pop(),
@@ -378,9 +430,9 @@ export const firestore = {
   runQuery: async (collectionPath, filter) => {
     const token = await getGoogleAccessToken()
     const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`
-    
-    const [field, op, value] = filter // Simplified [field, op, value]
-    
+
+    const [field, op, value] = filter
+
     const query = {
       structuredQuery: {
         from: [{ collectionId: collectionPath }],
@@ -410,14 +462,81 @@ export const firestore = {
     }
 
     const results = await response.json()
-    // runQuery returns an array of { document: ... }
-    const first = (results || []).find(r => r.document)
+    const first = (results || []).find((entry) => entry.document)
     if (!first) return null
-    
-    return { 
-      id: first.document.name.split('/').pop(), 
-      ...fromFirestore(first.document.fields) 
+
+    return {
+      id: first.document.name.split('/').pop(),
+      ...fromFirestore(first.document.fields)
     }
+  },
+
+  /**
+   * Runs a structured query and returns up to `limit` matches.
+   */
+  runQueryMany: async (collectionPath, filter, limit = 10) => {
+    const token = await getGoogleAccessToken()
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`
+
+    const [field, op, value] = filter
+    const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 10))
+
+    let where = {}
+    if (Array.isArray(filter[0])) {
+      // Composite filter
+      where = {
+        compositeFilter: {
+          op: 'AND',
+          filters: filter.map(([field, op, value]) => ({
+            fieldFilter: {
+              field: { fieldPath: field },
+              op: op === '==' ? 'EQUAL' : op,
+              value: toFirestore({ v: value }).v
+            }
+          }))
+        }
+      }
+    } else {
+      // Single filter
+      const [field, op, value] = filter
+      where = {
+        fieldFilter: {
+          field: { fieldPath: field },
+          op: op === '==' ? 'EQUAL' : op,
+          value: toFirestore({ v: value }).v
+        }
+      }
+    }
+
+    const query = {
+      structuredQuery: {
+        from: [{ collectionId: collectionPath }],
+        where,
+        limit: safeLimit
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(query)
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Firestore Query Error: ${error.error?.message || response.statusText}`)
+    }
+
+    const results = await response.json()
+    return (results || [])
+      .filter((entry) => entry?.document)
+      .map((entry) => ({
+        id: entry.document.name.split('/').pop(),
+        ...fromFirestore(entry.document.fields)
+      }))
   },
 
   /**
