@@ -222,7 +222,7 @@ export default function LandingPage() {
                   <p className="text-xl font-black uppercase tracking-[0.4em] text-primary md:text-3xl lg:text-4xl">
                     SPS Educationam
                   </p>
-                  <h1 className="text-balance text-5xl font-black leading-[1.1] md:text-7xl lg:text-8xl tracking-tight">
+                  <h1 className="text-balance text-4xl font-black leading-[1.1] md:text-6xl lg:text-7xl tracking-tight">
                     Premier coaching classes for{' '}
                     <span className="bg-gradient-to-r from-primary via-primary/80 to-secondary bg-clip-text text-transparent">
                       academic excellence.
