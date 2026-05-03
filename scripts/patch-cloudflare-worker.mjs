@@ -217,9 +217,29 @@ globalThis.require = (name) => {
     console.log(`Bundled worker saved to: ${destPath}`);
 
     // FINAL DEFUSE: Surgical String Patching the final bundle
-    console.log('Post-Processing: Defusing illegal namespace mutations in the final bundle...');
+    console.log('Post-Processing: Defusing illegal namespace mutations and fixing handler structures...');
     let finalBundle = readFileSync(destPath, 'utf-8');
     
+    // FIX 1: ComponentMod.handler is not a function resilience
+    // This happens in Next 15/16 when handlers are nested differently during bundling.
+    if (finalBundle.includes('components.ComponentMod.handler')) {
+        console.log('Applying Resilience Patch: Fixing ComponentMod.handler structure...');
+        finalBundle = finalBundle.replace(
+            /components\.ComponentMod\.handler/g, 
+            '(components.ComponentMod.handler || (components.ComponentMod.default && typeof components.ComponentMod.default.handler === "function" ? components.ComponentMod.default.handler : components.ComponentMod.default))'
+        );
+    }
+
+    // FIX 2: General handler invocation resilience
+    // Ensures that even if the top-level handler is wrapped, we can still find the callable function.
+    if (finalBundle.includes('return handler(')) {
+        console.log('Applying Resilience Patch: Normalizing handler call site...');
+        finalBundle = finalBundle.replace(
+            /return handler\(/g,
+            'const _targetHandler = (typeof handler === "function" ? handler : (handler.default || handler));\nreturn _targetHandler('
+        );
+    }
+
     // We replace specific mutation targets with innocuous dummy property writes.
     // This circumvents "Cannot set property ... which has only a getter" on Edge.
     const mutations = [
@@ -232,7 +252,7 @@ globalThis.require = (name) => {
         finalBundle = finalBundle.replace(m, 'globalThis.___defused_mutation =');
     });
     
-    console.log('Applied surgical patches to defuse frozen module TypeErrors.');
+    console.log('Applied surgical patches to defuse frozen module TypeErrors and handler structure issues.');
     writeFileSync(destPath, finalBundle);
 
     console.log('Worker deeply patched, bundled, and sanitized successfully.');
