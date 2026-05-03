@@ -129,7 +129,7 @@ export async function POST(request) {
         module: 'Auth',
         status: 'FAILED',
         request,
-      }).catch(() => {})
+      }).catch(() => { })
       return withNoStore(
         NextResponse.json(
           { error: 'Email/login ID and password are required.' },
@@ -220,7 +220,7 @@ export async function POST(request) {
           module: 'Auth',
           status: 'FAILED',
           request,
-        }).catch(() => {})
+        }).catch(() => { })
         return withNoStore(
           NextResponse.json(
             { error: 'Login directory lookup failed. Please try again in a moment.' },
@@ -264,7 +264,7 @@ export async function POST(request) {
           module: 'Auth',
           status: 'FAILED',
           request,
-        }).catch(() => {})
+        }).catch(() => { })
         return withNoStore(
           NextResponse.json(
             { error: 'Invalid login ID or password.' },
@@ -291,7 +291,7 @@ export async function POST(request) {
           module: 'Auth',
           status: 'FAILED',
           request,
-        }).catch(() => {})
+        }).catch(() => { })
         return withNoStore(
           NextResponse.json({ error: 'This account is currently disabled.' }, { status: 403 })
         )
@@ -344,7 +344,7 @@ export async function POST(request) {
           module: 'Auth',
           status: 'FAILED',
           request,
-        }).catch(() => {})
+        }).catch(() => { })
         return withNoStore(
           NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
         )
@@ -412,7 +412,7 @@ export async function POST(request) {
         module: 'Auth',
         status: 'FAILED',
         request,
-      }).catch(() => {})
+      }).catch(() => { })
       return withNoStore(
         NextResponse.json(
           { error: 'Students must sign in using the Google Student Portal.' },
@@ -478,7 +478,7 @@ export async function POST(request) {
         request,
         targetId: result.uid,
         targetRole: effectiveUser.role,
-      }).catch(() => {})
+      }).catch(() => { })
 
       return withNoStore(
         NextResponse.json(
@@ -540,13 +540,9 @@ export async function POST(request) {
       }
 
       // Do not block successful credential auth when persistence is unavailable or slow.
-      console.warn(`Post-login persistence failed: ${message || error}`)
+
     }
     timer.markPhase('session-creation')
-
-    if (sessionRegistryCreated) {
-      console.log(`[AUTH] Session registered successfully. SID: ${sessionId}`)
-    }
 
     const sessionCookie = await createSessionCookie({
       ...(sessionRegistryCreated ? { sid: sessionId } : {}),
@@ -602,7 +598,7 @@ export async function POST(request) {
       request,
       targetId: result.uid,
       targetRole: effectiveUser.role,
-    }).catch(() => {})
+    }).catch(() => { })
 
     timer.markPhase('response-complete')
     response.headers.set('X-Request-Timing-Ms', String(timer.getTotalDuration()))
@@ -654,7 +650,7 @@ export async function POST(request) {
       status: 'FAILED',
       request,
       metadata: { reason: String(error?.message || 'Unknown error') },
-    }).catch(() => {})
+    }).catch(() => { })
 
     return withNoStore(
       NextResponse.json(

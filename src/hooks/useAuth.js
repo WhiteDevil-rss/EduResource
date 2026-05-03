@@ -51,11 +51,7 @@ async function fetchSessionSnapshot() {
     }
 
     const payload = await response.json().catch(() => ({}));
-    console.log('[AUTH] API session snapshot:', {
-      uid: payload?.user?.uid || payload?.user?.id,
-      role: payload?.role,
-      status: payload?.status
-    });
+
     return {
       user: payload?.user || null,
       role: payload?.role || null,
@@ -148,11 +144,7 @@ export function AuthProvider({ children }) {
         }
       : null;
 
-    console.log('[AUTH] Applying session:', {
-      hasUser: !!nextUser,
-      role: normalizedRole,
-      status: normalizedStatus
-    });
+
 
     setUser(nextUser);
     setRole(normalizedRole);
@@ -420,8 +412,8 @@ export function AuthProvider({ children }) {
 
     try {
       window.sessionStorage.clear();
-    } catch (error) {
-      console.warn("Session storage cleanup failed during logout.", error);
+    } catch (_) {
+      // ignore
     }
 
     try {
@@ -439,8 +431,8 @@ export function AuthProvider({ children }) {
       }
 
       keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-    } catch (error) {
-      console.warn("Local storage cleanup failed during logout.", error);
+    } catch (_) {
+      // ignore
     }
 
     try {
@@ -451,8 +443,8 @@ export function AuthProvider({ children }) {
         }
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
       });
-    } catch (error) {
-      console.warn("Cookie cleanup failed during logout.", error);
+    } catch (_) {
+      // ignore
     }
   };
 
@@ -472,8 +464,8 @@ export function AuthProvider({ children }) {
         const { signOut } = await getAuthUtils();
         await signOut(authInstance).catch(() => {});
       }
-    } catch (err) {
-      console.warn('[AUTH] Handled safe logout:', err);
+    } catch (_) {
+      // ignore
     } finally {
       applySession({ user: null, role: null, status: null, authProvider: null });
       clearSessionStart();

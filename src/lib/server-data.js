@@ -433,9 +433,7 @@ export async function deleteUserAndData(userId) {
   await firestore.deleteDoc(`${USERS_COLLECTION}/${userId}`).catch(() => null)
   
   // 2. Delete from Auth (requires privileged access)
-  await auth.deleteUser(userId).catch((err) => {
-    console.warn(`Auth deletion failed for ${userId}:`, err?.message || err)
-  })
+  await auth.deleteUser(userId).catch(() => {})
 
   // 3. Mark as deleted in audit log
   await createAuditRecord({
@@ -546,8 +544,8 @@ async function syncExpiredUserBlock(docId, data) {
       await auth.updateUser(updated.uid, {
         disabled: String(updated.status || '').toLowerCase() === 'disabled',
       })
-    } catch (error) {
-      console.warn('Firebase Auth block expiry sync warning:', error?.message || error)
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -729,8 +727,8 @@ async function updateUserBlockedState({ userId, isBlocked, actor, reason = '', e
       await auth.updateUser(record.data.uid, {
         disabled: Boolean(isBlocked) || record.data.status === 'disabled',
       })
-    } catch (error) {
-      console.warn('Firebase Auth blocked status sync warning:', error?.message || error)
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -2239,7 +2237,7 @@ async function listSessionRecords() {
 
     return activeRecords
   } catch (error) {
-    console.warn(`[SERVER_DATA] listSessionRecords failed: ${error.message || error}`)
+
     return []
   }
 }
@@ -2288,7 +2286,7 @@ export async function listActiveSessionRecordsByUser(uid) {
 
     return sanitized.filter(isActiveSessionRecord)
   } catch (error) {
-    console.warn(`[SERVER_DATA] listActiveSessionRecordsByUser (${normalizedUid}) primary query failed:`, error.message || error)
+
     try {
       // Fallback to full list scan if query is unavailable (e.g. index missing or resource limit)
       const records = await listSessionRecords()
@@ -2407,8 +2405,8 @@ export async function createAuditRecord({
       createdAt,
     })
   } catch (error) {
-    console.warn('Audit log warning:', error?.message || error)
-  }
+      // ignore
+    }
 }
 
 export async function getSessionSettingsRecord() {
@@ -2648,8 +2646,8 @@ export async function setManagedUserStatus({ userId, nextStatus, actorUid, actor
       await auth.updateUser(updated.uid, {
         disabled: normalizedStatus !== 'active' || Boolean(record.isBlocked),
       })
-    } catch (error) {
-      console.warn('Firebase Auth status sync warning:', error?.message || error)
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -2964,7 +2962,7 @@ export async function createResourceRecord({ session, payload }) {
       session
     )
   } catch (error) {
-    console.warn('Notification fan-out warning:', error?.message || error)
+    // ignore
   }
 
   return sanitizeResourceData(docRef.id, {
@@ -3118,8 +3116,8 @@ export async function deleteManagedUser({ userId, actorUid, actorRole }) {
   if (record.data.uid) {
     try {
       await auth.deleteUser(record.data.uid)
-    } catch (error) {
-      console.warn('Firebase Auth deletion warning:', error?.message || error)
+    } catch (_) {
+
       // We continue even if auth deletion fails (e.g. if user was only in Firestore)
     }
   }

@@ -49,7 +49,7 @@ export default function AdminLayout({ children }) {
       if (pathname === target || redirectingToRef.current === target) {
         return
       }
-      console.warn(`[AUTH] AdminLayout: Redirecting to ${target}`);
+
       redirectingToRef.current = target
       router.replace(target)
     }

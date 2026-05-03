@@ -72,7 +72,7 @@ export default function Login() {
         return
       }
       
-      console.log(`[AUTH] Login page auto-redirect: session confirmed, navigating to ${target}`);
+
       redirectingToRef.current = target
       
       // Immediate browser-level redirection for maximum performance

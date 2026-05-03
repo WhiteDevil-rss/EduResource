@@ -163,8 +163,8 @@ export default function AdminResourcesPage() {
                   key={entry.id}
                   resource={entry}
                   isAdmin
-                  onDelete={() => console.log('Delete logic preserved')}
-                  onEdit={() => console.log('Edit logic preserved')}
+                  onDelete={() => {}}
+                  onEdit={() => {}}
                 />
               ))}
             </GridContainer>

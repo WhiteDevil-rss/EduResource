@@ -67,7 +67,7 @@ export default function PublicHeader({
       threshold: 0
     }
 
-    const observer = new IntersectionObserver((entries) => {
+    const observer = new window.IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting && entry.intersectionRatio > 0) {
           setActiveSection(entry.target.id)

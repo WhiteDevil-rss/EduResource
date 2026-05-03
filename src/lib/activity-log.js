@@ -17,7 +17,7 @@ export async function logActivity({
   metadata = null,
 }) {
   if (!action) {
-    console.warn('logActivity: action is required')
+
     return null
   }
 

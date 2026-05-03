@@ -47,11 +47,5 @@ export class RequestTimer {
     }
   }
 
-  logReport() {
-    const report = this.getReport()
-    console.info(`[${report.name}] ${report.totalMs}ms total`)
-    Object.entries(report.phases).forEach(([phase, data]) => {
-      console.info(`  ${phase}: ${data.duration}ms (elapsed: ${data.elapsed}ms)`)
-    })
-  }
+  logReport() {}
 }

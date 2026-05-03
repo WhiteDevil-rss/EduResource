@@ -40,7 +40,7 @@ export async function POST(request) {
       const result = await signInWithPassword(user.email, currentPassword)
       idToken = result.idToken
     } catch {
-      console.warn(`Password verification failed for user: ${user.email}`)
+
       return withNoStore(NextResponse.json(
         { error: 'The current password you entered is incorrect.' },
         { status: 403 }
@@ -53,8 +53,6 @@ export async function POST(request) {
     }
 
     await updateFirebasePassword(idToken, newPassword)
-
-    console.log(`Password successfully updated for user: ${user.email}`)
 
     return withNoStore(NextResponse.json({
       message: 'Password updated successfully.',

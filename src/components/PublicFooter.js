@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Globe, Camera, YouTube, Mail, ShieldCheck, ChevronRight, MapPin, Phone, MessageCircle as WhatsAppIcon } from 'lucide-react'
+import { Globe, Camera, MessageCircle, PlayCircle, ShieldCheck, ChevronRight, MapPin, Phone, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 
@@ -13,9 +13,9 @@ const COMPANY_SOCIALS = [
     external: true,
   },
   {
-    label: 'WhatsApp',
+    label: 'Whatsapp',
     href: 'https://whatsapp.com/channel/0029VbC36593bbV5xSG6gE1W',
-    icon: WhatsAppIcon,
+    icon: MessageCircle,
     external: true,
   },
   {
@@ -27,7 +27,7 @@ const COMPANY_SOCIALS = [
   {
     label: 'YouTube',
     href: 'https://www.youtube.com/@spseducationam',
-    icon: YouTube,
+    icon: PlayCircle,
     external: true,
   },
 ]

@@ -481,7 +481,7 @@ export const firestore = {
     const [field, op, value] = filter
     const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 10))
 
-    let where = {}
+    let where
     if (Array.isArray(filter[0])) {
       // Composite filter
       where = {

@@ -69,7 +69,7 @@ export async function POST(request) {
         )
       }
 
-      console.warn(`Post-2FA persistence failed: ${message || error}`)
+
     }
 
     await detectNewDeviceAndAlert({

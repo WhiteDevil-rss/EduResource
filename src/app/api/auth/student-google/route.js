@@ -131,7 +131,7 @@ export async function POST(request) {
         )
       }
 
-      console.warn(`Session registry update failed: ${message || error}`)
+
     }
 
     const sessionCookie = await createSessionCookie({
