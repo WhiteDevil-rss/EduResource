@@ -108,7 +108,7 @@ function persistDownloads(downloads) {
       window.localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(downloads))
     }
   } catch (err) {
-    console.error('Persistence error:', err)
+    // Silent
   }
 }
 
@@ -193,7 +193,7 @@ export default function StudentDashboard() {
           setUnreadCount(Number(payload?.unreadCount || 0))
         }
       } catch (err) {
-        if (err.name !== 'AbortError') console.error('Engagement sync error:', err)
+        // Silent
       }
     }
     loadExtra()
@@ -268,7 +268,7 @@ export default function StudentDashboard() {
         body: JSON.stringify({ action: 'read-all' }),
       })
       if (response.ok) {
-        const payload = await response.json()
+        const payload = await response.json().catch(() => ({}))
         setNotifications(payload.notifications || [])
         setUnreadCount(Number(payload.unreadCount || 0))
         toast.success('Notifications cleared')
@@ -313,7 +313,7 @@ export default function StudentDashboard() {
         setTargetReviews(payload.reviews || [])
       }
     } catch (err) {
-      console.error('Failed to load reviews:', err)
+      // Silent error
     } finally {
       setReviewsLoading(false)
     }

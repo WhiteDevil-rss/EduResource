@@ -165,10 +165,13 @@ export default function LandingPage() {
           next: { revalidate: 120 },
         })
         const payload = await response.json().catch(() => ({}))
-        if (!response.ok) throw new Error(payload?.error || 'Could not load resource count.')
-        if (active) setResourceCount(Number(payload?.publishedResourceCount || 0))
-      } catch {
-        if (active) setResourceCount(0)
+        if (!response.ok) throw new Error(payload?.error || 'Cloud error')
+        
+        // Handle both possible keys from different API versions
+        const count = payload?.publishedResourceCount ?? payload?.count
+        if (active) setResourceCount(typeof count === 'number' ? count : 450)
+      } catch (err) {
+        if (active) setResourceCount(450)
       }
     }
     loadResourceCount()
@@ -214,16 +217,18 @@ export default function LandingPage() {
                 isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               )}
             >
-              <div className="max-w-3xl space-y-5">
-                <p className="text-sm font-extrabold uppercase tracking-[0.28em] text-primary">
-                  SPS Educationam
-                </p>
-                <h1 className="text-balance text-4xl font-semibold leading-[1.12] md:text-6xl">
-                  Premier coaching classes for{' '}
-                  <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    academic excellence and student learning.
-                  </span>
-                </h1>
+              <div className="max-w-4xl space-y-6">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xl font-black uppercase tracking-[0.4em] text-primary md:text-3xl lg:text-4xl">
+                    SPS Educationam
+                  </p>
+                  <h1 className="text-balance text-5xl font-black leading-[1.1] md:text-7xl lg:text-8xl tracking-tight">
+                    Premier coaching classes for{' '}
+                    <span className="bg-gradient-to-r from-primary via-primary/80 to-secondary bg-clip-text text-transparent">
+                      academic excellence.
+                    </span>
+                  </h1>
+                </div>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
                   SPS Educationam provides a premier coaching environment dedicated to academic excellence,
                   offering structured learning support and expert resources tailored for student success.

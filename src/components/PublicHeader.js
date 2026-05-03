@@ -63,8 +63,8 @@ export default function PublicHeader({
     
     const observerOptions = {
       root: null,
-      rootMargin: '-20% 0px -75% 0px', // Detect when section is in the top 20% of the viewport
-      threshold: 0
+      rootMargin: '-80px 0px -50% 0px', // Detect when section is in the top half of the viewport
+      threshold: [0, 0.1]
     }
 
     const observer = new window.IntersectionObserver((entries) => {
@@ -214,20 +214,22 @@ export default function PublicHeader({
                       : "text-foreground active:bg-muted"
                   )}
                   onClick={(e) => {
-                    if (isSectionLink) {
+                    const isSectionLink = link.href.includes('#')
+                    const sectionId = isSectionLink ? link.href.split('#')[1] : null
+
+                    if (isSectionLink && pathname === '/') {
                       const element = document.getElementById(sectionId)
                       if (element) {
                         e.preventDefault()
                         setActiveSection(sectionId)
                         closeMenu()
+                        
                         const top = element.getBoundingClientRect().top + window.pageYOffset - 80
                         window.scrollTo({ top, behavior: 'smooth' })
-                      } else {
-                        closeMenu()
+                        return
                       }
-                    } else {
-                      closeMenu()
                     }
+                    closeMenu()
                   }}
                   style={{ transitionDelay: `${i * 50}ms` }}
                 >

@@ -115,7 +115,6 @@ export default function Login() {
           await loginWithGoogle(idToken)
         }
       } catch (error) {
-        console.error('[AUTH] Redirect result check failed:', error)
         setFormError(error.message || 'Google sign-in failed.')
       }
     }

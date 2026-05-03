@@ -1,3 +1,4 @@
+// Public maintenance status endpoint
 import { NextResponse } from 'next/server'
 import { firestore } from '@/lib/firebase-edge'
 import { getSessionFromRequest } from '@/lib/api-security'

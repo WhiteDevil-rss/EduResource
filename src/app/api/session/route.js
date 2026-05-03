@@ -1,3 +1,4 @@
+// Session info endpoint
 import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth-server'
 import { withNoStore } from '@/lib/api-security'

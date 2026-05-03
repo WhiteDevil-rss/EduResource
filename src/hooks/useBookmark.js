@@ -48,11 +48,19 @@ export function useBookmark() {
       const nextBookmarks = Array.isArray(payload?.bookmarks) ? payload.bookmarks : []
       setBookmarks(nextBookmarks)
 
-      toast.success(payload?.bookmarked ? 'Saved to favorites.' : 'Removed from favorites.')
-      return { bookmarked: Boolean(payload?.bookmarked) }
+      const isNowBookmarked = Boolean(payload?.bookmarked)
+      toast.success(isNowBookmarked ? 'Saved to library' : 'Removed from library')
+      
+      return { 
+        success: true, 
+        bookmarked: isNowBookmarked 
+      }
     } catch (error) {
       toast.error(error.message || 'Could not update bookmark.')
-      return { bookmarked: bookmarkSet.has(id) }
+      return { 
+        success: false, 
+        bookmarked: bookmarkSet.has(id) 
+      }
     } finally {
       setSaving(false)
     }

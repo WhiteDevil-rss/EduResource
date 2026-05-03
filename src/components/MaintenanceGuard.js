@@ -34,18 +34,32 @@ export default function MaintenanceGuard({ children }) {
     const checkMaintenance = async () => {
       try {
         const response = await fetch('/api/system/maintenance', { cache: 'no-store' })
-        const data = await response.json()
+        
+        // Handle non-JSON or error responses gracefully
+        if (!response.ok) {
+          // If we're in dev, log the failure to help debugging
+          if (process.env.NODE_ENV === 'development') {
+            console.error(`[MaintenanceGuard] API returned ${response.status} for /api/system/maintenance`);
+          }
+          if (mounted) setLoading(false);
+          return;
+        }
+
+        const data = await response.json().catch(() => ({}));
         
         if (mounted) {
           setMaintenance(data)
           
           // If maintenance is enabled and user is NOT allowed, redirect to /maintenance
-          if (data.enabled && !data.isAllowed) {
+          if (data?.enabled && !data?.isAllowed) {
             router.push('/maintenance')
           }
         }
       } catch (error) {
-        console.error('Failed to check maintenance status:', error)
+        // Log error in development for diagnosis
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[MaintenanceGuard] Failed to check maintenance status:', error);
+        }
       } finally {
         if (mounted) {
           setLoading(false)
