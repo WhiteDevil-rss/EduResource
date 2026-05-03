@@ -115,6 +115,21 @@ import * as _util from "node:util";
 import * as _module from "node:module";
 import * as _zlib from "node:zlib";
 
+// Build a comprehensive 'module' stub that satisfies Next.js's require-hook.js
+// which calls: require('module').prototype.require and Module._resolveFilename
+const _moduleStub = Object.assign({}, _module, {
+  prototype: {
+    require: (id) => globalThis.require(id),
+    ...(_module.prototype || {}),
+  },
+  _resolveFilename: (request) => request,
+  _resolveFilenameSync: (request) => request,
+  _cache: {},
+  _extensions: {},
+  builtinModules: _module.builtinModules || [],
+  createRequire: _module.createRequire || ((url) => globalThis.require),
+});
+
 const _node_modules = {
   "async_hooks": _async_hooks,
   "node:async_hooks": _async_hooks,
@@ -147,11 +162,12 @@ const _node_modules = {
   "node:url": _url,
   "util": _util,
   "node:util": _util,
-  "module": _module,
-  "node:module": _module,
+  "module": _moduleStub,
+  "node:module": _moduleStub,
   "zlib": _zlib,
   "node:zlib": _zlib
 };
+
 
 globalThis.require = (name) => {
   // Normalize name by removing node: prefix for lookup if needed
