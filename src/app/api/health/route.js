@@ -20,8 +20,10 @@ export async function GET() {
     firebaseApiKeySet &&
     (envStatus.NODE_ENV === 'production' || envStatus.NODE_ENV === 'development')
   
+  const isProduction = process.env.NODE_ENV === 'production'
+  
   return NextResponse.json({
     status: allSet ? 'ok' : 'missing_vars',
-    config: envStatus
+    ...(isProduction ? {} : { config: envStatus })
   })
 }
