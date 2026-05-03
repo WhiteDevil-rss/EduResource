@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Globe, Camera, Building2, Mail, ShieldCheck, ChevronRight, MapPin, Phone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/cn'
 
 const COMPANY_SOCIALS = [
   {
