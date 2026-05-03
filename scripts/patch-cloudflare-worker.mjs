@@ -229,18 +229,19 @@ globalThis.global = global;
     console.log('Post-Processing: Defusing illegal namespace mutations and fixing handler structures...');
     let finalBundle = readFileSync(destPath, 'utf-8');
     
-    // FIX 1: ComponentMod.handler is not a function resilience
-    // This happens in Next 15/16 when handlers are nested differently during bundling.
-    if (finalBundle.includes('components.ComponentMod.handler')) {
-        console.log('Applying Resilience Patch: Fixing ComponentMod.handler structure...');
-        finalBundle = finalBundle.replace(
-            /components\.ComponentMod\.handler/g, 
-            '(components.ComponentMod.handler || (components.ComponentMod.default && typeof components.ComponentMod.default.handler === "function" ? components.ComponentMod.default.handler : components.ComponentMod.default))'
-        );
-    }
+    // FIX 1: Defuse Turbopack's 'module.require' crash by forcing globalThis lookup
+    console.log('Applying Resilience Patch: Defusing module.require...');
+    finalBundle = finalBundle.replace(/module\.require\(/g, 'globalThis.require(');
+    
+    // FIX 2: ComponentMod.handler resilience
+    // This patch ensures we always find the callable handler even if nested by Next.js 16
+    console.log('Applying Resilience Patch: Fixing ComponentMod.handler structure...');
+    finalBundle = finalBundle.replace(
+      /ComponentMod\.handler\(/g,
+      '(typeof ComponentMod.handler === "function" ? ComponentMod.handler : (ComponentMod.default && typeof ComponentMod.default.handler === "function" ? ComponentMod.default.handler : ComponentMod.handler))('
+    );
 
-    // FIX 2: General handler invocation resilience
-    // Ensures that even if the top-level handler is wrapped, we can still find the callable function.
+    // FIX 3: General handler invocation resilience
     if (finalBundle.includes('return handler(')) {
         console.log('Applying Resilience Patch: Normalizing handler call site...');
         finalBundle = finalBundle.replace(
@@ -249,8 +250,7 @@ globalThis.global = global;
         );
     }
 
-    // We replace specific mutation targets with innocuous dummy property writes.
-    // This circumvents "Cannot set property ... which has only a getter" on Edge.
+    // FIX 4: Defuse illegal namespace mutations
     const mutations = [
         /nodeTimers[a-zA-Z]*\.setImmediate\s*=/g,
         /nodeTimers[a-zA-Z]*\.clearImmediate\s*=/g,
@@ -261,7 +261,7 @@ globalThis.global = global;
         finalBundle = finalBundle.replace(m, 'globalThis.___defused_mutation =');
     });
     
-    console.log('Applied surgical patches to defuse frozen module TypeErrors and handler structure issues.');
+    console.log('✅ Applied all surgical patches to defuse TypeErrors and handler structure issues.');
     writeFileSync(destPath, finalBundle);
 
     console.log('Worker deeply patched, bundled, and sanitized successfully.');
