@@ -1,11 +1,12 @@
 export function getPublicHeaderContent(pathname = '/') {
   const currentPath = String(pathname || '/')
+  const isHomePage = currentPath === '/'
 
   return {
     links: [
-      { label: 'Home', href: '/', current: currentPath === '/' },
-      { label: 'Features', href: '/#features' },
-      { label: 'Team', href: '/#team' },
+      { label: 'Home', href: isHomePage ? '#hero' : '/', current: isHomePage },
+      { label: 'Features', href: isHomePage ? '#features' : '/#features' },
+      { label: 'Team', href: isHomePage ? '#team' : '/#team' },
     ],
     actions: [
       { label: 'Sign In', href: '/login', variant: 'ghost', current: currentPath === '/login' },

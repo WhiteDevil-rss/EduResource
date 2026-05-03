@@ -24,18 +24,30 @@ export const getFirebaseAuth = async () => {
   if (typeof window === 'undefined') return null;
   
   try {
-    // If for some reason app wasn't initialized (e.g. error in module scope), try again
+    const { initializeApp: initApp, getApps: getAppsList } = await import("firebase/app");
+    const apps = getAppsList();
+    
+    if (apps.length === 0) {
+      app = initApp(firebaseConfig);
+    } else {
+      app = apps[0];
+    }
+    
     if (!app) {
-      const { initializeApp: initApp, getApps: getAppsList } = await import("firebase/app");
-      const apps = getAppsList();
-      app = apps.length === 0 ? initApp(firebaseConfig) : apps[0];
+      throw new Error("Failed to initialize Firebase app instance.");
     }
     
     const { getAuth } = await import('firebase/auth');
     return getAuth(app);
   } catch (error) {
     console.error('[FIREBASE] Auth initialization failed:', error);
-    return null;
+    // If it fails, try to return the default auth instance as a last resort
+    try {
+      const { getAuth } = await import('firebase/auth');
+      return getAuth();
+    } catch (innerError) {
+      return null;
+    }
   }
 };
 

@@ -17,8 +17,15 @@ export default function MaintenanceGuard({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Don't guard the maintenance page or API routes
-    if (pathname === '/maintenance' || pathname.startsWith('/api/')) {
+    // Don't guard the maintenance page, API routes, or SEO files
+    const isExcluded = 
+      pathname === '/maintenance' || 
+      pathname.startsWith('/api/') ||
+      pathname === '/sitemap.xml' ||
+      pathname === '/robots.txt' ||
+      pathname === '/favicon.ico'
+
+    if (isExcluded) {
       setLoading(false)
       return
     }

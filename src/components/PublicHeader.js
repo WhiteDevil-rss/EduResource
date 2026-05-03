@@ -63,13 +63,13 @@ export default function PublicHeader({
     
     const observerOptions = {
       root: null,
-      rootMargin: '-20% 0px -70% 0px', // Trigger when section is in top-middle of viewport
+      rootMargin: '-15% 0px -65% 0px', // Precise slice near the top
       threshold: 0
     }
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && entry.intersectionRatio > 0) {
           setActiveSection(entry.target.id)
         }
       })
@@ -176,7 +176,7 @@ export default function PublicHeader({
               onClick={() => setMenuOpen((open) => !open)}
               aria-label="Toggle menu"
             >
-              {menuOpen ? <X size={28} /> : <Menu size={28} />}
+              {menuOpen ? <X size={32} /> : <Menu size={32} />}
             </Button>
           </div>
         </div>
@@ -185,7 +185,7 @@ export default function PublicHeader({
       {/* Mobile Menu Overlay */}
       <div
         className={cn(
-          'fixed inset-0 z-40 flex flex-col bg-background/98 backdrop-blur-2xl transition-all duration-500 lg:hidden',
+          'fixed inset-0 z-40 flex flex-col bg-background/99 backdrop-blur-3xl transition-all duration-500 lg:hidden shadow-2xl',
           menuOpen ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible pointer-events-none'
         )}
       >

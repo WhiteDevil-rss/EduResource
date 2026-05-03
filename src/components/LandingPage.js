@@ -206,7 +206,7 @@ export default function LandingPage() {
       <main className="overflow-x-hidden">
 
         {/* ── HERO ─────────────────────────────────── */}
-        <section className="relative overflow-hidden px-4 pb-20 pt-4 md:pb-28 md:pt-8" ref={heroRef}>
+        <section id="hero" className="relative overflow-hidden px-4 pb-20 pt-4 md:pb-28 md:pt-8" ref={heroRef}>
           {/* Multi-layer background mesh */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(99,102,241,0.22),transparent_32%),radial-gradient(ellipse_at_80%_15%,rgba(45,212,191,0.16),transparent_28%),radial-gradient(ellipse_at_50%_85%,rgba(168,85,247,0.14),transparent_32%)] dark:bg-[radial-gradient(ellipse_at_20%_20%,rgba(129,140,248,0.26),transparent_30%),radial-gradient(ellipse_at_80%_15%,rgba(45,212,191,0.18),transparent_26%),radial-gradient(ellipse_at_50%_85%,rgba(168,85,247,0.2),transparent_30%)]" />
@@ -256,7 +256,7 @@ export default function LandingPage() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Button 
                   asChild 
-                  className="h-12 rounded-full px-7 text-sm font-semibold shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300"
+                  className="h-12 rounded-full px-7 text-sm font-semibold shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300 whitespace-nowrap"
                 >
                   <Link href="/register">
                     Create account
@@ -459,6 +459,7 @@ export default function LandingPage() {
 
         {/* ── TEAM ──────────────────────────────────── */}
         <section
+          id="team"
           ref={teamSectionRef}
           className={cn(
             'px-4 py-20 transition-colors duration-700 md:py-28',
@@ -524,7 +525,7 @@ export default function LandingPage() {
                 <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
                   <Button 
                     asChild 
-                    className="h-13 rounded-full px-8 text-sm font-semibold shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/80 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300"
+                    className="h-13 rounded-full px-8 text-sm font-semibold shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/80 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300 whitespace-nowrap"
                   >
                     <Link href="/register">Create account</Link>
                   </Button>
