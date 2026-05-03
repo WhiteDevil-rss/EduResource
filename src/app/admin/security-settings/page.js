@@ -12,7 +12,7 @@ import {
 import { StandardCard } from '@/components/layout/StandardCards'
 import { SkeletonWrapper } from '@/components/admin/SkeletonWrapper'
 import { minutesToMs, msToMinutes, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
-import { Shield, Clock, AlertTriangle, RefreshCcw, Lock, Zap } from 'lucide-react'
+import { Shield, Clock, AlertTriangle, RefreshCcw, Lock, Zap, Construction, UserPlus, X } from 'lucide-react'
 
 function buildForm(settings) {
   return {
@@ -61,6 +61,12 @@ export default function AdminSecuritySettingsPage() {
   const [savedSettings, setSavedSettings] = useState(SESSION_SETTINGS_DEFAULTS)
   const [formState, setFormState] = useState(buildForm(SESSION_SETTINGS_DEFAULTS))
 
+  // Maintenance Mode State
+  const [maintenanceConfig, setMaintenanceConfig] = useState({ enabled: false, whitelist: [] })
+  const [originalMaintenanceConfig, setOriginalMaintenanceConfig] = useState({ enabled: false, whitelist: [] })
+  const [newWhitelistEmail, setNewWhitelistEmail] = useState('')
+  const [maintenanceLoading, setMaintenanceLoading] = useState(true)
+
   useEffect(() => {
     if (authLoading) return
     if (!user) {
@@ -95,35 +101,83 @@ export default function AdminSecuritySettingsPage() {
       }
     }
     load()
+
+    const loadMaintenance = async () => {
+      try {
+        const response = await fetch('/api/admin/maintenance', { cache: 'no-store' })
+        const payload = await response.json().catch(() => ({}))
+        if (response.ok) {
+          setMaintenanceConfig(payload)
+          setOriginalMaintenanceConfig(payload)
+        }
+      } catch (err) {
+        console.error('Failed to load maintenance config:', err)
+      } finally {
+        setMaintenanceLoading(false)
+      }
+    }
+    loadMaintenance()
+
     return () => { mounted = false }
   }, [authLoading, user])
 
   const parsed = useMemo(() => parseForm(formState), [formState])
 
   const hasChanges = useMemo(() => {
-    if (!parsed.value) return false
+    const maintenanceChanged = 
+      maintenanceConfig.enabled !== originalMaintenanceConfig.enabled ||
+      JSON.stringify(maintenanceConfig.whitelist) !== JSON.stringify(originalMaintenanceConfig.whitelist)
+
+    if (!parsed.value) return maintenanceChanged
     return (
+      maintenanceChanged ||
       parsed.value.inactivityTimeout !== savedSettings.inactivityTimeout ||
       parsed.value.warningTimeout !== savedSettings.warningTimeout ||
       parsed.value.maxSessionTimeout !== savedSettings.maxSessionTimeout
     )
-  }, [parsed.value, savedSettings])
+  }, [parsed.value, savedSettings, maintenanceConfig, originalMaintenanceConfig])
 
   const save = async () => {
-    if (!parsed.value) return
+    setSaving(true)
+    setError('')
+    
     try {
-      setSaving(true)
-      setError('')
-      const response = await fetch('/api/admin/session-settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed.value),
-      })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload?.error || 'Could not save settings.')
+      // 1. Save Session Settings if changed
+      const sessionChanged = parsed.value && (
+        parsed.value.inactivityTimeout !== savedSettings.inactivityTimeout ||
+        parsed.value.warningTimeout !== savedSettings.warningTimeout ||
+        parsed.value.maxSessionTimeout !== savedSettings.maxSessionTimeout
+      )
 
-      setSavedSettings(payload?.settings || parsed.value)
-      setFormState(buildForm(payload?.settings || parsed.value))
+      if (sessionChanged) {
+        const response = await fetch('/api/admin/session-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed.value),
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(payload?.error || 'Could not save session settings.')
+        setSavedSettings(payload?.settings || parsed.value)
+        setFormState(buildForm(payload?.settings || parsed.value))
+      }
+
+      // 2. Save Maintenance Settings if changed
+      const maintenanceChanged = 
+        maintenanceConfig.enabled !== originalMaintenanceConfig.enabled ||
+        JSON.stringify(maintenanceConfig.whitelist) !== JSON.stringify(originalMaintenanceConfig.whitelist)
+
+      if (maintenanceChanged) {
+        const response = await fetch('/api/admin/maintenance', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(maintenanceConfig),
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(payload?.error || 'Could not save maintenance settings.')
+        setMaintenanceConfig(payload.config)
+        setOriginalMaintenanceConfig(payload.config)
+      }
+
       toast.success('Security settings updated.')
     } catch (saveError) {
       setError(saveError.message || 'Update failed.')
@@ -131,6 +185,27 @@ export default function AdminSecuritySettingsPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const addToWhitelist = () => {
+    const email = newWhitelistEmail.trim().toLowerCase()
+    if (!email) return
+    if (maintenanceConfig.whitelist.includes(email)) {
+      toast.error('Email already in whitelist.')
+      return
+    }
+    setMaintenanceConfig(prev => ({
+      ...prev,
+      whitelist: [...prev.whitelist, email]
+    }))
+    setNewWhitelistEmail('')
+  }
+
+  const removeFromWhitelist = (email) => {
+    setMaintenanceConfig(prev => ({
+      ...prev,
+      whitelist: prev.whitelist.filter(e => e !== email)
+    }))
   }
 
   return (
@@ -252,6 +327,90 @@ export default function AdminSecuritySettingsPage() {
                       </p>
                     </div>
                   )}
+                </div>
+              </StandardCard>
+
+              {/* Maintenance Mode Card */}
+              <StandardCard className="p-0 overflow-hidden border-border/40 bg-card/40">
+                <div className="px-6 py-5 border-b border-border/10 bg-muted/5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/5 flex items-center justify-center text-amber-500">
+                      <Construction size={20} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold">Maintenance Mode</h3>
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-tight mt-0.5">Platform Accessibility</p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => setMaintenanceConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                      maintenanceConfig.enabled ? 'bg-amber-500' : 'bg-muted'
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        maintenanceConfig.enabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">
+                        User Whitelist (Email)
+                      </label>
+                      <div className="flex gap-2">
+                        <div className="group relative flex-1">
+                          <UserPlus className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/30 group-focus-within:text-primary transition-colors" size={16} />
+                          <input
+                            type="email"
+                            placeholder="user@example.com"
+                            className="w-full h-11 pl-12 pr-4 rounded-lg border border-border/40 bg-background/50 text-xs font-medium transition-all focus:ring-2 focus:ring-primary/10 focus:border-primary/20 outline-none"
+                            value={newWhitelistEmail}
+                            onChange={(e) => setNewWhitelistEmail(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && addToWhitelist()}
+                          />
+                        </div>
+                        <button
+                          onClick={addToWhitelist}
+                          className="px-4 bg-primary text-white text-[10px] font-bold uppercase rounded-lg hover:opacity-90"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+                      {maintenanceConfig.whitelist.length === 0 ? (
+                        <p className="text-[10px] text-muted-foreground italic text-center py-4 bg-muted/5 rounded-lg border border-dashed border-border/40">
+                          No users whitelisted. Only Superadmin has access during maintenance.
+                        </p>
+                      ) : (
+                        maintenanceConfig.whitelist.map((email) => (
+                          <div key={email} className="flex items-center justify-between p-3 rounded-lg bg-muted/20 border border-border/10 group hover:border-primary/20 transition-all">
+                            <span className="text-[11px] font-medium text-foreground">{email}</span>
+                            <button 
+                              onClick={() => removeFromWhitelist(email)}
+                              className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/10 text-amber-600">
+                    <p className="text-[9px] font-semibold uppercase tracking-wider leading-relaxed">
+                      Important: When enabled, everyone except you and whitelisted users will be redirected to the maintenance page.
+                    </p>
+                  </div>
                 </div>
               </StandardCard>
 

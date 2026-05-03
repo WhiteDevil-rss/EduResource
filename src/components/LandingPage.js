@@ -254,18 +254,21 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button asChild className="h-12 rounded-full px-7 text-sm font-semibold shadow-lg shadow-primary/20">
+                <Button 
+                  asChild 
+                  className="h-12 rounded-full px-7 text-sm font-semibold shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300"
+                >
                   <Link href="/register">
                     Create account
-                    <ArrowRight size={16} />
+                    <ArrowRight size={16} className="ml-1.5" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="h-12 rounded-full px-7 text-sm font-semibold border-border/70 hover:border-primary/30">
+                <Button asChild variant="outline" className="h-12 rounded-full px-7 text-sm font-semibold border-border/70 hover:border-primary/30 hover:bg-muted/50 transition-all">
                   <Link href="/login">Open workspace</Link>
                 </Button>
                 <Button
                   variant="secondary"
-                  className="h-12 rounded-full px-7 text-sm font-semibold"
+                  className="h-12 rounded-full px-7 text-sm font-semibold hover:bg-secondary/80 transition-all"
                   onClick={handleMeetTeamScroll}
                 >
                   Meet the team
@@ -519,10 +522,13 @@ export default function LandingPage() {
                   to help you excel in your academic journey.
                 </p>
                 <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Button asChild className="h-13 rounded-full px-8 text-sm font-semibold shadow-lg shadow-primary/25">
+                  <Button 
+                    asChild 
+                    className="h-13 rounded-full px-8 text-sm font-semibold shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/80 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300"
+                  >
                     <Link href="/register">Create account</Link>
                   </Button>
-                  <Button asChild variant="outline" className="h-13 rounded-full px-8 text-sm font-semibold border-border/70 hover:border-primary/30">
+                  <Button asChild variant="outline" className="h-13 rounded-full px-8 text-sm font-semibold border-border/70 hover:border-primary/30 hover:bg-muted/50 transition-all">
                     <Link href="/login">Sign in</Link>
                   </Button>
                 </div>

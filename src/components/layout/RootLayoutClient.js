@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import PublicHeader from '@/components/PublicHeader'
 import PublicFooter from '@/components/PublicFooter'
 import { getPublicHeaderContent } from '@/lib/public-nav'
+import MaintenanceGuard from '@/components/MaintenanceGuard'
 
 export default function RootLayoutClient({ children }) {
   const pathname = usePathname()
@@ -14,18 +15,24 @@ export default function RootLayoutClient({ children }) {
   const showPublicLayout = !isAppRoute
 
   if (!showPublicLayout) {
-    return <>{children}</>
+    return (
+      <MaintenanceGuard>
+        {children}
+      </MaintenanceGuard>
+    )
   }
 
   const { links, actions } = getPublicHeaderContent(pathname)
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <PublicHeader brand="SPS EDUCATIONAM" links={links} actions={actions} showUtilityIcons />
-      <div className="flex-1 pt-20">
-        {children}
+    <MaintenanceGuard>
+      <div className="flex min-h-screen flex-col">
+        <PublicHeader brand="SPS EDUCATIONAM" links={links} actions={actions} showUtilityIcons />
+        <div className="flex-1 pt-20">
+          {children}
+        </div>
+        <PublicFooter links={links} />
       </div>
-      <PublicFooter links={links} />
-    </div>
+    </MaintenanceGuard>
   )
 }

@@ -16,6 +16,7 @@ export default function PublicHeader({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('')
 
   const closeMenu = () => setMenuOpen(false)
 
@@ -53,6 +54,38 @@ export default function PublicHeader({
     }
   }, [menuOpen])
 
+  useEffect(() => {
+    // Only track sections if we have links that point to anchors
+    const sectionLinks = links.filter(l => l.href.includes('#'))
+    if (sectionLinks.length === 0) return
+
+    const observers = []
+    
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -70% 0px', // Trigger when section is in top-middle of viewport
+      threshold: 0
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id)
+        }
+      })
+    }, observerOptions)
+
+    sectionLinks.forEach(link => {
+      const id = link.href.split('#')[1]
+      const element = document.getElementById(id)
+      if (element) {
+        observer.observe(element)
+      }
+    })
+
+    return () => observer.disconnect()
+  }, [links])
+
   return (
     <header
       className={cn(
@@ -80,23 +113,31 @@ export default function PublicHeader({
         </div>
 
         <div className="hidden lg:flex lg:gap-x-1">
-          {links.map((link) => (
-            <Link
-              key={`${link.href}-${link.label}`}
-              href={link.href}
-              className={cn(
-                "relative px-4 py-2 text-sm font-semibold transition-colors rounded-full",
-                link.current
-                  ? "bg-primary/5 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              {link.label}
-              {link.current && (
-                <span className="absolute inset-x-4 -bottom-px h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-              )}
-            </Link>
-          ))}
+          {links.map((link) => {
+            const isSectionLink = link.href.includes('#')
+            const sectionId = isSectionLink ? link.href.split('#')[1] : null
+            const isActive = isSectionLink 
+              ? activeSection === sectionId 
+              : link.current
+
+            return (
+              <Link
+                key={`${link.href}-${link.label}`}
+                href={link.href}
+                className={cn(
+                  "relative px-4 py-2 text-sm font-semibold transition-all duration-300 rounded-full",
+                  isActive
+                    ? "bg-primary/10 text-primary shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {link.label}
+                {isActive && (
+                  <span className="absolute inset-x-4 -bottom-px h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-in fade-in slide-in-from-bottom-1 duration-500" />
+                )}
+              </Link>
+            )
+          })}
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-3 lg:gap-4">
@@ -150,18 +191,31 @@ export default function PublicHeader({
       >
         <div className="flex h-full flex-col px-8 py-24 overflow-y-auto">
           <div className="flex flex-col gap-2">
-            {links.map((link, i) => (
-              <Link
-                key={`mobile-${link.href}-${link.label}`}
-                href={link.href}
-                className="flex items-center justify-between rounded-2xl p-4 text-2xl font-bold tracking-tight text-foreground transition-all active:bg-muted active:scale-95"
-                onClick={closeMenu}
-                style={{ transitionDelay: `${i * 50}ms` }}
-              >
-                {link.label}
-                <ChevronRight className="text-primary/40" size={24} />
-              </Link>
-            ))}
+            {links.map((link, i) => {
+              const isSectionLink = link.href.includes('#')
+              const sectionId = isSectionLink ? link.href.split('#')[1] : null
+              const isActive = isSectionLink 
+                ? activeSection === sectionId 
+                : link.current
+
+              return (
+                <Link
+                  key={`mobile-${link.href}-${link.label}`}
+                  href={link.href}
+                  className={cn(
+                    "flex items-center justify-between rounded-2xl p-4 text-2xl font-bold tracking-tight transition-all active:scale-95",
+                    isActive 
+                      ? "bg-primary/10 text-primary" 
+                      : "text-foreground active:bg-muted"
+                  )}
+                  onClick={closeMenu}
+                  style={{ transitionDelay: `${i * 50}ms` }}
+                >
+                  {link.label}
+                  <ChevronRight className={cn(isActive ? "text-primary" : "text-primary/40")} size={24} />
+                </Link>
+              )
+            })}
           </div>
 
           <div className="mt-auto space-y-4 pt-12">

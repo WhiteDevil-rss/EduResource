@@ -3,7 +3,7 @@ export default function robots() {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/', '/dashboard/'],
+      disallow: ['/admin/', '/dashboard/', '/api/', '/maintenance'],
     },
     sitemap: 'https://edu-resource.pages.dev/sitemap.xml',
   }
