@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
 export default function PublicHeader({
-  brand = 'SPS EDUCATIONAM',
+  brand = 'SPS Educationam',
   links = [],
   actions = [],
   showUtilityIcons = true,
@@ -63,13 +63,13 @@ export default function PublicHeader({
     
     const observerOptions = {
       root: null,
-      rootMargin: '-15% 0px -65% 0px', // Precise slice near the top
+      rootMargin: '-20% 0px -75% 0px', // Detect when section is in the top 20% of the viewport
       threshold: 0
     }
 
     const observer = new window.IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting && entry.intersectionRatio > 0) {
+        if (entry.isIntersecting) {
           setActiveSection(entry.target.id)
         }
       })
@@ -107,7 +107,7 @@ export default function PublicHeader({
             </div>
             <span className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">SPS</span>
-              <span className="hidden sm:inline"> EDUCATIONAM</span>
+              <span className="hidden sm:inline"> Educationam</span>
             </span>
           </Link>
         </div>
@@ -117,7 +117,7 @@ export default function PublicHeader({
             const isSectionLink = link.href.includes('#')
             const sectionId = isSectionLink ? link.href.split('#')[1] : null
             const isActive = isSectionLink 
-              ? activeSection === sectionId 
+              ? (activeSection === sectionId || (activeSection === '' && sectionId === 'hero'))
               : link.current
 
             return (
@@ -130,6 +130,11 @@ export default function PublicHeader({
                     ? "bg-primary/10 text-primary shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
+                onClick={() => {
+                  if (isSectionLink) {
+                    setActiveSection(sectionId)
+                  }
+                }}
               >
                 {link.label}
                 {isActive && (
@@ -176,7 +181,7 @@ export default function PublicHeader({
               onClick={() => setMenuOpen((open) => !open)}
               aria-label="Toggle menu"
             >
-              {menuOpen ? <X size={32} /> : <Menu size={32} />}
+              {menuOpen ? <X size={40} /> : <Menu size={40} />}
             </Button>
           </div>
         </div>
@@ -185,7 +190,7 @@ export default function PublicHeader({
       {/* Mobile Menu Overlay */}
       <div
         className={cn(
-          'fixed inset-0 z-40 flex flex-col bg-background/99 backdrop-blur-3xl transition-all duration-500 lg:hidden shadow-2xl',
+          'fixed inset-0 z-50 flex flex-col bg-background/98 backdrop-blur-3xl transition-all duration-500 lg:hidden shadow-2xl',
           menuOpen ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible pointer-events-none'
         )}
       >
@@ -195,7 +200,7 @@ export default function PublicHeader({
               const isSectionLink = link.href.includes('#')
               const sectionId = isSectionLink ? link.href.split('#')[1] : null
               const isActive = isSectionLink 
-                ? activeSection === sectionId 
+                ? (activeSection === sectionId || (activeSection === '' && sectionId === 'hero'))
                 : link.current
 
               return (
@@ -205,10 +210,25 @@ export default function PublicHeader({
                   className={cn(
                     "flex items-center justify-between rounded-2xl p-4 text-2xl font-bold tracking-tight transition-all active:scale-95",
                     isActive 
-                      ? "bg-primary/10 text-primary" 
+                      ? "bg-primary/10 text-primary shadow-sm" 
                       : "text-foreground active:bg-muted"
                   )}
-                  onClick={closeMenu}
+                  onClick={(e) => {
+                    if (isSectionLink) {
+                      const element = document.getElementById(sectionId)
+                      if (element) {
+                        e.preventDefault()
+                        setActiveSection(sectionId)
+                        closeMenu()
+                        const top = element.getBoundingClientRect().top + window.pageYOffset - 80
+                        window.scrollTo({ top, behavior: 'smooth' })
+                      } else {
+                        closeMenu()
+                      }
+                    } else {
+                      closeMenu()
+                    }
+                  }}
                   style={{ transitionDelay: `${i * 50}ms` }}
                 >
                   {link.label}

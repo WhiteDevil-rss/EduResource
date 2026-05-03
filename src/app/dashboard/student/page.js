@@ -238,21 +238,24 @@ export default function StudentDashboard() {
     if (!entry?.id || bookmarkSaving) return
     
     // Optimistic update
-    const nextStatus = !entry.isBookmarked
+    const previousStatus = entry.isBookmarked
+    const nextStatus = !previousStatus
+    
     setResources(prev => prev.map(r => 
       r.id === entry.id ? { ...r, isBookmarked: nextStatus } : r
     ))
 
     try {
-      const { bookmarked } = await toggleBookmark(entry.id)
-      // Confirm with server response
+      const result = await toggleBookmark(entry.id)
+      // Use the actual status from the server if it differs from our optimistic guess
+      // but usually they should match.
       setResources(prev => prev.map(r => 
-        r.id === entry.id ? { ...r, isBookmarked: bookmarked } : r
+        r.id === entry.id ? { ...r, isBookmarked: result.bookmarked } : r
       ))
     } catch (error) {
       // Revert on error
       setResources(prev => prev.map(r => 
-        r.id === entry.id ? { ...r, isBookmarked: !nextStatus } : r
+        r.id === entry.id ? { ...r, isBookmarked: previousStatus } : r
       ))
     }
   }, [toggleBookmark, bookmarkSaving])
@@ -413,7 +416,7 @@ export default function StudentDashboard() {
     <AppLayout
       role="student"
       userLabel={getDisplayName(user?.email, 'Student')}
-      sidebarTitle="EDUCATIONAM"
+      sidebarTitle="SPS Educationam"
       sidebarSubtitle="Student Workspace"
       navSections={studentNavSections}
       navItems={[

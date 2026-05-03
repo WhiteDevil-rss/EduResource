@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request) {
   try {
-    const config = await firestore.getDoc('configs/maintenance')
-    const enabled = config?.enabled === true
+    const config = await firestore.getDoc('app_config/security_controls')
+    const enabled = config?.maintenanceMode === true
     
     if (!enabled) {
       return NextResponse.json({ enabled: false, isAllowed: true })
@@ -28,7 +28,7 @@ export async function GET(request) {
         isAllowed = true
       } else {
         // 2. Whitelist check
-        const whitelist = Array.isArray(config?.whitelist) ? config.whitelist : []
+        const whitelist = Array.isArray(config?.maintenanceWhitelist) ? config.maintenanceWhitelist : []
         const userEmail = String(session.email || '').trim().toLowerCase()
         if (userEmail && whitelist.includes(userEmail)) {
           isAllowed = true

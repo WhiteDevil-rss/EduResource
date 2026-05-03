@@ -215,8 +215,8 @@ export default function LandingPage() {
               )}
             >
               <div className="max-w-3xl space-y-5">
-                <p className="text-sm font-bold uppercase tracking-[0.28em] text-primary/80">
-                  SPS EDUCATIONAM
+                <p className="text-sm font-extrabold uppercase tracking-[0.28em] text-primary">
+                  SPS Educationam
                 </p>
                 <h1 className="text-balance text-4xl font-semibold leading-[1.12] md:text-6xl">
                   Premier coaching classes for{' '}

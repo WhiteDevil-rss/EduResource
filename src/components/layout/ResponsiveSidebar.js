@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { LogOut, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AppIcon } from '@/components/ui/AppIcon'
@@ -11,7 +12,8 @@ import { RoleAvatar } from '@/components/dashboard/RoleAvatar'
 /**
  * SidebarContent - Logic and rendering for navigation links
  */
-function SidebarContent({ user, role, title, subtitle, navItems, navSections, onLogout }) {
+function SidebarContent({ user, role, title, subtitle, navItems, navSections, onLogout, activeAnchor, onAnchorClick, closeMobile }) {
+  const pathname = usePathname()
   const filteredSections = Array.isArray(navSections)
     ? navSections
       .map((section) => ({
@@ -48,7 +50,8 @@ function SidebarContent({ user, role, title, subtitle, navItems, navSections, on
                 <ul className="space-y-1" role="list">
                   {section.items.map((item) => {
                     const Icon = item.icon
-                    const isActive = item.active || false
+                    const isAnchor = item.href.startsWith('#')
+                    const isActive = item.active || (isAnchor ? activeAnchor === item.href : pathname === item.href || (item.href !== '/dashboard/student' && item.href !== '/dashboard/faculty' && item.href !== '/admin' && pathname.startsWith(item.href + '/')))
 
                     return (
                       <li key={item.id || item.href}>
@@ -61,6 +64,21 @@ function SidebarContent({ user, role, title, subtitle, navItems, navSections, on
                               : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground active:scale-[0.98]'
                           )}
                           aria-current={isActive ? 'page' : undefined}
+                          onClick={(e) => {
+                            if (isAnchor) {
+                              const id = item.href.slice(1)
+                              const element = document.getElementById(id)
+                              if (element) {
+                                e.preventDefault()
+                                onAnchorClick?.(item.href)
+                                closeMobile?.()
+                                const top = element.getBoundingClientRect().top + window.pageYOffset - 80
+                                window.scrollTo({ top, behavior: 'smooth' })
+                              }
+                            } else {
+                              closeMobile?.()
+                            }
+                          }}
                         >
                           <AppIcon
                             icon={Icon}
@@ -97,7 +115,8 @@ function SidebarContent({ user, role, title, subtitle, navItems, navSections, on
             <ul className="space-y-1" role="list">
               {visibleNavItems.map((item) => {
                 const Icon = item.icon
-                const isActive = item.active || false
+                const isAnchor = item.href.startsWith('#')
+                const isActive = item.active || (isAnchor ? activeAnchor === item.href : pathname === item.href || (item.href !== '/dashboard/student' && item.href !== '/dashboard/faculty' && item.href !== '/admin' && pathname.startsWith(item.href + '/')))
 
                 return (
                   <li key={item.id || item.href}>
@@ -110,6 +129,21 @@ function SidebarContent({ user, role, title, subtitle, navItems, navSections, on
                           : 'text-muted-foreground hover:bg-muted/65 hover:text-foreground active:scale-[0.98]'
                       )}
                       aria-current={isActive ? 'page' : undefined}
+                      onClick={(e) => {
+                        if (isAnchor) {
+                          const id = item.href.slice(1)
+                          const element = document.getElementById(id)
+                          if (element) {
+                            e.preventDefault()
+                            onAnchorClick?.(item.href)
+                            closeMobile?.()
+                            const top = element.getBoundingClientRect().top + window.pageYOffset - 80
+                            window.scrollTo({ top, behavior: 'smooth' })
+                          }
+                        } else {
+                          closeMobile?.()
+                        }
+                      }}
                     >
                       <AppIcon
                         icon={Icon}
@@ -167,6 +201,8 @@ export function ResponsiveSidebar({
   mobileOpen,
   onMobileOpenChange,
   onLogout,
+  activeAnchor,
+  onAnchorClick,
 }) {
   return (
     <>
@@ -201,6 +237,9 @@ export function ResponsiveSidebar({
           navSections={navSections}
           navItems={navItems}
           onLogout={onLogout}
+          activeAnchor={activeAnchor}
+          onAnchorClick={onAnchorClick}
+          closeMobile={() => onMobileOpenChange(false)}
         />
       </aside>
 
@@ -213,6 +252,8 @@ export function ResponsiveSidebar({
           navSections={navSections}
           navItems={navItems}
           onLogout={onLogout}
+          activeAnchor={activeAnchor}
+          onAnchorClick={onAnchorClick}
         />
       </aside>
 

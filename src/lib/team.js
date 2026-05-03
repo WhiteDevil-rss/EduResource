@@ -1,6 +1,6 @@
 import sumitSirImage from '../../team/SumitSir.jpeg'
 import prakashSirImage from '../../team/PrakashSir.jpeg'
-import shivamTiwariImage from '../../team/ShivamTiwari.png'
+import shivamTiwariImage from '../../team/shivam-tiwari.jpeg'
 import rajputShivamSinghImage from '../../team/RajputShivamSingh.jpg'
 
 export const TEAM_FALLBACK_IMAGE = rajputShivamSinghImage

@@ -939,6 +939,7 @@ export async function toggleBookmarkForStudent({ studentUid, resourceId }) {
     : []
 
   const hasBookmark = currentBookmarks.includes(normalizedResourceId)
+  
   const nextBookmarks = hasBookmark
     ? currentBookmarks.filter((value) => value !== normalizedResourceId)
     : [...new Set([...currentBookmarks, normalizedResourceId])]

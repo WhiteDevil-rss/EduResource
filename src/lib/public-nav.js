@@ -4,7 +4,7 @@ export function getPublicHeaderContent(pathname = '/') {
 
   return {
     links: [
-      { label: 'Home', href: isHomePage ? '#hero' : '/', current: isHomePage },
+      { label: 'Home', href: isHomePage ? '#hero' : '/', current: !isHomePage && currentPath === '/' },
       { label: 'Features', href: isHomePage ? '#features' : '/#features' },
       { label: 'Team', href: isHomePage ? '#team' : '/#team' },
     ],

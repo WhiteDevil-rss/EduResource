@@ -16,20 +16,20 @@ export const metadata = {
   description:
     'SPS Educationam is a specialized student learning platform offering academic support, expert coaching classes, and curated study resources for Class 10th, 11th, and 12th students.',
   keywords: ['coaching classes', 'student learning', 'academic support', 'online education platform', 'expert study materials', 'board exam preparation'],
-  authors: [{ name: 'SPS EDUCATIONAM Team' }],
-  creator: 'SPS EDUCATIONAM',
+  authors: [{ name: 'SPS Educationam Team' }],
+  creator: 'SPS Educationam',
   metadataBase: new URL('https://sps.zembaa.com'),
   openGraph: {
     type: 'website',
     locale: 'en_US',
     url: 'https://sps.zembaa.com',
-    title: 'SPS EDUCATIONAM | Premier Coaching Classes & Student Learning Platform',
+    title: 'SPS Educationam | Premier Coaching Classes & Student Learning Platform',
     description: 'Empowering students with high-quality academic support and expert study materials.',
-    siteName: 'SPS EDUCATIONAM',
+    siteName: 'SPS Educationam',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SPS EDUCATIONAM | Premier Coaching Classes & Student Learning Platform',
+    title: 'SPS Educationam | Premier Coaching Classes & Student Learning Platform',
     description: 'Empowering students with high-quality academic support and expert study materials.',
   },
   icons: {

@@ -169,7 +169,7 @@ export default function AdminLayout({ children }) {
       user={user}
       role="admin"
       userLabel={getDisplayName(user?.email, isSuperAdmin(user) ? 'Super Admin' : 'Admin')}
-      sidebarTitle="EDUCATIONAM"
+      sidebarTitle="SPS Educationam"
       sidebarSubtitle="System Intelligence"
       navSections={ADMIN_NAV_SECTIONS}
       navItems={ADMIN_NAV_SECTIONS.flatMap(s => s.items)}

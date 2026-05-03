@@ -34,7 +34,7 @@ const COMPANY_SOCIALS = [
 
 export default function PublicFooter({
   links = [],
-  tagline = `© ${new Date().getFullYear()} SPS EDUCATIONAM. All rights reserved.`,
+  tagline = `© ${new Date().getFullYear()} SPS Educationam. All rights reserved.`,
 }) {
   return (
     <footer className="relative w-full overflow-hidden border-t border-border/40 bg-card/30 backdrop-blur-sm">
@@ -50,7 +50,7 @@ export default function PublicFooter({
                 <ShieldCheck className="text-primary-foreground" size={22} />
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground">
-                SPS <span className="text-primary">EDUCATIONAM</span>
+                SPS <span className="text-primary">Educationam</span>
               </span>
             </Link>
             <p className="text-sm leading-6 text-muted-foreground max-w-xs">

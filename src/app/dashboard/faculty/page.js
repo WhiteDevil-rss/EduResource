@@ -387,7 +387,7 @@ export default function FacultyDashboard() {
     <AppLayout
       role="faculty"
       userLabel={getDisplayName(user?.email, 'Faculty Member')}
-      sidebarTitle="EDUCATIONAM"
+      sidebarTitle="SPS Educationam"
       sidebarSubtitle="Faculty Workspace"
       navSections={facultyNavSections}
       navItems={[

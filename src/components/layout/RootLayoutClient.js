@@ -27,7 +27,7 @@ export default function RootLayoutClient({ children }) {
   return (
     <MaintenanceGuard>
       <div className="flex min-h-screen flex-col">
-        <PublicHeader brand="SPS EDUCATIONAM" links={links} actions={actions} showUtilityIcons />
+        <PublicHeader brand="SPS Educationam" links={links} actions={actions} showUtilityIcons />
         <div className="flex-1 pt-20">
           {children}
         </div>

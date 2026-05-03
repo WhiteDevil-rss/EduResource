@@ -31,7 +31,7 @@ export function useBookmark() {
 
   const toggleBookmark = useCallback(async (resourceId) => {
     const id = String(resourceId || '').trim()
-    if (!id || saving) return { bookmarked: false }
+    if (!id || saving) return { bookmarked: bookmarkSet.has(id) }
 
     setSaving(true)
     try {

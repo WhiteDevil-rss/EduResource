@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ResponsiveSidebar } from './ResponsiveSidebar'
 import { ResponsiveTopbar } from './ResponsiveTopbar'
 import { GlobalErrorBoundary } from '@/components/ErrorBoundary'
@@ -29,6 +29,43 @@ export function AppLayout({
   className = '',
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeAnchor, setActiveAnchor] = useState('')
+
+  useEffect(() => {
+    const allItems = [
+      ...(navItems || []),
+      ...(navSections || []).flatMap(s => s.items || [])
+    ]
+    const anchors = allItems.filter(item => item?.href?.startsWith('#'))
+    if (anchors.length === 0) {
+      setActiveAnchor('')
+      return
+    }
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-20% 0px -75% 0px', // Trigger when section is in the upper part of the viewport
+      threshold: 0
+    }
+
+    const observer = new window.IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveAnchor('#' + entry.target.id)
+        }
+      })
+    }, observerOptions)
+
+    anchors.forEach(item => {
+      const id = item.href.slice(1)
+      const element = document.getElementById(id)
+      if (element) {
+        observer.observe(element)
+      }
+    })
+
+    return () => observer.disconnect()
+  }, [navItems, navSections])
 
   return (
     <div className={cn('app-shell flex min-h-screen w-full max-w-full flex-col overflow-x-hidden bg-transparent text-foreground md:flex-row', className)}>
@@ -42,6 +79,8 @@ export function AppLayout({
         mobileOpen={sidebarOpen}
         onMobileOpenChange={setSidebarOpen}
         onLogout={onLogout}
+        activeAnchor={activeAnchor}
+        onAnchorClick={setActiveAnchor}
       />
 
       <div className="flex min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">

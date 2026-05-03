@@ -4,6 +4,8 @@ export const SECURITY_CONTROLS_DEFAULTS = {
   maxLoginAttempts: 5,
   lockDurationMinutes: 15,
   enableAlerts: true,
+  maintenanceMode: false,
+  maintenanceWhitelist: [],
 }
 
 export const SECURITY_CONTROLS_LIMITS = {
@@ -35,6 +37,10 @@ export function normalizeSecurityControls(value) {
         ? Math.min(Math.round(lockMinutes), SECURITY_CONTROLS_LIMITS.maxLockMinutes)
         : SECURITY_CONTROLS_DEFAULTS.lockDurationMinutes,
     enableAlerts: value?.enableAlerts !== false,
+    maintenanceMode: Boolean(value?.maintenanceMode),
+    maintenanceWhitelist: Array.isArray(value?.maintenanceWhitelist)
+      ? value.maintenanceWhitelist.map((e) => String(e || '').trim().toLowerCase()).filter(Boolean)
+      : [],
     updatedAt: value?.updatedAt || null,
     updatedBy: value?.updatedBy || null,
   }

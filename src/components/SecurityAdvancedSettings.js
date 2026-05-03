@@ -12,6 +12,8 @@ const DEFAULTS = {
   maxLoginAttempts: 5,
   lockDurationMinutes: 15,
   enableAlerts: true,
+  maintenanceMode: false,
+  maintenanceWhitelist: [],
 }
 
 export function SecurityAdvancedSettings() {
@@ -206,6 +208,63 @@ export function SecurityAdvancedSettings() {
               >
                 <Save size={14} />
                 {saving ? "Saving..." : "Save Settings"}
+              </button>
+            </div>
+          </StandardCard>
+
+          {/* Maintenance Mode Card */}
+          <StandardCard title="Infrastructure Control" icon={Hammer}>
+            <div className="space-y-8 py-4">
+              <div className="flex items-start justify-between p-4 rounded-2xl border border-border/40 bg-muted/5 hover:bg-muted/10 transition-colors group">
+                <div className="flex gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                    <ShieldAlert size={20} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-amber-600">Maintenance Mode</h3>
+                    <p className="text-xs text-muted-foreground">Suspend public access and only allow authorized personnel</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSettings(s => ({ ...s, maintenanceMode: !s.maintenanceMode }))}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none items-center",
+                    settings.maintenanceMode ? "bg-amber-500" : "bg-muted-foreground/20"
+                  )}
+                >
+                  <span className={cn(
+                    "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+                    settings.maintenanceMode ? "translate-x-5" : "translate-x-0"
+                  )} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-primary" />
+                  <label className="text-xs font-medium text-muted-foreground">Bypass Whitelist (One email per line)</label>
+                </div>
+                <textarea
+                  className="w-full min-h-[120px] p-4 rounded-xl border border-border/40 bg-background font-mono text-xs focus:ring-2 focus:ring-primary/20 transition-all leading-relaxed"
+                  placeholder="admin@example.com&#10;developer@zembaa.com"
+                  value={settings.maintenanceWhitelist.join('\n')}
+                  onChange={(e) => setSettings(s => ({ ...s, maintenanceWhitelist: e.target.value.split('\n') }))}
+                />
+                <p className="text-[10px] text-muted-foreground italic">Superadmins are automatically whitelisted and do not need to be added here.</p>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-border/40 flex justify-end gap-3">
+              <button
+                onClick={save}
+                disabled={saving}
+                className={cn(
+                  "h-10 px-6 rounded-lg font-semibold text-xs shadow-lg flex items-center gap-2 transition-all disabled:opacity-50",
+                  settings.maintenanceMode ? "bg-amber-500 text-white hover:bg-amber-600 shadow-amber-500/20" : "bg-primary text-white hover:bg-primary-strong shadow-primary/20"
+                )}
+              >
+                <Save size={14} />
+                {saving ? "Updating..." : "Update Infrastructure"}
               </button>
             </div>
           </StandardCard>
