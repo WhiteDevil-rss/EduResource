@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import {
   ArrowRight,
   BookOpen,
@@ -17,12 +16,9 @@ import {
   TrendingUp,
   Globe,
 } from 'lucide-react'
-import PublicHeader from '@/components/PublicHeader'
-import PublicFooter from '@/components/PublicFooter'
 import TeamCard from '@/components/TeamCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { getPublicHeaderContent } from '@/lib/public-nav'
 import { TEAM_MEMBERS } from '@/lib/team'
 import { cn } from '@/lib/cn'
 
@@ -192,7 +188,6 @@ export default function LandingPage() {
     window.setTimeout(() => setTeamSectionActive(false), 1000)
   }, [])
 
-  const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)
 
   const metrics = [
     {
@@ -207,12 +202,10 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-transparent text-foreground">
-      <PublicHeader brand="SPS EDUCATIONAM" links={navLinks} actions={navActions} showUtilityIcons />
-
       <main className="overflow-x-hidden">
 
         {/* ── HERO ─────────────────────────────────── */}
-        <section className="relative overflow-hidden px-4 pb-20 pt-10 md:pb-28 md:pt-14" ref={heroRef}>
+        <section className="relative overflow-hidden px-4 pb-20 pt-4 md:pb-28 md:pt-8" ref={heroRef}>
           {/* Multi-layer background mesh */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(99,102,241,0.22),transparent_32%),radial-gradient(ellipse_at_80%_15%,rgba(45,212,191,0.16),transparent_28%),radial-gradient(ellipse_at_50%_85%,rgba(168,85,247,0.14),transparent_32%)] dark:bg-[radial-gradient(ellipse_at_20%_20%,rgba(129,140,248,0.26),transparent_30%),radial-gradient(ellipse_at_80%_15%,rgba(45,212,191,0.18),transparent_26%),radial-gradient(ellipse_at_50%_85%,rgba(168,85,247,0.2),transparent_30%)]" />
@@ -537,8 +530,6 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-
-      <PublicFooter links={navLinks} />
     </div>
   )
 }

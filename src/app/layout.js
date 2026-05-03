@@ -4,6 +4,7 @@ import { GlobalErrorBoundary } from '@/components/ErrorBoundary'
 import ToastProvider from '@/components/ToastProvider'
 import Script from 'next/script'
 import { preinit } from 'react-dom'
+import RootLayoutClient from '@/components/layout/RootLayoutClient'
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-RECK6F2WB4'
 
@@ -62,11 +63,9 @@ export default function RootLayout({ children }) {
 
         <GlobalErrorBoundary>
           <AuthProvider>
-            <main id="main-content" className="relative flex min-h-screen flex-col w-full max-w-full overflow-x-hidden">
-              <div className="flex-1 w-full mx-auto max-w-[1920px] px-4 sm:px-6 lg:px-8">
-                {children}
-              </div>
-            </main>
+            <RootLayoutClient>
+              {children}
+            </RootLayoutClient>
           </AuthProvider>
         </GlobalErrorBoundary>
 
