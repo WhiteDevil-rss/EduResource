@@ -18,11 +18,11 @@ export const metadata = {
   keywords: ['coaching classes', 'student learning', 'academic support', 'online education platform', 'expert study materials', 'board exam preparation'],
   authors: [{ name: 'SPS EDUCATIONAM Team' }],
   creator: 'SPS EDUCATIONAM',
-  metadataBase: new URL('https://edu-resource.pages.dev'),
+  metadataBase: new URL('https://sps.zembaa.com'),
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://edu-resource.vercel.app',
+    url: 'https://sps.zembaa.com',
     title: 'SPS EDUCATIONAM | Premier Coaching Classes & Student Learning Platform',
     description: 'Empowering students with high-quality academic support and expert study materials.',
     siteName: 'SPS EDUCATIONAM',

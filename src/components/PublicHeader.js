@@ -153,7 +153,7 @@ export default function PublicHeader({
                 asChild
                 variant={action.variant === 'primary' ? 'default' : 'ghost'}
                 className={cn(
-                  'rounded-full px-8 h-11 font-bold shadow-md transition-all duration-300',
+                  'rounded-full px-8 h-11 font-bold shadow-md transition-all duration-300 whitespace-nowrap',
                   action.variant === 'primary'
                     ? 'bg-primary text-primary-foreground hover:shadow-primary/30 hover:scale-105 active:scale-95'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
