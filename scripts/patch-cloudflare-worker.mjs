@@ -112,6 +112,7 @@ import * as _stream from "node:stream";
 import * as _url from "node:url";
 import * as _util from "node:util";
 import * as _module from "node:module";
+import * as _zlib from "node:zlib";
 
 const _node_modules = {
   "async_hooks": _async_hooks,
