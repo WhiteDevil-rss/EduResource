@@ -14,6 +14,7 @@ import {
   GraduationCap,
 } from 'lucide-react'
 import { useCallback, useEffect, useState, useRef } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { getFirebaseAuth } from '@/lib/firebase'
