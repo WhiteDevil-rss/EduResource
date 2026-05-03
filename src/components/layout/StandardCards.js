@@ -104,7 +104,7 @@ export function UserCard({
         </div>
 
         {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-2 mt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
           <div className="p-2.5 rounded-xl bg-muted/50 border border-border/50">
             <p className="text-[10px] font-medium text-muted-strong uppercase tracking-wider mb-0.5">Last Active</p>
             <p className="text-xs font-semibold text-foreground truncate">{lastActive || 'Never'}</p>

@@ -1,6 +1,21 @@
 import { google } from 'googleapis';
 import http from 'http';
 import url from 'url';
+import fs from 'fs';
+import path from 'path';
+
+// Load .env.local manually
+const envPath = path.resolve(process.cwd(), '.env.local');
+if (fs.existsSync(envPath)) {
+  const envConfig = fs.readFileSync(envPath, 'utf8');
+  envConfig.split('\n').forEach(line => {
+    const [key, ...valueParts] = line.split('=');
+    if (key && valueParts.length > 0) {
+      const value = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
+      process.env[key.trim()] = value;
+    }
+  });
+}
 
 /**
  * 🛠️ GOOGLE DRIVE TOKEN GENERATOR

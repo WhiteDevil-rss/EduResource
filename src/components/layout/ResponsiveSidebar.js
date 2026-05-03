@@ -70,7 +70,12 @@ function SidebarContent({ user, role, title, subtitle, navItems, navSections, on
                             className={cn('shrink-0 transition-transform duration-200 group-hover:scale-110', !isActive && 'group-hover:text-foreground')}
                           />
                           <span className="truncate">{item.label}</span>
-                          {isActive && (
+                          {item.badge && (
+                            <span className="ml-auto inline-flex items-center justify-center rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary animate-in zoom-in fade-in duration-300">
+                              {item.badge}
+                            </span>
+                          )}
+                          {isActive && !item.badge && (
                             <span
                               className="ml-auto h-1 w-1 rounded-full bg-primary animate-in fade-in zoom-in duration-300"
                               aria-hidden="true"
@@ -114,7 +119,12 @@ function SidebarContent({ user, role, title, subtitle, navItems, navSections, on
                         className={cn('shrink-0 transition-transform duration-200 group-hover:scale-110', !isActive && 'group-hover:text-foreground')}
                       />
                       <span className="truncate">{item.label}</span>
-                      {isActive && (
+                      {item.badge && (
+                        <span className="ml-auto inline-flex items-center justify-center rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary animate-in zoom-in fade-in duration-300">
+                          {item.badge}
+                        </span>
+                      )}
+                      {isActive && !item.badge && (
                         <span
                           className="ml-auto h-1 w-1 rounded-full bg-primary animate-in fade-in zoom-in duration-300"
                           aria-hidden="true"

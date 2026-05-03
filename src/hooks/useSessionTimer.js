@@ -36,14 +36,16 @@ export function useSessionTimer() {
       setSecondsRemaining((current) => Math.max(0, current - 1))
     }, 1000)
 
+    const activityHandler = () => resetTimer()
+
     ACTIVITY_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, resetTimer, { passive: true })
+      window.addEventListener(eventName, activityHandler, { passive: true })
     })
 
     return () => {
       window.clearInterval(tick)
       ACTIVITY_EVENTS.forEach((eventName) => {
-        window.removeEventListener(eventName, resetTimer)
+        window.removeEventListener(eventName, activityHandler)
       })
     }
   }, [inactivityTimeoutSeconds, superAdminVisible, user?.uid])
@@ -59,6 +61,6 @@ export function useSessionTimer() {
     secondsRemaining,
     formatted,
     isWarning: secondsRemaining <= 60,
-    onExtendSession: () => stayLoggedIn?.(),
+    onExtendSession: stayLoggedIn,
   }
 }

@@ -17,7 +17,7 @@ import { useCallback, useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 // getRedirectResult will be imported dynamically
-import { auth } from '@/lib/firebase'
+import { getFirebaseAuth } from '@/lib/firebase'
 import PublicFooter from '@/components/PublicFooter'
 import PublicHeader from '@/components/PublicHeader'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,8 +29,8 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/cn'
 
 const footerLinks = [
-  { label: 'Privacy Policy', href: '/#features' },
-  { label: 'Terms of Service', href: '/#features' },
+  { label: 'Privacy Policy', href: '/privacy-policy' },
+  { label: 'Terms of Service', href: '/terms-of-service' },
   { label: 'Academic Integrity', href: '/#team' },
   { label: 'Support', href: '/#team' },
 ]
@@ -60,22 +60,41 @@ export default function Login() {
     role,
     loading,
     isAuthenticating,
+    isNavigating,
+    isSessionConfirmed,
   } = useAuth()
   
   const router = useRouter()
   const redirectCheckStartedRef = useRef(false)
+  const redirectingToRef = useRef(null)
   const staffSubmitInFlightRef = useRef(false)
   const otpVerifyInFlightRef = useRef(false)
   const otpResendInFlightRef = useRef(false)
   const studentLoginInFlightRef = useRef(false)
   const { links: navLinks, actions: navActions } = getPublicHeaderContent(pathname)
 
-  // Redirect if already logged in
+  // Redirect if already logged in and session is confirmed by server
   useEffect(() => {
-    if (!loading && user && role) {
-      router.replace(getPostLoginRedirectPath(user, role))
+    if (!loading && user && role && isSessionConfirmed && !isNavigating) {
+      const target = getPostLoginRedirectPath(user, role)
+      
+      // Prevent multiple redirection attempts to the same target
+      if (redirectingToRef.current === target) {
+        return
+      }
+      
+      console.log(`[AUTH] Login page auto-redirect: session confirmed, navigating to ${target}`);
+      redirectingToRef.current = target
+      
+      // Immediate browser-level redirection for maximum performance
+      if (typeof window !== 'undefined') {
+        window.location.replace(target)
+      } else {
+        router.replace(target)
+      }
     }
-  }, [loading, role, router, user])
+  }, [loading, role, router, user, isNavigating, isSessionConfirmed])
+
 
   // Handle unauthorized reason from URL
   useEffect(() => {
@@ -97,13 +116,17 @@ export default function Login() {
 
     const checkRedirect = async () => {
       try {
+        const authInstance = await getFirebaseAuth()
+        if (!authInstance) return
+
         const { getRedirectResult } = await import('firebase/auth')
-        const result = await getRedirectResult(auth)
+        const result = await getRedirectResult(authInstance)
         if (result) {
           const idToken = await result.user.getIdToken()
           await loginWithGoogle(idToken)
         }
       } catch (error) {
+        console.error('[AUTH] Redirect result check failed:', error)
         setFormError(error.message || 'Google sign-in failed.')
       }
     }

@@ -2,6 +2,15 @@
 
 import { BookOpen, FolderKanban, Star, Users, TrendingUp, ArrowUpRight, BarChart3, Activity } from 'lucide-react'
 import { StandardCard, StatCard } from '@/components/layout/StandardCards'
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts'
 
 export function AnalyticsDashboard({ summary, role = 'faculty' }) {
   if (!summary) return null
@@ -10,7 +19,7 @@ export function AnalyticsDashboard({ summary, role = 'faculty' }) {
   const reviews = Array.isArray(summary.reviews) ? summary.reviews : []
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="w-full max-w-full space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Primary Metrics */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -47,8 +56,8 @@ export function AnalyticsDashboard({ summary, role = 'faculty' }) {
 
       {/* Engagement Insights */}
       <div className="grid gap-8 lg:grid-cols-12">
-        {/* Top Content */}
-        <StandardCard className="lg:col-span-12 xl:col-span-5 p-0 overflow-hidden border-border/40 bg-card/40">
+        {/* Popular Content */}
+        <StandardCard className="lg:col-span-12 p-0 overflow-hidden border-border/40 bg-card/40">
           <div className="p-6 border-b border-border/40 bg-muted/20 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
@@ -87,7 +96,7 @@ export function AnalyticsDashboard({ summary, role = 'faculty' }) {
         </StandardCard>
 
         {/* Feedback Stream */}
-        <StandardCard className="lg:col-span-12 xl:col-span-7 p-0 overflow-hidden border-border/40 bg-card/40">
+        <StandardCard className="lg:col-span-12 p-0 overflow-hidden border-border/40 bg-card/40">
           <div className="px-6 py-5 border-b border-border/40 bg-muted/20 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-warning/10 border border-warning/20 flex items-center justify-center text-warning-strong">

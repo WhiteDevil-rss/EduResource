@@ -44,7 +44,7 @@ export default function PublicFooter({
               SPS EDUCATIONAM
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs break-words">
-              Empowering academic communities through high-fidelity resource management and governance.
+              Providing premier academic support and coaching classes to help students achieve excellence in their board exams and beyond.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {COMPANY_SOCIALS.map((item) => {
@@ -88,7 +88,20 @@ export default function PublicFooter({
             </nav>
           </div>
 
-          {/* Legal / Meta */}
+          {/* Legal Section */}
+          <div className="space-y-6">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Legal</h4>
+            <nav className="flex flex-col gap-3">
+              <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms-of-service" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Terms of Service
+              </Link>
+            </nav>
+          </div>
+
+          {/* Partnership / Meta */}
           <div className="space-y-6">
             <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Partnership</h4>
             <div className="space-y-3">

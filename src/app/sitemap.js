@@ -1,5 +1,5 @@
 export default function sitemap() {
-  const baseUrl = 'https://edu-resource.vercel.app' // Placeholder
+  const baseUrl = 'https://sps.zembaa.com' // Placeholder
 
   return [
     {
@@ -19,6 +19,18 @@ export default function sitemap() {
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/privacy-policy`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/terms-of-service`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
   ]
 }

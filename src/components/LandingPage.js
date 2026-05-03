@@ -30,23 +30,23 @@ import { cn } from '@/lib/cn'
 
 const FEATURE_CARDS = [
   {
-    title: 'Search-first discovery',
+    title: 'Comprehensive Study Material',
     description:
-      'Students move from course code to the exact note, handout, or guide in a few taps. No hunting, no friction.',
+      'Access expertly curated notes, practice papers, and reference guides for Class 10th, 11th, and 12th students.',
     icon: BookOpen,
     accent: 'primary',
   },
   {
-    title: 'Faculty publishing flows',
+    title: 'Online Education Hub',
     description:
-      'Upload, organise, and maintain resources without wrestling the interface. Upload queues, editing, and analytics in one place.',
+      'A seamless platform for student learning with academic support, digital handouts, and structured subject collections.',
     icon: FileText,
     accent: 'secondary',
   },
   {
-    title: 'Operational governance',
+    title: 'Track Your Progress',
     description:
-      'Admins manage requests, logs, security, and moderation from one calm, role-aware control surface.',
+      'Monitor your learning journey with personalized insights, analytics, and easy access to all your academic resources.',
     icon: Shield,
     accent: 'success',
   },
@@ -55,23 +55,23 @@ const FEATURE_CARDS = [
 const PLATFORM_STEPS = [
   {
     step: '01',
-    eyebrow: 'Discover',
-    title: 'Students get a cleaner path to learning materials',
-    copy: 'Search, filters, bookmarking, and guided collections reduce the time spent hunting for resources.',
+    eyebrow: 'Access',
+    title: 'Get high-quality coaching material instantly',
+    copy: 'Find specialized notes and academic resources designed specifically for your school curriculum and board exams.',
     icon: BookOpen,
   },
   {
     step: '02',
-    eyebrow: 'Publish',
-    title: 'Faculty gets a focused publishing workspace',
-    copy: 'Upload queues, editing flows, and analytics surfaces make content management straightforward.',
+    eyebrow: 'Learn',
+    title: 'Focused academic support for every subject',
+    copy: 'Structured digital content ensures students can focus on learning instead of searching for materials.',
     icon: TrendingUp,
   },
   {
     step: '03',
-    eyebrow: 'Govern',
-    title: 'Admins get visibility without clutter',
-    copy: 'Security, user control, auditability, and analytics live inside a consistent admin system.',
+    eyebrow: 'Succeed',
+    title: 'Achieve better results with organized study',
+    copy: 'Stay ahead of your classes with regular updates and easy-to-digest handouts from experienced faculty.',
     icon: Shield,
   },
 ]
@@ -248,15 +248,14 @@ export default function LandingPage() {
                   SPS EDUCATIONAM
                 </p>
                 <h1 className="text-balance text-4xl font-semibold leading-[1.12] md:text-6xl">
-                  One cohesive academic platform for{' '}
+                  Premier coaching classes for{' '}
                   <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    discovery, publishing, and governance.
+                    academic excellence and student learning.
                   </span>
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                  The interface is designed like a product workspace, not a collection of screens:
-                  cleaner hierarchy, softer surfaces, faster navigation, and role-based control that
-                  feels production-ready.
+                  SPS Educationam provides a premier coaching environment dedicated to academic excellence, 
+                  offering structured learning support and expert resources tailored for student success.
                 </p>
               </div>
 
@@ -297,7 +296,7 @@ export default function LandingPage() {
                     Product Snapshot
                   </p>
                   <h2 className="text-2xl font-semibold text-foreground">
-                    Designed for the three workflows that matter most
+                    Empowering students with coaching materials that matter
                   </h2>
                 </div>
 
@@ -321,7 +320,7 @@ export default function LandingPage() {
                       <h3 className="text-base font-semibold">Latest redesign system</h3>
                       <p className="text-sm leading-6 text-muted-foreground">
                         Shared shell components, semantic tokens, accessible controls, mobile-first
-                        layouts, and Boneyard-powered loading states now drive the experience.
+                        layouts, and streamlined loading states now drive the experience.
                       </p>
                     </div>
                   </div>
@@ -404,12 +403,11 @@ export default function LandingPage() {
                   Platform flow
                 </Badge>
                 <h2 className="mt-2 text-3xl font-semibold leading-tight md:text-4xl">
-                  Each panel now has one job and a clearer working surface.
+                  Streamlined learning paths for every student.
                 </h2>
                 <p className="mt-5 text-base leading-7 text-muted-foreground">
-                  Student, faculty, and admin experiences all share the same visual grammar: sticky
-                  topbar, responsive sidebar, standardised cards, and more legible search and filter
-                  controls.
+                  Our platform provides organized access to coaching notes, subject-wise materials, 
+                  and academic updates, ensuring a focused learning experience without distractions.
                 </p>
 
                 <div className="mt-8 grid grid-cols-3 gap-3">
@@ -520,11 +518,11 @@ export default function LandingPage() {
                   Ready to launch
                 </Badge>
                 <h2 className="mx-auto mt-5 max-w-3xl text-balance text-3xl font-semibold leading-tight md:text-5xl">
-                  Start with a faster, calmer interface across the entire academic workflow.
+                  Empowering students with high-quality academic support and resources.
                 </h2>
                 <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-                  The redesign brings modern SaaS UI patterns to landing, student, faculty, and admin
-                  experiences — without changing the app&apos;s core workflows.
+                  Join SPS Educationam today and access a world of curated coaching material designed 
+                  to help you excel in your academic journey.
                 </p>
                 <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
                   <Button asChild className="h-13 rounded-full px-8 text-sm font-semibold shadow-lg shadow-primary/25">

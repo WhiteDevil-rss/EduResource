@@ -20,8 +20,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 const footerLinks = [
-  { label: 'Privacy Policy', href: '/#features' },
-  { label: 'Terms of Service', href: '/#features' },
+  { label: 'Privacy Policy', href: '/privacy-policy' },
+  { label: 'Terms of Service', href: '/terms-of-service' },
   { label: 'Support', href: '/#team' },
 ]
 
@@ -120,9 +120,9 @@ export default function Register() {
 
                 <p className="text-center text-xs text-muted-foreground px-4 leading-relaxed">
                   By joining, you agree to our{' '}
-                  <Link href="/#features" className="text-foreground font-semibold hover:underline">Terms of Service</Link>{' '}
+                  <Link href="/terms-of-service" className="text-foreground font-semibold hover:underline">Terms of Service</Link>{' '}
                   and{' '}
-                  <Link href="/#features" className="text-foreground font-semibold hover:underline">Privacy Policy</Link>.
+                  <Link href="/privacy-policy" className="text-foreground font-semibold hover:underline">Privacy Policy</Link>.
                 </p>
               </div>
 

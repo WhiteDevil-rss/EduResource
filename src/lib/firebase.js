@@ -1,5 +1,4 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "placeholder-api-key",
@@ -10,21 +9,19 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "placeholder-app-id"
 };
 
-let existingApp = null;
+let app;
 try {
-  existingApp = getApps()[0];
-} catch (_e) {
-  // SSR safety
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+} catch (error) {
+  console.error('[FIREBASE] App initialization failed:', error);
 }
 
-const app = existingApp || initializeApp(firebaseConfig);
+// Function to get auth instance on demand to avoid module factory race conditions
+export const getFirebaseAuth = async () => {
+  if (typeof window === 'undefined') return null;
+  const { getAuth } = await import('firebase/auth');
+  return getAuth(app);
+};
 
-// Handle Auth with lazy initialization or safety
-let authInstance = null;
-try {
-  authInstance = getAuth(app);
-} catch (_e) {
-  // Silent fail for non-client environments
-}
-
-export const auth = authInstance;
+// Export app for local use
+export { app };

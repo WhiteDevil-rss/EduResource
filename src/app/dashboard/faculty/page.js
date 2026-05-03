@@ -85,6 +85,7 @@ export default function FacultyDashboard() {
   // State
   const [resources, setResources] = useState([])
   const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [notificationsLoading, setNotificationsLoading] = useState(false)
@@ -148,13 +149,14 @@ export default function FacultyDashboard() {
     const loadNotifications = async () => {
       setNotificationsLoading(true)
       try {
-        const response = await fetch('/api/student/notifications', {
+        const response = await fetch('/api/notifications', {
           cache: 'no-store',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
         if (isActive && response.ok) {
           setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
+          setUnreadCount(Number(payload?.unreadCount || 0))
         }
       } catch (error) {
         if (error.name === 'AbortError') return
@@ -305,7 +307,7 @@ export default function FacultyDashboard() {
 
   const readAllNotifications = useCallback(async () => {
     try {
-      const response = await fetch('/api/student/notifications', {
+      const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'read-all' }),
@@ -313,6 +315,7 @@ export default function FacultyDashboard() {
       if (response.ok) {
         const payload = await response.json()
         setNotifications(payload.notifications || [])
+        setUnreadCount(Number(payload.unreadCount || 0))
         toast.success('Alert feed cleared')
       }
     } catch {
@@ -398,7 +401,7 @@ export default function FacultyDashboard() {
       topbarTitle="Faculty Center"
       topbarSubtitle="Manage and publish your academic resources"
       onOpenNotifications={() => setNotificationsOpen(true)}
-      unreadCount={notifications.filter(n => !n.isRead).length}
+      unreadCount={unreadCount}
       onLogout={logout}
     >
       <PageContainer>
@@ -441,7 +444,7 @@ export default function FacultyDashboard() {
             <StatCard label="Total Resources" value={resources.length} icon={BookOpen} color="primary" trend="up" trendLabel="+12%" />
             <StatCard label="Collections" value={collections.length} icon={Library} color="info" />
             <StatCard label="Active Uploads" value={activeUploadCount} icon={Upload} color="warning" />
-            <StatCard label="Unread Alerts" value={notifications.filter(n => !n.isRead).length} icon={AlertCircle} color="error" />
+            <StatCard label="Unread Alerts" value={unreadCount} icon={AlertCircle} color="error" />
           </GridContainer>
         </ContentSection>
 
@@ -616,7 +619,7 @@ export default function FacultyDashboard() {
       {/* Resource Viewer & Editor: MODAL_OVERLAYS */}
       {resourceViewerOpen && (
         <Suspense fallback={<PanelSkeleton minHeight="min-h-[320px]" />}>
-          <LazyResourceViewer resource={previewResource} onClose={() => setResourceViewerOpen(false)} />
+          <LazyResourceViewer open={resourceViewerOpen} onOpenChange={setResourceViewerOpen} resource={previewResource} role="faculty" />
         </Suspense>
       )}
 
@@ -640,9 +643,14 @@ export default function FacultyDashboard() {
             <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Class</label>
             <Input value={draft.class} onChange={(e) => setDraft({ ...draft, class: e.target.value })} placeholder="Class 10, Batch B, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Description</label>
-            <Textarea value={draft.summary} onChange={(e) => setDraft({ ...draft, summary: e.target.value })} placeholder="Briefly describe what this resource is about..." rows={4} className="rounded-lg border-border/40 bg-muted/20 text-sm" />
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Resource Summary</label>
+            <Textarea
+              value={draft.summary}
+              onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
+              placeholder="Briefly describe what this resource is about..."
+              className="resize-none shadow-sm"
+            />
           </div>
         </DialogBody>
         <DialogFooter className="p-6 pt-4 border-t border-border/40 flex gap-3">
@@ -667,7 +675,7 @@ export default function FacultyDashboard() {
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
         notificationCount={notifications.length}
-        unreadCount={notifications.filter(n => !n.isRead).length}
+        unreadCount={unreadCount}
         onMarkAllRead={readAllNotifications}
         isLoading={notificationsLoading}
       >

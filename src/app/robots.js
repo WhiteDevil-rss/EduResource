@@ -5,6 +5,6 @@ export default function robots() {
       allow: '/',
       disallow: ['/admin/', '/api/', '/dashboard/'],
     },
-    sitemap: 'https://edu-resource.vercel.app/sitemap.xml',
+    sitemap: 'https://sps.zembaa.com/sitemap.xml',
   }
 }

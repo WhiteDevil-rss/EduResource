@@ -460,6 +460,7 @@ function sanitizeNotificationData(docId, data = {}) {
     facultyName: data.facultyName || data.facultyEmail || '',
     facultyEmail: data.facultyEmail || '',
     message: data.message || '',
+    isRead: Boolean(data.readAt),
     readAt: data.readAt || null,
     createdAt: data.createdAt || null,
   }
@@ -2160,23 +2161,35 @@ export async function markNotificationAsRead({ notificationId, recipientUid }) {
 }
 
 export async function markAllNotificationsAsRead(recipientUid) {
-  const notifications = await listNotificationRecords(recipientUid)
-  const unreadNotifications = notifications.filter((notification) => !notification.readAt)
+  const normalizedRecipientUid = String(recipientUid || '').trim()
+  if (!normalizedRecipientUid) return 0
 
-  await Promise.all(
-    unreadNotifications.map((notification) =>
-      firestore.setDoc(
-        `${NOTIFICATIONS_COLLECTION}/${notification.id}`,
-        {
-          ...notification,
-          readAt: nowIso(),
-        },
-        true
-      )
-    )
-  )
+  // Fetch up to 1000 unread notifications to mark them in a batch
+  const allUnread = await firestore
+    .runQueryMany(NOTIFICATIONS_COLLECTION, [
+      ['recipientUid', '==', normalizedRecipientUid],
+      ['readAt', '==', null]
+    ], 1000)
+    .catch(() => [])
 
-  return unreadNotifications.length
+  // Robust filter for unread state
+  const unreadRecords = allUnread.filter(r => r && !r.readAt)
+
+  if (unreadRecords.length === 0) return 0
+
+  const timestamp = nowIso()
+  const ops = unreadRecords.map((record) => ({
+    type: 'set',
+    path: `${NOTIFICATIONS_COLLECTION}/${record.id}`,
+    data: {
+      ...record,
+      readAt: timestamp,
+    },
+    merge: true,
+  }))
+
+  await firestore.commit(ops)
+  return unreadRecords.length
 }
 
 export async function createNotificationRecordsForResource(resource, facultySession) {

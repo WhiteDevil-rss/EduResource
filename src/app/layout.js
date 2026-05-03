@@ -3,32 +3,33 @@ import { AuthProvider } from '@/hooks/useAuth'
 import { GlobalErrorBoundary } from '@/components/ErrorBoundary'
 import ToastProvider from '@/components/ToastProvider'
 import Script from 'next/script'
+import { preinit } from 'react-dom'
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-RECK6F2WB4'
 
 export const metadata = {
   title: {
-    default: 'EDUCATIONAM | Intelligent Academic Resource Platform',
-    template: '%s | EDUCATIONAM',
+    default: 'SPS Educationam | Premier Coaching Classes & Student Learning Platform',
+    template: '%s | SPS Educationam',
   },
   description:
-    'A high-performance, role-based academic resource platform. Empowering students and faculty with seamless resource management and secure collaboration.',
-  keywords: ['education', 'academic resources', 'student platform', 'faculty workspace', 'SaaS'],
-  authors: [{ name: 'EDUCATIONAM Team' }],
-  creator: 'EDUCATIONAM',
-  metadataBase: new URL('https://edu-resource.pages.dev'), 
+    'SPS Educationam is a specialized student learning platform offering academic support, expert coaching classes, and curated study resources for Class 10th, 11th, and 12th students.',
+  keywords: ['coaching classes', 'student learning', 'academic support', 'online education platform', 'expert study materials', 'board exam preparation'],
+  authors: [{ name: 'SPS EDUCATIONAM Team' }],
+  creator: 'SPS EDUCATIONAM',
+  metadataBase: new URL('https://edu-resource.pages.dev'),
   openGraph: {
     type: 'website',
     locale: 'en_US',
     url: 'https://edu-resource.vercel.app',
-    title: 'EDUCATIONAM | Intelligent Academic Resource Platform',
-    description: 'Empowering students and faculty with seamless resource management and secure collaboration.',
-    siteName: 'EDUCATIONAM',
+    title: 'SPS EDUCATIONAM | Premier Coaching Classes & Student Learning Platform',
+    description: 'Empowering students with high-quality academic support and expert study materials.',
+    siteName: 'SPS EDUCATIONAM',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'EDUCATIONAM | Intelligent Academic Resource Platform',
-    description: 'Empowering students and faculty with seamless resource management and secure collaboration.',
+    title: 'SPS EDUCATIONAM | Premier Coaching Classes & Student Learning Platform',
+    description: 'Empowering students with high-quality academic support and expert study materials.',
   },
   icons: {
     icon: [
@@ -41,8 +42,9 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }) {
-  // Server-side diagnostic log to confirm the layout is rendering
-  console.log('[LAYOUT] Rendering RootLayout at:', new Date().toISOString());
+  // Use React 19's native preinit API to inject the theme script into the head
+  // without rendering a tag in the React tree that could trigger hydration warnings.
+  preinit('/theme-init.js', { as: 'script' })
 
   return (
     <html
@@ -53,54 +55,23 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body suppressHydrationWarning>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {`
-            (function () {
-              try {
-                var storageKey = 'eduresourcehub-theme';
-                var accentKey = 'eduresourcehub-accent';
-                var savedTheme = window.localStorage.getItem(storageKey);
-                var savedAccent = window.localStorage.getItem(accentKey);
-                var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                var theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : (prefersDark ? 'dark' : 'light');
-                var accent = ['indigo', 'teal', 'violet'].includes(savedAccent) ? savedAccent : 'indigo';
+      <body suppressHydrationWarning className="min-h-screen bg-background font-sans antialiased">
+        <a href="#main-content" className="skip-link sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-background">
+          Skip to Content
+        </a>
 
-                document.documentElement.classList.remove('light', 'dark');
-                document.documentElement.classList.add(theme);
-                document.documentElement.setAttribute('data-theme', theme);
-                document.documentElement.setAttribute('data-accent', accent);
-                document.documentElement.style.colorScheme = theme;
-              } catch (error) {
-                document.documentElement.classList.remove('light', 'dark');
-                document.documentElement.classList.add('light');
-                document.documentElement.setAttribute('data-theme', 'light');
-                document.documentElement.setAttribute('data-accent', 'indigo');
-                document.documentElement.style.colorScheme = 'light';
-              }
-            })();
-          `}
-        </Script>
-        {process.env.NODE_ENV === 'development' ? (
-          <Script id="clipboard-focus-guard" strategy="beforeInteractive">
-            {`
-              (function () {
-                if (!navigator.clipboard || !navigator.clipboard.writeText) {
-                  return;
-                }
+        <GlobalErrorBoundary>
+          <AuthProvider>
+            <main id="main-content" className="relative flex min-h-screen flex-col w-full max-w-full overflow-x-hidden">
+              <div className="flex-1 w-full mx-auto max-w-[1920px] px-4 sm:px-6 lg:px-8">
+                {children}
+              </div>
+            </main>
+          </AuthProvider>
+        </GlobalErrorBoundary>
 
-                const originalWriteText = navigator.clipboard.writeText.bind(navigator.clipboard);
-                navigator.clipboard.writeText = async function (text) {
-                  if (typeof document !== 'undefined' && !document.hasFocus()) {
-                    return Promise.resolve();
-                  }
+        <ToastProvider />
 
-                  return originalWriteText(text);
-                };
-              })();
-            `}
-          </Script>
-        ) : null}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
@@ -115,13 +86,6 @@ export default function RootLayout({ children }) {
             });
           `}
         </Script>
-        <a href="#main-content" className="skip-link">Skip to Content</a>
-        <GlobalErrorBoundary>
-          <AuthProvider>
-            <main id="main-content">{children}</main>
-          </AuthProvider>
-        </GlobalErrorBoundary>
-        <ToastProvider />
       </body>
     </html>
   )

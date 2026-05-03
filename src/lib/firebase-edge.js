@@ -273,7 +273,10 @@ function fromFirestore(fields) {
 function toFirestore(obj) {
   const fields = {}
   for (const [key, value] of Object.entries(obj)) {
-    if (value === null || value === undefined) continue
+    if (value === null || value === undefined) {
+      fields[key] = { nullValue: 'NULL_VALUE' }
+      continue
+    }
     
     if (typeof value === 'string') fields[key] = { stringValue: value }
     else if (typeof value === 'boolean') fields[key] = { booleanValue: value }
@@ -476,18 +479,39 @@ export const firestore = {
     const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`
 
     const [field, op, value] = filter
-    const safeLimit = Math.max(1, Math.min(100, Number(limit) || 10))
+    const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 10))
+
+    let where = {}
+    if (Array.isArray(filter[0])) {
+      // Composite filter
+      where = {
+        compositeFilter: {
+          op: 'AND',
+          filters: filter.map(([field, op, value]) => ({
+            fieldFilter: {
+              field: { fieldPath: field },
+              op: op === '==' ? 'EQUAL' : op,
+              value: toFirestore({ v: value }).v
+            }
+          }))
+        }
+      }
+    } else {
+      // Single filter
+      const [field, op, value] = filter
+      where = {
+        fieldFilter: {
+          field: { fieldPath: field },
+          op: op === '==' ? 'EQUAL' : op,
+          value: toFirestore({ v: value }).v
+        }
+      }
+    }
 
     const query = {
       structuredQuery: {
         from: [{ collectionId: collectionPath }],
-        where: {
-          fieldFilter: {
-            field: { fieldPath: field },
-            op: op === '==' ? 'EQUAL' : op,
-            value: toFirestore({ v: value }).v
-          }
-        },
+        where,
         limit: safeLimit
       }
     }

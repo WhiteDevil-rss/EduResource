@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 import { ExternalLink, FileText, Download, ShieldAlert } from 'lucide-react'
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +17,10 @@ function inferPreviewKind(resource) {
   if (fileType.includes('pdf') || fileFormat === 'pdf' || fileUrl.endsWith('.pdf')) {
     return 'pdf'
   }
+  
+  if (fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileFormat) || /\.(jpg|jpeg|png|gif|webp|svg)$/.test(fileUrl)) {
+    return 'image'
+  }
 
   if (fileType.startsWith('text/') || ['txt', 'md', 'csv', 'json'].includes(fileFormat)) {
     return 'text'
@@ -29,12 +35,18 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
   const downloadUrl = resource?.id ? `/api/student/resources/${resource.id}/download` : ''
   const canDownload = role !== 'student' && Boolean(downloadUrl)
 
+  const [loadError, setLoadError] = useState(false)
+
   const openResource = (url) => {
     if (!url || typeof window === 'undefined') {
       return
     }
 
     window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleIframeError = () => {
+    setLoadError(true)
   }
 
   return (
@@ -51,7 +63,7 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
           <Badge>{resource?.subject || 'General'}</Badge>
           <Badge variant="outline">{resource?.class || 'Unassigned class'}</Badge>
           <Badge variant={previewKind === 'other' ? 'outline' : 'secondary'}>
-            {previewKind === 'pdf' ? 'PDF Preview' : previewKind === 'text' ? 'Text Preview' : 'Limited Preview'}
+            {previewKind === 'pdf' ? 'PDF Preview' : previewKind === 'image' ? 'Image Preview' : previewKind === 'text' ? 'Text Preview' : 'Limited Preview'}
           </Badge>
         </div>
 
@@ -72,17 +84,36 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
 
         <Card className="overflow-hidden border border-outline bg-surface-panel">
           <CardContent className="p-0">
-            {previewKind === 'pdf' ? (
+            {loadError ? (
+              <div className="flex h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center">
+                <ShieldAlert size={28} className="text-red-500" />
+                <h3 className="text-lg font-semibold text-foreground">Preview Failed to Load</h3>
+                <p className="max-w-md text-sm text-muted">
+                  We couldn't generate a secure preview for this file. You can still download it directly.
+                </p>
+              </div>
+            ) : previewKind === 'pdf' ? (
               <iframe
                 title={`${resource?.title || 'Resource'} preview`}
                 src={previewUrl}
-                className="h-[65vh] w-full bg-background"
+                className="h-[65vh] w-full bg-background border-0"
+                onError={() => setLoadError(true)}
               />
+            ) : previewKind === 'image' ? (
+              <div className="flex h-[65vh] w-full items-center justify-center bg-muted/20 p-4">
+                <img
+                  src={previewUrl}
+                  alt={resource?.title || 'Resource preview'}
+                  className="max-h-full max-w-full object-contain shadow-sm"
+                  onError={() => setLoadError(true)}
+                />
+              </div>
             ) : previewKind === 'text' ? (
               <iframe
                 title={`${resource?.title || 'Resource'} text preview`}
                 src={previewUrl}
-                className="h-[65vh] w-full bg-background"
+                className="h-[65vh] w-full bg-background border-0"
+                onError={() => setLoadError(true)}
               />
             ) : (
               <div className="flex h-[40vh] flex-col items-center justify-center gap-3 p-6 text-center">

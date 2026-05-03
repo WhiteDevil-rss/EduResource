@@ -7,6 +7,7 @@ import {
   Star,
   Clock,
   CheckCircle2,
+  UserCircle,
 } from 'lucide-react'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -43,11 +44,7 @@ import { StudentResourceCard } from '@/components/student/StudentResourceCard'
 const DOWNLOADS_STORAGE_KEY = 'sps.educationam.downloads.v1'
 
 const LazyResourceViewer = lazy(() => import('@/components/ResourceViewer').then((module) => ({ default: module.ResourceViewer })))
-const LazyAnalyticsDashboard = lazy(() => import('@/components/analytics/AnalyticsDashboard').then((module) => ({ default: module.AnalyticsDashboard })))
-const LazyCollectionManager = lazy(() => import('@/components/CollectionManager').then((module) => ({ default: module.CollectionManager })))
-const LazyRecommendationPanel = lazy(() => import('@/components/RecommendationPanel').then((module) => ({ default: module.RecommendationPanel })))
 const LazyNotificationPreferencesPanel = lazy(() => import('@/components/NotificationPreferencesPanel').then((module) => ({ default: module.NotificationPreferencesPanel })))
-const LazySavedSearchPanel = lazy(() => import('@/components/SavedSearchPanel').then((module) => ({ default: module.SavedSearchPanel })))
 
 function PanelSkeleton({ minHeight = 'min-h-[220px]' }) {
   return (
@@ -117,13 +114,14 @@ function persistDownloads(downloads) {
 
 export default function StudentDashboard() {
   const { user, logout } = useAuth()
-  const { toggleBookmark } = useBookmark()
+  const { toggleBookmark, saving: bookmarkSaving } = useBookmark()
 
   // State
   const [resources, setResources] = useState([])
   const [, setDownloads] = useState([])
   const [notifications, setNotifications] = useState([])
-  const [notificationsLoading] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestSubmitting, setRequestSubmitting] = useState(false)
@@ -140,11 +138,11 @@ export default function StudentDashboard() {
   const [resourcePage, setResourcePage] = useState(1)
   const [previewResource, setPreviewResource] = useState(null)
   const [resourceViewerOpen, setResourceViewerOpen] = useState(false)
-  const [collections, setCollections] = useState([])
-  const [analyticsSummary, setAnalyticsSummary] = useState(null)
   const [reviewTarget, setReviewTarget] = useState(null)
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState('')
+  const [targetReviews, setTargetReviews] = useState([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
 
   const debouncedSearchInput = useDebouncedSearch(searchInput, 500)
 
@@ -187,23 +185,12 @@ export default function StudentDashboard() {
 
     const loadExtra = async () => {
       try {
-        const [notifRes, collRes, statsRes] = await Promise.all([
-          fetch('/api/student/notifications', { cache: 'no-store', signal: controller.signal }),
-          fetch('/api/collections', { cache: 'no-store', signal: controller.signal }),
-          fetch('/api/analytics/summary', { cache: 'no-store', signal: controller.signal }),
-        ])
+        const notifRes = await fetch('/api/notifications', { cache: 'no-store', signal: controller.signal })
 
         if (isActive && notifRes.ok) {
           const payload = await notifRes.json().catch(() => ({}))
           setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
-        }
-        if (isActive && collRes.ok) {
-          const payload = await collRes.json().catch(() => ({}))
-          setCollections(Array.isArray(payload?.collections) ? payload.collections : [])
-        }
-        if (isActive && statsRes.ok) {
-          const payload = await statsRes.json().catch(() => ({}))
-          setAnalyticsSummary(payload?.summary || null)
+          setUnreadCount(Number(payload?.unreadCount || 0))
         }
       } catch (err) {
         if (err.name !== 'AbortError') console.error('Engagement sync error:', err)
@@ -248,13 +235,31 @@ export default function StudentDashboard() {
   }, [])
 
   const handleToggleBookmark = useCallback(async (entry) => {
-    if (!entry?.id) return
-    await toggleBookmark(entry.id)
-  }, [toggleBookmark])
+    if (!entry?.id || bookmarkSaving) return
+    
+    // Optimistic update
+    const nextStatus = !entry.isBookmarked
+    setResources(prev => prev.map(r => 
+      r.id === entry.id ? { ...r, isBookmarked: nextStatus } : r
+    ))
+
+    try {
+      const { bookmarked } = await toggleBookmark(entry.id)
+      // Confirm with server response
+      setResources(prev => prev.map(r => 
+        r.id === entry.id ? { ...r, isBookmarked: bookmarked } : r
+      ))
+    } catch (error) {
+      // Revert on error
+      setResources(prev => prev.map(r => 
+        r.id === entry.id ? { ...r, isBookmarked: !nextStatus } : r
+      ))
+    }
+  }, [toggleBookmark, bookmarkSaving])
 
   const readAllNotifications = useCallback(async () => {
     try {
-      const response = await fetch('/api/student/notifications', {
+      const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'read-all' }),
@@ -262,6 +267,7 @@ export default function StudentDashboard() {
       if (response.ok) {
         const payload = await response.json()
         setNotifications(payload.notifications || [])
+        setUnreadCount(Number(payload.unreadCount || 0))
         toast.success('Notifications cleared')
       }
     } catch {
@@ -292,6 +298,24 @@ export default function StudentDashboard() {
     }
   }
 
+  const handleReviewClick = useCallback(async (resource) => {
+    setReviewTarget(resource)
+    setReviewRating(5)
+    setReviewComment('')
+    setReviewsLoading(true)
+    try {
+      const response = await fetch(`/api/resources/${resource.id}/reviews`)
+      const payload = await response.json().catch(() => ({}))
+      if (response.ok) {
+        setTargetReviews(payload.reviews || [])
+      }
+    } catch (err) {
+      console.error('Failed to load reviews:', err)
+    } finally {
+      setReviewsLoading(false)
+    }
+  }, [])
+
   const handleSubmitReview = async () => {
     if (!reviewTarget?.id) return
     try {
@@ -300,9 +324,16 @@ export default function StudentDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
       })
-      if (!response.ok) throw new Error('Failed to submit review')
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Failed to submit review')
       toast.success('Your review has been submitted. Thank you!')
-      setReviewTarget(null)
+      
+      // Refresh reviews list
+      const freshRes = await fetch(`/api/resources/${reviewTarget.id}/reviews`)
+      const freshPayload = await freshRes.json().catch(() => ({}))
+      if (freshRes.ok) setTargetReviews(freshPayload.reviews || [])
+      
+      setReviewComment('')
     } catch (err) {
       toast.error(err.message)
     }
@@ -337,10 +368,7 @@ export default function StudentDashboard() {
     return filteredResources.slice(startIndex, startIndex + pageSize)
   }, [filteredResources, resourcePage])
 
-  const unreadNotifications = useMemo(
-    () => notifications.filter((n) => !n.isRead).length,
-    [notifications]
-  )
+  // Remove unreadNotifications memo as we use state now
 
   const filterConfig = useMemo(() => [
     { id: 'search', type: 'search', label: 'Search Resources', placeholder: 'Find resources...', value: searchInput },
@@ -362,19 +390,21 @@ export default function StudentDashboard() {
 
   if (loading) return <StudentDashboardSkeleton />
 
+  const bookmarkedCount = resources.filter(r => r.isBookmarked).length
+
   const studentNavSections = [
     {
       label: 'Workspace',
       items: [
         { id: 'overview', label: 'Overview', href: '#overview', icon: Library },
-        { id: 'resources', label: 'Library', href: '#resources', icon: BookOpen },
+        { id: 'library', label: 'Library', href: '#library', icon: BookOpen },
+        { id: 'saved', label: 'Saved', href: '#saved', icon: Bookmark, badge: bookmarkedCount > 0 ? bookmarkedCount : null },
       ],
     },
     {
-      label: 'Engagement',
+      label: 'Personal',
       items: [
-        { id: 'insights', label: 'Insights', href: '#insights', icon: Star },
-        { id: 'personal', label: 'Personal', href: '#personal', icon: Bookmark },
+        { id: 'personal', label: 'Profile Settings', href: '#personal', icon: UserCircle },
       ],
     },
   ]
@@ -388,9 +418,10 @@ export default function StudentDashboard() {
       navSections={studentNavSections}
       navItems={[
         { id: 'overview', label: 'Overview', href: '#overview', icon: Library },
-        { id: 'resources', label: 'Library', href: '#resources', icon: BookOpen },
+        { id: 'library', label: 'Library', href: '#library', icon: BookOpen },
+        { id: 'saved', label: 'Saved', href: '#saved', icon: Bookmark },
         { id: 'insights', label: 'Insights', href: '#insights', icon: Star },
-        { id: 'personal', label: 'Personal', href: '#personal', icon: Bookmark },
+        { id: 'personal', label: 'Personal', href: '#personal', icon: UserCircle },
       ]}
       topbarTitle="Student Console"
       topbarSubtitle="Manage and sync your academic assets"
@@ -436,7 +467,7 @@ export default function StudentDashboard() {
           </GridContainer>
         </ContentSection>
 
-        <ContentSection id="resources" title="Resource Library" subtitle="Browse approved materials with a cleaner search and filter flow">
+        <ContentSection id="library" title="Resource Library" subtitle="Access your curated academic materials">
           <ResponsiveFilterBar
             filters={filterConfig}
             onFilterChange={(id, val) => {
@@ -471,7 +502,7 @@ export default function StudentDashboard() {
                       onPreview={handlePreviewResource}
                       onDownload={handleResourceAction}
                       onBookmark={handleToggleBookmark}
-                      onReview={(r) => setReviewTarget(r)}
+                      onReview={handleReviewClick}
                     />
                   ))}
                 </GridContainer>
@@ -492,51 +523,61 @@ export default function StudentDashboard() {
           </div>
         </ContentSection>
 
-        {/* Insights & Collections */}
-        {(analyticsSummary || collections.length > 0) && (
-          <ContentSection id="insights" title="Learning Insights" subtitle="Visual signals from your recent usage and saved collections">
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-              {analyticsSummary && (
-                <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
-                  <LazyAnalyticsDashboard summary={analyticsSummary} />
-                </Suspense>
-              )}
-              {collections.length > 0 && (
-                <Suspense fallback={<PanelSkeleton minHeight="min-h-[360px]" />}>
-                  <LazyCollectionManager collections={collections} onToggleSave={() => { }} />
-                </Suspense>
-              )}
+        {/* Saved Content Section */}
+        <ContentSection id="saved" title="Saved Resources" subtitle="Quick access to your bookmarked materials">
+          {resources.filter(r => r.isBookmarked).length > 0 ? (
+            <GridContainer columns={3}>
+              {resources.filter(r => r.isBookmarked).map((resource) => (
+                <StudentResourceCard
+                  key={resource.id}
+                  resource={resource}
+                  bookmarked={resource.isBookmarked}
+                  onPreview={handlePreviewResource}
+                  onDownload={handleResourceAction}
+                  onBookmark={handleToggleBookmark}
+                  onReview={handleReviewClick}
+                />
+              ))}
+            </GridContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 rounded-3xl border border-dashed border-border/60 bg-muted/5">
+              <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center text-muted-foreground/40 mb-4">
+                <Bookmark size={32} />
+              </div>
+              <h4 className="text-sm font-semibold text-foreground">No saved resources yet</h4>
+              <p className="text-xs text-muted-foreground mt-1">Bookmark resources from the library to see them here.</p>
             </div>
-          </ContentSection>
-        )}
+          )}
+        </ContentSection>
+
+
 
         {/* Personalization */}
-        <ContentSection id="personal" title="Workspace Management" subtitle="Personalize alerts, saved searches, and resource requests">
-          <GridContainer columns={3}>
+        <ContentSection id="personal" title="Workspace Management" subtitle="Personalize alerts and manage resource requests">
+          <div className="grid gap-6 md:grid-cols-2">
             <Suspense fallback={<PanelSkeleton />}>
-              <LazyRecommendationPanel />
+              <LazyNotificationPreferencesPanel />
             </Suspense>
-            <Suspense fallback={<PanelSkeleton />}>
-              <LazySavedSearchPanel />
-            </Suspense>
-            <div className="flex flex-col gap-6">
-              <Suspense fallback={<PanelSkeleton />}>
-                <LazyNotificationPreferencesPanel />
-              </Suspense>
-              <div className="mt-auto overflow-hidden rounded-xl border border-primary/10 bg-primary/5 p-6">
-                <h4 className="text-xs font-semibold text-primary">Need a specific resource?</h4>
-                <p className="mt-2 text-[11px] leading-relaxed text-primary/70">
-                  Request specialized content or materials directly from your instructors.
-                </p>
+            <div className="overflow-hidden rounded-2xl border border-primary/10 bg-primary/5 p-8 flex flex-col justify-center">
+              <div className="space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <Library size={24} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-foreground">Need a specific resource?</h4>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Request specialized content or materials directly from your instructors.
+                  </p>
+                </div>
                 <Button
-                  className="mt-6 w-full h-10 rounded-lg bg-primary font-semibold text-xs shadow-sm shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95"
+                  className="mt-4 w-full h-12 rounded-xl bg-primary font-semibold text-sm shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95"
                   onClick={() => setRequestModalOpen(true)}
                 >
                   Create Request
                 </Button>
               </div>
             </div>
-          </GridContainer>
+          </div>
         </ContentSection>
       </PageContainer>
 
@@ -545,7 +586,7 @@ export default function StudentDashboard() {
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
         notificationCount={notifications.length}
-        unreadCount={unreadNotifications}
+        unreadCount={unreadCount}
         onMarkAllRead={readAllNotifications}
         isLoading={notificationsLoading}
       >
@@ -563,8 +604,9 @@ export default function StudentDashboard() {
       {resourceViewerOpen && (
         <Suspense fallback={<PanelSkeleton minHeight="min-h-[320px]" />}>
           <LazyResourceViewer
+            open={resourceViewerOpen}
+            onOpenChange={setResourceViewerOpen}
             resource={previewResource}
-            onClose={() => setResourceViewerOpen(false)}
           />
         </Suspense>
       )}
@@ -594,14 +636,13 @@ export default function StudentDashboard() {
                 className="h-10 rounded-lg border-border/40 bg-muted/20 text-xs"
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Additional Details</label>
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Additional Details</label>
               <Textarea
                 value={resourceRequest.details}
                 onChange={(e) => setResourceRequest({ ...resourceRequest, details: e.target.value })}
                 placeholder="Briefly describe what you need..."
-                rows={4}
-                className="rounded-lg border-border/40 bg-muted/20 text-xs"
+                className="resize-none shadow-sm"
               />
             </div>
           </div>
@@ -615,35 +656,71 @@ export default function StudentDashboard() {
       </Dialog>
 
       {/* Resource Review Dialog */}
-      <Dialog open={Boolean(reviewTarget)} onOpenChange={(open) => !open && setReviewTarget(null)}>
+      <Dialog open={Boolean(reviewTarget)} onOpenChange={(open) => !open && setReviewTarget(null)} className="max-w-3xl">
         <DialogHeader className="p-6 pb-4 border-b border-border/10">
-          <DialogTitle className="text-sm font-semibold">Review: {reviewTarget?.title}</DialogTitle>
+          <DialogTitle className="text-sm font-semibold">Reviews: {reviewTarget?.title}</DialogTitle>
         </DialogHeader>
-        <DialogBody className="p-6 py-6 space-y-8">
-          <div className="space-y-4">
-            <label className="text-[11px] font-medium text-muted-foreground text-center block">Rating: {reviewRating}/5</label>
-            <div className="flex justify-center gap-2">
-              {[1, 2, 3, 4, 5].map(i => (
-                <button key={i} onClick={() => setReviewRating(i)} className="transition-transform active:scale-90">
-                  <Star size={28} className={cn(i <= reviewRating ? "fill-primary text-primary" : "text-muted-foreground/20")} strokeWidth={2} />
-                </button>
-              ))}
+        <DialogBody className="p-0 max-h-[70vh] overflow-y-auto">
+          <div className="p-6 space-y-8">
+            {/* Existing Reviews */}
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">Community Feedback</h4>
+              {reviewsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2].map(i => <div key={i} className="h-20 w-full animate-pulse rounded-xl bg-muted/20" />)}
+                </div>
+              ) : targetReviews.length > 0 ? (
+                <div className="space-y-3">
+                  {targetReviews.map((rev) => (
+                    <div key={rev.id} className="rounded-xl border border-border/10 bg-muted/5 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold">{rev.reviewerName || 'Student'}</p>
+                        <div className="flex items-center gap-1 text-amber-500">
+                          <Star size={10} className="fill-current" />
+                          <span className="text-[10px] font-bold">{rev.rating}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground italic leading-relaxed">"{rev.comment}"</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center rounded-xl border border-dashed border-border/20">
+                  <p className="text-xs text-muted-foreground">No reviews yet. Be the first to share your thoughts!</p>
+                </div>
+              )}
             </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Your Review</label>
-            <Textarea
-              value={reviewComment}
-              onChange={(e) => setReviewComment(e.target.value)}
-              placeholder="Share your thoughts on this resource..."
-              rows={4}
-              className="rounded-lg border-border/40 bg-muted/20 text-xs"
-            />
+
+            {/* Submit New Review */}
+            <div className="space-y-6 pt-6 border-t border-border/10">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Write a Review</h4>
+              <div className="space-y-4">
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <label className="text-[11px] font-medium text-muted-foreground">Rate this resource</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <button key={i} onClick={() => setReviewRating(i)} className="transition-transform active:scale-90">
+                        <Star size={28} className={cn(i <= reviewRating ? "fill-primary text-primary" : "text-muted-foreground/20")} strokeWidth={2} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 px-1">Your Feedback</label>
+                  <Textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="What did you think of this material? Was it helpful for your exams?"
+                    className="min-h-[100px] shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </DialogBody>
         <DialogFooter className="p-6 pt-4 border-t border-border/10 flex gap-3">
-          <Button variant="secondary" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setReviewTarget(null)}>Cancel</Button>
-          <Button className="flex-[2] rounded-lg font-semibold text-xs h-10" onClick={handleSubmitReview}>Submit Review</Button>
+          <Button variant="secondary" className="flex-1 rounded-lg font-medium text-xs h-10" onClick={() => setReviewTarget(null)}>Close</Button>
+          <Button className="flex-[2] rounded-lg font-semibold text-xs h-10 shadow-lg shadow-primary/20" onClick={handleSubmitReview}>Submit Review</Button>
         </DialogFooter>
       </Dialog>
     </AppLayout>

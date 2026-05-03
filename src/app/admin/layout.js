@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { usePathname, useRouter } from 'next/navigation'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { isAdminUser, isSuperAdmin } from '@/lib/admin-protection'
 import { getDisplayName } from '@/lib/demo-content'
@@ -28,8 +28,10 @@ async function fetchNotifications() {
 
 export default function AdminLayout({ children }) {
   const router = useRouter()
-  const { user, role, loading, logout } = useAuth()
+  const { user, role, loading, logout, isSessionConfirmed, isNavigating } = useAuth()
   const sessionTimer = useSessionTimer()
+  const pathname = usePathname()
+  const redirectingToRef = useRef(null)
 
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
@@ -39,18 +41,30 @@ export default function AdminLayout({ children }) {
   const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    if (loading) {
+    if (loading || isNavigating) {
       return
     }
 
-    // Only redirect with 'unauthorized' reason if user is present but not an admin
-    // If user is null, it's a simple unauthenticated state which is handled by AuthGuard/login redirect
-    if (user && !isAdminUser(user, role)) {
-      router.replace('/login?reason=unauthorized')
-    } else if (!user) {
-      router.replace('/login')
+    const checkRedirect = (target) => {
+      if (pathname === target || redirectingToRef.current === target) {
+        return
+      }
+      console.warn(`[AUTH] AdminLayout: Redirecting to ${target}`);
+      redirectingToRef.current = target
+      router.replace(target)
     }
-  }, [loading, role, router, user])
+
+    // Only redirect if session is confirmed or if hydration is complete and no user is found
+    if (isSessionConfirmed) {
+      if (user && !isAdminUser(user, role)) {
+        checkRedirect('/login?reason=unauthorized')
+      }
+    } else if (!loading && !isNavigating) {
+      // hydration finished but no session found
+      checkRedirect('/login')
+    }
+  }, [loading, role, router, user, isSessionConfirmed, isNavigating, pathname])
+
 
   useEffect(() => {
     if (loading || !isAdminUser(user, role)) {

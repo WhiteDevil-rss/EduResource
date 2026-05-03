@@ -1,9 +1,4 @@
-import { dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
 /** @type {import('next').NextConfig} */
-const projectRoot = dirname(fileURLToPath(import.meta.url))
-
 const nextConfig = {
   reactStrictMode: false,
   compress: true,
@@ -18,7 +13,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
-  transpilePackages: ['firebase', '@firebase/auth', '@firebase/app', '@firebase/util', '@firebase/component'],
+  transpilePackages: ['firebase'],
   async headers() {
     return [
       {

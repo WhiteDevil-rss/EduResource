@@ -22,7 +22,7 @@ export function IconButton({
     >
       {Icon ? <Icon size={18} aria-hidden="true" /> : null}
       {badge ? (
-        <span className="absolute right-2 top-2 inline-flex min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-4 text-danger-foreground">
+        <span className="absolute right-2 top-2 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white">
           {badge}
         </span>
       ) : null}

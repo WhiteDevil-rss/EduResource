@@ -1,9 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-// Firebase Auth functions will be imported dynamically inside methods to avoid Turbopack instantiation errors
-import { auth } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import { getPostLoginRedirectPath } from '@/lib/admin-protection'
 import {
   Dialog,
@@ -16,6 +15,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAutoLogout } from "@/hooks/useAutoLogout";
 import { areSessionSettingsEqual, normalizeSessionSettings, SESSION_SETTINGS_DEFAULTS } from "@/lib/session-settings";
+
+// Lazy Auth utilities that will be loaded on demand within the provider
+const getAuthUtils = async () => {
+  const { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } = await import("firebase/auth");
+  return { GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut };
+};
 
 const AuthContext = createContext(null);
 const SESSION_START_KEY = "sps_auth_session_started_at";
@@ -46,6 +51,11 @@ async function fetchSessionSnapshot() {
     }
 
     const payload = await response.json().catch(() => ({}));
+    console.log('[AUTH] API session snapshot:', {
+      uid: payload?.user?.uid || payload?.user?.id,
+      role: payload?.role,
+      status: payload?.status
+    });
     return {
       user: payload?.user || null,
       role: payload?.role || null,
@@ -87,6 +97,8 @@ export function AuthProvider({ children }) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [sessionSettings, setSessionSettings] = useState(SESSION_SETTINGS_DEFAULTS);
   const [sessionStartedAtMs, setSessionStartedAtMs] = useState(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isSessionConfirmed, setIsSessionConfirmed] = useState(false);
   const logoutInProgressRef = useRef(false);
   const router = useRouter();
 
@@ -136,10 +148,17 @@ export function AuthProvider({ children }) {
         }
       : null;
 
+    console.log('[AUTH] Applying session:', {
+      hasUser: !!nextUser,
+      role: normalizedRole,
+      status: normalizedStatus
+    });
+
     setUser(nextUser);
     setRole(normalizedRole);
     setStatus(normalizedStatus);
     setAuthProvider(session?.authProvider || null);
+    setIsSessionConfirmed(!!nextUser);
 
     const nextSettings = normalizeSessionSettings(session?.sessionSettings);
     setSessionSettings((current) =>
@@ -147,13 +166,13 @@ export function AuthProvider({ children }) {
     );
   };
 
-  const refreshSessionSettings = async () => {
+  const refreshSessionSettings = useCallback(async () => {
     const nextSettings = await fetchLiveSessionSettings();
     setSessionSettings((current) =>
       areSessionSettingsEqual(current, nextSettings) ? current : nextSettings
     );
     return nextSettings;
-  };
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -220,6 +239,8 @@ export function AuthProvider({ children }) {
 
       applySession(nextSession);
       writeSessionStart(Date.now());
+      setIsNavigating(true);
+
       if (typeof window !== "undefined") {
         window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
         return;
@@ -236,12 +257,14 @@ export function AuthProvider({ children }) {
   const signInWithGoogleStudent = async () => {
     try {
       setIsAuthenticating(true);
-      const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = await import("firebase/auth");
+      const authInstance = await getFirebaseAuth();
+      const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = await getAuthUtils();
+      
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       
       try {
-        const result = await signInWithPopup(auth, provider);
+        const result = await signInWithPopup(authInstance, provider);
         const idToken = await result.user.getIdToken();
         await loginWithGoogle(idToken);
       } catch (error) {
@@ -253,7 +276,7 @@ export function AuthProvider({ children }) {
         }
 
         if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-          await signInWithRedirect(auth, provider);
+          await signInWithRedirect(authInstance, provider);
         } else {
           throw error;
         }
@@ -267,7 +290,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginWithCredentials = async (email, password) => {
+  const loginWithCredentials = useCallback(async (email, password) => {
     try {
       setIsAuthenticating(true);
 
@@ -306,6 +329,8 @@ export function AuthProvider({ children }) {
 
       applySession(nextSession);
       writeSessionStart(Date.now());
+      setIsNavigating(true);
+
       if (typeof window !== "undefined") {
         window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
         return null;
@@ -317,11 +342,11 @@ export function AuthProvider({ children }) {
       throw new Error(error?.message || "Credential sign-in failed.");
     } finally {
       setIsAuthenticating(false);
-      setLoading(false);
+      // loading remains true if isNavigating is true to prevent UI flash
     }
-  };
+  }, [router]);
 
-  const verifyTwoFactorCode = async (challengeId, otp) => {
+  const verifyTwoFactorCode = useCallback(async (challengeId, otp) => {
     try {
       setIsAuthenticating(true);
 
@@ -355,6 +380,8 @@ export function AuthProvider({ children }) {
 
       applySession(nextSession);
       writeSessionStart(Date.now());
+      setIsNavigating(true);
+
       if (typeof window !== "undefined") {
         window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
         return;
@@ -367,9 +394,9 @@ export function AuthProvider({ children }) {
       setIsAuthenticating(false);
       setLoading(false);
     }
-  };
+  }, [router]);
 
-  const resendTwoFactorCode = async (challengeId) => {
+  const resendTwoFactorCode = useCallback(async (challengeId) => {
     const response = await fetch("/api/auth/resend-2fa", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -384,7 +411,7 @@ export function AuthProvider({ children }) {
     }
 
     return payload;
-  };
+  }, []);
 
   const clearBrowserAuthArtifacts = () => {
     if (typeof window === "undefined") {
@@ -429,7 +456,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = async ({ reason = "manual" } = {}) => {
+  const logout = useCallback(async ({ reason = "manual" } = {}) => {
     if (logoutInProgressRef.current) {
       return;
     }
@@ -439,8 +466,14 @@ export function AuthProvider({ children }) {
     try {
       clearBrowserAuthArtifacts();
       await fetch("/api/session-logout", { method: "POST" }).catch(() => {});
-      const { signOut } = await import("firebase/auth");
-      await signOut(auth).catch(() => {});
+      
+      const authInstance = await getFirebaseAuth();
+      if (authInstance) {
+        const { signOut } = await getAuthUtils();
+        await signOut(authInstance).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('[AUTH] Handled safe logout:', err);
     } finally {
       applySession({ user: null, role: null, status: null, authProvider: null });
       clearSessionStart();
@@ -451,7 +484,16 @@ export function AuthProvider({ children }) {
       router.replace(target);
       logoutInProgressRef.current = false;
     }
-  };
+  }, [router]);
+
+  // Stable references for useAutoLogout and other hooks that need stable callbacks
+  const onInactivityLogoutRef = useRef(null);
+  const onSessionLogoutRef = useRef(null);
+
+  useEffect(() => {
+    onInactivityLogoutRef.current = () => logout({ reason: "inactivity-timeout" });
+    onSessionLogoutRef.current = () => logout({ reason: "session-absolute-timeout" });
+  }, [logout]);
 
   const autoLogout = useAutoLogout({
     enabled: Boolean(user && role && !loading && !isAuthenticating),
@@ -459,8 +501,8 @@ export function AuthProvider({ children }) {
     warningOffsetMs: sessionSettings.inactivityTimeout - sessionSettings.warningTimeout,
     maxSessionMs: sessionSettings.maxSessionTimeout,
     sessionStartedAtMs,
-    onInactivityLogout: () => logout({ reason: "inactivity-timeout" }),
-    onSessionLogout: () => logout({ reason: "session-absolute-timeout" }),
+    onInactivityLogout: useCallback(() => onInactivityLogoutRef.current?.(), []),
+    onSessionLogout: useCallback(() => onSessionLogoutRef.current?.(), []),
   });
 
   useEffect(() => {
@@ -503,6 +545,8 @@ export function AuthProvider({ children }) {
     authProvider,
     loading: loading || isAuthenticating,
     isAuthenticating,
+    isNavigating,
+    isSessionConfirmed,
     loginWithCredentials,
     verifyTwoFactorCode,
     resendTwoFactorCode,

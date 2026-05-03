@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { AccentSelector } from '@/components/AccentSelector'
 import { AppIcon } from '@/components/ui/AppIcon'
 
 export default function PublicHeader({
@@ -83,8 +82,6 @@ export default function PublicHeader({
           {showUtilityIcons ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/85 px-2 py-2 shadow-lg shadow-primary/5 backdrop-blur-xl">
               <ThemeToggle />
-              <div className="hidden h-8 w-px bg-border/50 sm:block" aria-hidden="true" />
-              <AccentSelector />
             </div>
           ) : null}
 

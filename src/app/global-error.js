@@ -3,7 +3,7 @@
 import { AlertOctagon, RefreshCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-export default function GlobalError({ error, reset }) {
+export default function GlobalError({ error: _error, reset }) {
   return (
     <html lang="en">
       <body className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center antialiased">
