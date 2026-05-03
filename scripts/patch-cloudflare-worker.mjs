@@ -237,7 +237,7 @@ globalThis.global = global;
         'process.env.NODE_ENV': '"production"',
       },
       // Remove 'alias' for node:* sub-paths as the plugin's regex handles it more flexibly
-      minify: false,
+      minify: true,
       logLevel: 'info',
     });
 
