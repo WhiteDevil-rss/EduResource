@@ -1,5 +1,5 @@
 export default function sitemap() {
-  const baseUrl = 'https://sps.zembaa.com' // Placeholder
+  const baseUrl = 'https://edu-resource.pages.dev'
 
   return [
     {
