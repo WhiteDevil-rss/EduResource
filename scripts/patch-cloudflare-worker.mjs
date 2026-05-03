@@ -237,8 +237,8 @@ globalThis.global = global;
     // This patch ensures we always find the callable handler even if nested by Next.js 16
     console.log('Applying Resilience Patch: Fixing ComponentMod.handler structure...');
     finalBundle = finalBundle.replace(
-      /ComponentMod\.handler\(/g,
-      '(typeof ComponentMod.handler === "function" ? ComponentMod.handler : (ComponentMod.default && typeof ComponentMod.default.handler === "function" ? ComponentMod.default.handler : ComponentMod.handler))('
+      /return await components\.ComponentMod\.handler\(/g,
+      'const _h = components.ComponentMod; const _target = (typeof _h.handler === "function" ? _h.handler : (_h.default && typeof _h.default.handler === "function" ? _h.default.handler : _h.handler));\nreturn await _target('
     );
 
     // FIX 3: General handler invocation resilience
