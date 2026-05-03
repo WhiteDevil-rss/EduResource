@@ -269,15 +269,17 @@ globalThis.global = global;
         );
     }
 
-    // FIX 4: Defuse illegal namespace mutations
+    // FIX 4: Defuse illegal namespace mutations (especially setImmediate which crashes on Cloudflare)
     const mutations = [
+        /\.setImmediate\s*=/g,
+        /\.clearImmediate\s*=/g,
         /nodeTimers[a-zA-Z]*\.setImmediate\s*=/g,
         /nodeTimers[a-zA-Z]*\.clearImmediate\s*=/g,
         /nodeTimersPromises[a-zA-Z]*\.setImmediate\s*=/g
     ];
 
     mutations.forEach(m => {
-        finalBundle = finalBundle.replace(m, 'globalThis.___defused_mutation =');
+        finalBundle = finalBundle.replace(m, '.___defused_mutation =');
     });
     
     console.log('✅ Applied all surgical patches to defuse TypeErrors and handler structure issues.');
