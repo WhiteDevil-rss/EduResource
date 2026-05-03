@@ -166,12 +166,18 @@ globalThis.require = (name) => {
   return undefined; 
 };
 
+// Polyfill timers on globalThis for libraries that expect them
+globalThis.setImmediate = (fn, ...args) => globalThis.setTimeout(fn, 0, ...args);
+globalThis.clearImmediate = (id) => globalThis.clearTimeout(id);
+
 // Top-level var declarations for maximum compatibility with bundled code
 var module = { require: globalThis.require };
+var require = globalThis.require;
 var self = globalThis;
 var global = globalThis;
 
 globalThis.module = module;
+globalThis.require = require;
 globalThis.self = self;
 globalThis.global = global;
 `;
@@ -268,10 +274,14 @@ globalThis.global = global;
           let content = readFileSync(fullPath, 'utf-8');
           let changed = false;
 
-          // FIX 1: Defuse 'module.require' and 'this.require'
-          if (content.includes('module.require') || content.includes('.require(')) {
-            content = content.replace(/module\.require\(/g, 'globalThis.require(');
-            content = content.replace(/this\.require\(/g, 'globalThis.require(');
+          // FIX 1: Universal require patching
+          if (content.includes('.require(')) {
+            // Replace any [something].require( with globalThis.require(
+            // but avoid infinite loop if it's already globalThis.require
+            content = content.replace(/([a-zA-Z0-9_$]+)\.require\(/g, (match, p1) => {
+              if (p1 === 'globalThis') return match;
+              return 'globalThis.require(';
+            });
             changed = true;
           }
 
@@ -303,13 +313,8 @@ globalThis.global = global;
     console.log('Starting Universal Patching of .open-next directory...');
     patchDirectory(outDir);
 
-    // Final special handling for _worker.js (header insertion)
-    let workerContent = readFileSync(destPath, 'utf-8');
-    if (!workerContent.includes('const _polyfilledModules =')) {
-      console.log('Injecting Polyfill Header into _worker.js...');
-      workerContent = requirePolyfill + workerContent;
-      writeFileSync(destPath, workerContent);
-    }
+    // Relying on esbuild banner for requirePolyfill injection to avoid duplicates
+
 
     console.log('\u001b[32m\u001b[1m✅ SURGICAL STABILIZATION COMPLETE\u001b[22m\u001b[39m');
   } catch (e) {
