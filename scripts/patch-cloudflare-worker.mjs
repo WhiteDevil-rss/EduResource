@@ -130,18 +130,36 @@ const _node_modules = {
   "node:process": _process,
   "stream": _stream,
   "node:stream": _stream,
+  "node:stream/web": {
+    ReadableStream: globalThis.ReadableStream,
+    WritableStream: globalThis.WritableStream,
+    TransformStream: globalThis.TransformStream,
+    TextEncoderStream: globalThis.TextEncoderStream,
+    TextDecoderStream: globalThis.TextDecoderStream,
+    CompressionStream: globalThis.CompressionStream,
+    DecompressionStream: globalThis.DecompressionStream
+  },
   "url": _url,
   "node:url": _url,
   "util": _util,
   "node:util": _util,
   "module": _module,
-  "node:module": _module
+  "node:module": _module,
+  "zlib": _zlib,
+  "node:zlib": _zlib
 };
 
 globalThis.require = (name) => {
+  // Normalize name by removing node: prefix for lookup if needed
+  const normalized = name.startsWith('node:') ? name.substring(5) : name;
+  const prefixed = name.startsWith('node:') ? name : 'node:' + name;
+  
   if (_node_modules[name]) return _node_modules[name];
-  if (_node_modules["node:" + name]) return _node_modules["node:" + name];
-  throw new Error('Dynamic require of "' + name + '" is not supported in this Edge environment');
+  if (_node_modules[prefixed]) return _node_modules[prefixed];
+  if (_node_modules[normalized]) return _node_modules[normalized];
+  
+  console.warn(\`[EDGE-REQUIRE] Module not found: \${name}. Falling back to undefined.\`);
+  return undefined; 
 };
 
 // Top-level var declarations for maximum compatibility with bundled code
