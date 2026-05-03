@@ -274,14 +274,14 @@ globalThis.global = global;
           let content = readFileSync(fullPath, 'utf-8');
           let changed = false;
 
-          // FIX 1: Universal require patching
-          if (content.includes('.require(')) {
-            // Replace any [something].require( with globalThis.require(
-            // but avoid infinite loop if it's already globalThis.require
-            content = content.replace(/([a-zA-Z0-9_$]+)\.require\(/g, (match, p1) => {
-              if (p1 === 'globalThis') return match;
-              return 'globalThis.require(';
-            });
+          // FIX 1: Targeted require patching
+          // IMPORTANT: Only patch the bare `module.require(` and `this.require(` patterns.
+          // DO NOT replace registry-style calls like `__next_app__.require(` or `e.require(`
+          // because those point to Next.js's internal module registry, not the Node.js `module` global.
+          // Replacing them with globalThis.require() would break the entire module loading system.
+          if (content.includes('module.require(') || content.includes('this.require(')) {
+            content = content.replace(/\bmodule\.require\(/g, 'globalThis.require(');
+            content = content.replace(/\bthis\.require\(/g, 'globalThis.require(');
             changed = true;
           }
 
@@ -310,10 +310,34 @@ globalThis.global = global;
       }
     }
 
+    // UNIVERSAL PATCHER: Walk the output directory to patch source files
     console.log('Starting Universal Patching of .open-next directory...');
     patchDirectory(outDir);
 
+    // SURGICAL PATCH #4: Fix the Xe module factory in the final _worker.js
+    // ====================================================================
+    // The root cause of "Cannot read properties of undefined (reading 'require')":
+    //   esbuild's CJS module shim creates module objects as {exports:{}} with NO .require property.
+    //   Next.js internals (e.g. app-page-turbo.runtime.prod.js) use `module.require(...)` to
+    //   load dynamic chunks at runtime, expecting a Node.js-style CJS module object.
+    // Fix: patch the Xe factory to inject require: globalThis.require into every module object.
+    console.log('Patching Xe CJS module factory to inject require...');
+    let workerContent = readFileSync(destPath, 'utf-8');
+    // The pattern we want to replace is the module object creation inside the Xe factory.
+    // esbuild generates: (A={exports:{}}).exports,A)
+    // We change it to:   (A={exports:{},require:globalThis.require}).exports,A)
+    const xePattern = /\(A=\{exports:\{\}\}\)\.exports,A\)/g;
+    const xeReplacement = '(A={exports:{},require:globalThis.require}).exports,A)';
+    if (xePattern.test(workerContent)) {
+      workerContent = workerContent.replace(xePattern, xeReplacement);
+      writeFileSync(destPath, workerContent);
+      console.log('[PATCHED] Xe module factory in _worker.js — module.require is now available inside CJS factories');
+    } else {
+      console.warn('[WARN] Xe pattern not found in _worker.js — the module factory structure may have changed');
+    }
+
     // Relying on esbuild banner for requirePolyfill injection to avoid duplicates
+
 
 
     console.log('\u001b[32m\u001b[1m✅ SURGICAL STABILIZATION COMPLETE\u001b[22m\u001b[39m');
