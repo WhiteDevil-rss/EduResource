@@ -158,7 +158,7 @@ export default function PublicFooter({
           </p>
           <div className="flex items-center gap-4">
              <Badge variant="outline" className="bg-primary/5 text-[10px] uppercase tracking-tighter text-primary border-primary/20">
-               v0.2.8.21
+               v0.2.8.22
              </Badge>
              <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
                Enterprise Ready
