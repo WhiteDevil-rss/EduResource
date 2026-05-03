@@ -6,7 +6,7 @@
   "packageManager": "npm@11.12.1",
   "scripts": {
     "dev": "next dev",
-    "build": "NEXT_TURBOPACK=0 next build",
+    "build": "next build --no-turbo",
     "start": "next start",
     "lint": "eslint .",
     "bench:api": "node scripts/benchmark-api.mjs",

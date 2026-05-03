@@ -144,10 +144,14 @@ globalThis.require = (name) => {
   throw new Error('Dynamic require of "' + name + '" is not supported in this Edge environment');
 };
 
-// Aliases to satisfy different runtime access patterns
-globalThis.module = { require: globalThis.require };
-globalThis.self = globalThis;
-globalThis.global = globalThis;
+// Top-level var declarations for maximum compatibility with bundled code
+var module = { require: globalThis.require };
+var self = globalThis;
+var global = globalThis;
+
+globalThis.module = module;
+globalThis.self = self;
+globalThis.global = global;
 `;
     const banner = bootLog + requirePolyfill;
     
