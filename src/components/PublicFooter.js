@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Globe, Camera, Building2, Mail, ShieldCheck, ChevronRight, MapPin, Phone } from 'lucide-react'
+import { Globe, Camera, YouTube, Mail, ShieldCheck, ChevronRight, MapPin, Phone, MessageCircle as WhatsAppIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 
@@ -13,22 +13,22 @@ const COMPANY_SOCIALS = [
     external: true,
   },
   {
-    label: 'LinkedIn',
-    href: 'https://www.linkedin.com/company/zembaa-solution',
-    icon: Building2,
+    label: 'WhatsApp',
+    href: 'https://whatsapp.com/channel/0029VbC36593bbV5xSG6gE1W',
+    icon: WhatsAppIcon,
     external: true,
   },
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/zembaa_com/',
+    href: 'https://www.instagram.com/spseducationam.surat',
     icon: Camera,
     external: true,
   },
   {
-    label: 'Email',
-    href: 'mailto:info@zembaa.com',
-    icon: Mail,
-    external: false,
+    label: 'YouTube',
+    href: 'https://www.youtube.com/@spseducationam',
+    icon: YouTube,
+    external: true,
   },
 ]
 
@@ -80,7 +80,7 @@ export default function PublicFooter({
               })}
             </div>
           </div>
-          
+
           <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
             <div className="md:grid md:grid-cols-2 md:gap-8">
               <div>
@@ -130,8 +130,7 @@ export default function PublicFooter({
                   <li className="flex gap-x-3">
                     <MapPin className="h-5 w-5 flex-none text-primary" aria-hidden="true" />
                     <span className="text-sm leading-6 text-muted-foreground">
-                      Zembaa Solution Private Limited<br />
-                      India
+                      Zembaa Solution
                     </span>
                   </li>
                   <li className="flex gap-x-3">
@@ -151,18 +150,18 @@ export default function PublicFooter({
             </div>
           </div>
         </div>
-        
+
         <div className="mt-16 border-t border-border/40 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs leading-5 text-muted-foreground">
             {tagline} Designed & Developed by <a href="https://www.zembaa.com" target="_blank" rel="noopener noreferrer" className="text-foreground font-semibold hover:text-primary transition-colors">Zembaa Solution</a>.
           </p>
           <div className="flex items-center gap-4">
-             <Badge variant="outline" className="bg-primary/5 text-[10px] uppercase tracking-tighter text-primary border-primary/20">
-               v0.2.8.23
-             </Badge>
-             <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
-               Enterprise Ready
-             </span>
+            <Badge variant="outline" className="bg-primary/5 text-[10px] uppercase tracking-tighter text-primary border-primary/20">
+              v0.2.8.23
+            </Badge>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+              Enterprise Ready
+            </span>
           </div>
         </div>
       </div>
