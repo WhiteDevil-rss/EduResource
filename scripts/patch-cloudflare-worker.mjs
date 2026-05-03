@@ -147,6 +147,7 @@ globalThis.require = (name) => {
 // Aliases to satisfy different runtime access patterns
 globalThis.module = { require: globalThis.require };
 globalThis.self = globalThis;
+globalThis.global = globalThis;
 `;
     const banner = bootLog + requirePolyfill;
     
