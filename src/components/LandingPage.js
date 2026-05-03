@@ -29,7 +29,7 @@ const FEATURE_CARDS = [
   {
     title: 'Comprehensive Study Material',
     description:
-      'Access expertly curated notes, practice papers, and reference guides for Class 10th, 11th, and 12th students.',
+      'Access expertly curated notes, practice papers, and reference guides for Class 10–12, bachelor’s, and master’s students.',
     icon: BookOpen,
     accent: 'primary',
   },
@@ -71,13 +71,6 @@ const PLATFORM_STEPS = [
     copy: 'Stay ahead of your classes with regular updates and easy-to-digest handouts from experienced faculty.',
     icon: Shield,
   },
-]
-
-const TRUST_BADGES = [
-  { label: 'Role-based access', icon: Shield },
-  { label: 'Real-time analytics', icon: ChartNoAxesCombined },
-  { label: 'Multi-campus ready', icon: Globe },
-  { label: 'Production grade', icon: Zap },
 ]
 
 /* ─────────────────────── Animated counter hook ─────────────── */
@@ -221,24 +214,8 @@ export default function LandingPage() {
                 isVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
               )}
             >
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge variant="outline" className="border-primary/25 bg-card/75 text-accent-foreground gap-1.5 rounded-full px-3 py-1">
-                  <Sparkles size={13} />
-                  Resource operations for modern campuses
-                </Badge>
-                {TRUST_BADGES.map((b) => {
-                  const Icon = b.icon
-                  return (
-                    <span key={b.label} className="hidden sm:inline-flex items-center gap-1 rounded-full border border-border/50 bg-card/60 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
-                      <Icon size={11} />
-                      {b.label}
-                    </span>
-                  )
-                })}
-              </div>
-
               <div className="max-w-3xl space-y-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                <p className="text-sm font-bold uppercase tracking-[0.28em] text-primary/80">
                   SPS EDUCATIONAM
                 </p>
                 <h1 className="text-balance text-4xl font-semibold leading-[1.12] md:text-6xl">
@@ -248,14 +225,14 @@ export default function LandingPage() {
                   </span>
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                  SPS Educationam provides a premier coaching environment dedicated to academic excellence, 
+                  SPS Educationam provides a premier coaching environment dedicated to academic excellence,
                   offering structured learning support and expert resources tailored for student success.
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Button 
-                  asChild 
+                <Button
+                  asChild
                   className="h-12 rounded-full px-7 text-sm font-semibold shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-primary/90 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300 whitespace-nowrap"
                 >
                   <Link href="/register">
@@ -403,7 +380,7 @@ export default function LandingPage() {
                   Streamlined learning paths for every student.
                 </h2>
                 <p className="mt-5 text-base leading-7 text-muted-foreground">
-                  Our platform provides organized access to coaching notes, subject-wise materials, 
+                  Our platform provides organized access to coaching notes, subject-wise materials,
                   and academic updates, ensuring a focused learning experience without distractions.
                 </p>
 
@@ -519,12 +496,12 @@ export default function LandingPage() {
                   Empowering students with high-quality academic support and resources.
                 </h2>
                 <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-muted-foreground">
-                  Join SPS Educationam today and access a world of curated coaching material designed 
+                  Join SPS Educationam today and access a world of curated coaching material designed
                   to help you excel in your academic journey.
                 </p>
                 <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-                  <Button 
-                    asChild 
+                  <Button
+                    asChild
                     className="h-13 rounded-full px-8 text-sm font-semibold shadow-xl shadow-primary/30 bg-gradient-to-r from-primary to-primary/80 hover:scale-105 hover:shadow-primary/40 active:scale-95 transition-all duration-300 whitespace-nowrap"
                   >
                     <Link href="/register">Create account</Link>
