@@ -871,17 +871,10 @@ export default function FacultyDashboard() {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
         title="Delete Resource"
         description={(
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete this resource?
-            </p>
-            <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3">
-              <p className="text-sm font-semibold text-foreground break-words">
-                {deleteTarget?.title || 'Untitled resource'}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              This action cannot be undone.
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">You are deleting the resource below.</p>
+            <p className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3 text-sm font-semibold text-foreground break-words">
+              {deleteTarget?.title || 'Untitled resource'}
             </p>
           </div>
         )}
