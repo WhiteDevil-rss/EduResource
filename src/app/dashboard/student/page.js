@@ -185,7 +185,7 @@ export default function StudentDashboard() {
 
     const loadExtra = async () => {
       try {
-        const notifRes = await fetch('/api/notifications', { cache: 'no-store', signal: controller.signal })
+        const notifRes = await fetch('/api/notifications', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
 
         if (isActive && notifRes.ok) {
           const payload = await notifRes.json().catch(() => ({}))
@@ -265,6 +265,7 @@ export default function StudentDashboard() {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ action: 'read-all' }),
       })
       if (response.ok) {

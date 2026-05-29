@@ -18,7 +18,7 @@ import { ADMIN_NAV_SECTIONS } from '@/components/admin/adminNav'
 import { cn } from '@/lib/cn'
 
 async function fetchNotifications() {
-  const response = await fetch('/api/notifications?limit=50&page=1', { cache: 'no-store' })
+  const response = await fetch('/api/notifications?limit=50&page=1', { cache: 'no-store', credentials: 'same-origin' })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
     throw new Error(payload?.error || 'Could not load notifications.')
@@ -101,6 +101,7 @@ export default function AdminLayout({ children }) {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ notificationId }),
       })
       const payload = await response.json().catch(() => ({}))
@@ -122,6 +123,7 @@ export default function AdminLayout({ children }) {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ action: 'read-all' }),
       })
       const payload = await response.json().catch(() => ({}))

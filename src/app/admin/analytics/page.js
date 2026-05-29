@@ -37,7 +37,7 @@ export default function AdminAnalyticsPage() {
     const load = async () => {
       setLoading(true)
       try {
-        const response = await fetch('/api/analytics/summary', { cache: 'no-store' })
+        const response = await fetch('/api/analytics/summary', { cache: 'no-store', credentials: 'same-origin' })
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(payload?.error || 'Could not load analytics.')
         if (!isActive) return

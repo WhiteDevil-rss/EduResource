@@ -169,7 +169,7 @@ export async function getSessionFromRequest(request) {
 
   if (session.sid) {
     const sessionRecord = await getSessionRecordById(session.sid)
-    if (!sessionRecord || sessionRecord.uid !== session.uid) {
+    if (sessionRecord && sessionRecord.uid !== session.uid) {
       return null
     }
   }
