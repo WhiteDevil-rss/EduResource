@@ -357,7 +357,10 @@ export default function FacultyDashboard() {
         method: 'DELETE',
         credentials: 'include',
       })
-      if (!response.ok) throw new Error('Failed to delete resource.')
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}))
+        throw new Error(payload?.error || 'Failed to delete resource.')
+      }
       setResources((current) => current.filter((r) => r.id !== deleteTarget.id))
       setDeleteTarget(null)
       toast.success('Resource removed from library.')

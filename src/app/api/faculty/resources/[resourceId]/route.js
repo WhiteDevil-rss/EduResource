@@ -156,7 +156,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     assertSameOrigin(request)
-    const session = await requireApiSession(request, ['faculty'])
+    const session = await requireApiSession(request, ['faculty', 'admin'])
     const routeParams = await params
     const resourceId = String(routeParams?.resourceId || '').trim()
 

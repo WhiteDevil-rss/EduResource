@@ -3082,17 +3082,18 @@ export async function updateResourceRecord({ resourceId, session, payload }) {
     return sanitizeResourceData(resourceId, updated)
   }
   
-  export async function deleteResourceRecord({ resourceId, session }) {
-    const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
-    if (!current) {
-      throw new Error('Resource not found.')
-    }
+export async function deleteResourceRecord({ resourceId, session }) {
+  const current = await firestore.getDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+  if (!current) {
+    throw new Error('Resource not found.')
+  }
 
-    if (!isOwnedBySession(current, session)) {
-      throw new Error('You can only manage resources that you uploaded.')
-    }
+  const isAdmin = String(session?.role || '').toLowerCase() === 'admin'
+  if (!isAdmin && !isOwnedBySession(current, session)) {
+    throw new Error('You can only manage resources that you uploaded.')
+  }
 
-    await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
+  await firestore.deleteDoc(`${RESOURCES_COLLECTION}/${resourceId}`)
   await createAuditRecord({
     actorUid: session.uid,
     actorRole: session.role,
