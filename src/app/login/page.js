@@ -62,6 +62,33 @@ export default function Login() {
   const otpResendInFlightRef = useRef(false)
   const studentLoginInFlightRef = useRef(false)
 
+  const getStaffLoginErrorMessage = useCallback((error) => {
+    const message = String(error?.message || '')
+    const status = Number(error?.status || 0)
+
+    if (status === 403) {
+      if (message.includes('disabled')) {
+        return 'Access denied. This account is currently disabled.'
+      }
+
+      if (message.includes('blocked')) {
+        return 'Access denied. Your account is blocked.'
+      }
+
+      if (message.includes('2 devices')) {
+        return 'Access denied. You are already signed in on 2 devices. Log out from another device and try again.'
+      }
+
+      return 'Access denied. This account cannot sign in right now.'
+    }
+
+    if (status === 401 && message) {
+      return message
+    }
+
+    return message || 'Failed to sign in.'
+  }, [])
+
   // Redirect if already logged in and session is confirmed by server
   useEffect(() => {
     if (!loading && user && role && isSessionConfirmed && !isNavigating) {
@@ -146,11 +173,11 @@ export default function Login() {
       }
       setFormSuccess('Signed in successfully.')
     } catch (error) {
-      setFormError(error.message || 'Failed to sign in.')
+      setFormError(getStaffLoginErrorMessage(error))
     } finally {
       staffSubmitInFlightRef.current = false
     }
-  }, [email, isAuthenticating, loginWithCredentials, password])
+  }, [email, getStaffLoginErrorMessage, isAuthenticating, loginWithCredentials, password])
 
   const handleVerifyOtp = useCallback(async (event) => {
     event.preventDefault()
@@ -294,6 +321,9 @@ export default function Login() {
                   loginMode === 'student' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => {
+                    <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
+                      Access denied usually means the account is disabled, blocked, or already signed in on 2 devices.
+                    </p>
                   setLoginMode('student')
                   setTwoFactorChallenge(null)
                   setOtpCode('')

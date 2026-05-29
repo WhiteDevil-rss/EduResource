@@ -304,7 +304,10 @@ export function AuthProvider({ children }) {
       }
 
       if (!response.ok) {
-        throw new Error(payload?.error || "Credential sign-in failed.");
+        const error = new Error(payload?.error || "Credential sign-in failed.")
+        error.status = response.status
+        error.code = 'credential-login-failed'
+        throw error
       }
 
       const nextRole = payload?.role || null;
@@ -333,7 +336,10 @@ export function AuthProvider({ children }) {
       router.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
       return null;
     } catch (error) {
-      throw new Error(error?.message || "Credential sign-in failed.");
+      const nextError = new Error(error?.message || "Credential sign-in failed.")
+      nextError.status = error?.status || null
+      nextError.code = error?.code || 'credential-login-failed'
+      throw nextError
     } finally {
       setIsAuthenticating(false);
       // loading remains true if isNavigating is true to prevent UI flash
