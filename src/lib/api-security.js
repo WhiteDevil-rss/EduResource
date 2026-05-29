@@ -126,8 +126,17 @@ export function assertSameOrigin(request) {
     return
   }
 
-  const requestOrigin = new URL(request.url).origin
-  if (origin !== requestOrigin) {
+  // Handle Cloudflare/reverse proxy protocol and host headers
+  const headers = request.headers
+  const proto = headers.get('x-forwarded-proto') || new URL(request.url).protocol.replace(':', '')
+  const host = headers.get('x-forwarded-host') || new URL(request.url).host
+  const requestOrigin = `${proto}://${host}`
+
+  // Normalize protocols for comparison (e.g. behind SSL-terminating proxies)
+  const normOrigin = origin.replace(/^http:/, 'https:')
+  const normRequestOrigin = requestOrigin.replace(/^http:/, 'https:')
+
+  if (normOrigin !== normRequestOrigin) {
     throw new ApiError(403, 'Cross-site request blocked.')
   }
 }
