@@ -5,12 +5,12 @@ import { Button } from '@/components/ui/button'
 
 export function ConfirmDialog({
   open,
-  onOpenChange,
+  onOpenChange = () => {},
   title = 'Are you sure?',
   description,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
-  onConfirm,
+  onConfirm = () => {},
   isConfirming = false,
   confirmDisabled = false,
   confirmVariant = 'destructive',

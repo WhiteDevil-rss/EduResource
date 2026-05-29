@@ -121,7 +121,7 @@ export default function FacultyDashboard() {
       try {
         const response = await fetch('/api/faculty/resources', {
           cache: 'no-store',
-          credentials: 'same-origin',
+          credentials: 'include',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
@@ -156,7 +156,7 @@ export default function FacultyDashboard() {
       try {
         const response = await fetch('/api/notifications', {
           cache: 'no-store',
-          credentials: 'same-origin',
+          credentials: 'include',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
@@ -185,8 +185,8 @@ export default function FacultyDashboard() {
     const load = async () => {
       try {
         const [analyticsRes, collectionsRes] = await Promise.all([
-          fetch('/api/analytics/summary', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal }),
-          fetch('/api/collections', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal }),
+          fetch('/api/analytics/summary', { cache: 'no-store', credentials: 'include', signal: controller.signal }),
+          fetch('/api/collections', { cache: 'no-store', credentials: 'include', signal: controller.signal }),
         ])
 
         if (isActive && analyticsRes.ok) {
@@ -355,7 +355,7 @@ export default function FacultyDashboard() {
     try {
       const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, {
         method: 'DELETE',
-        credentials: 'same-origin',
+        credentials: 'include',
       })
       if (!response.ok) throw new Error('Failed to delete resource.')
       setResources((current) => current.filter((r) => r.id !== deleteTarget.id))
@@ -371,7 +371,7 @@ export default function FacultyDashboard() {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
+        credentials: 'include',
         body: JSON.stringify({ action: 'read-all' }),
       })
       if (response.ok) {
@@ -868,6 +868,7 @@ export default function FacultyDashboard() {
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
         title="Delete Resource"
         description={(
           <div className="space-y-3">
@@ -884,10 +885,9 @@ export default function FacultyDashboard() {
             </p>
           </div>
         )}
-        confirmText="Delete"
-        cancelText="Cancel"
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
         onConfirm={handleDeleteResource}
-        onCancel={() => setDeleteTarget(null)}
       />
 
       <ResponsiveNotificationPanel

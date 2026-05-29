@@ -72,7 +72,7 @@ async function fetchSessionSnapshot() {
 
 async function fetchLiveSessionSettings() {
   try {
-    const response = await fetch("/api/session-settings", { cache: "no-store", credentials: "same-origin" });
+    const response = await fetch("/api/session-settings", { cache: "no-store", credentials: "include" });
     if (!response.ok) {
       return SESSION_SETTINGS_DEFAULTS;
     }
