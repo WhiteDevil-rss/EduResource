@@ -27,7 +27,7 @@
     "framer-motion": "^12.38.0",
     "jose": "^6.2.2",
     "lucide-react": "^1.8.0",
-    "next": "16.2.3",
+    "next": "^16.2.6",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-hot-toast": "^2.6.0",
@@ -50,7 +50,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "googleapis": "^171.4.0",
     "jsdom": "^29.0.2",
-    "postcss": "^8.5.9",
+    "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
     "vitest": "^4.1.4",
@@ -63,6 +63,7 @@
     "teeny-request": "^9.0.0",
     "retry-request": "^8.0.2",
     "glob": "^12.0.0",
-    "formdata-node": "^6.0.3"
+    "formdata-node": "^6.0.3",
+    "postcss": "^8.5.10"
   }
 }
