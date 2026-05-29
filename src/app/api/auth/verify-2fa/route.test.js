@@ -3,15 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/lib/api-security', () => ({
   assertSameOrigin: vi.fn(),
   assertRequestNotBlocked: vi.fn(async () => {}),
+  applyRateLimit: vi.fn(),
   ApiError: class ApiError extends Error {
     constructor(status, message) {
       super(message)
       this.status = status
     }
   },
-  jsonError: vi.fn((error, _message, status = 500) =>
-    new Response(JSON.stringify({ error: String(error?.message || 'error') }), { status: error?.status || status })
-  ),
+  jsonError: vi.fn((error, fallbackMessage = 'Request failed.', status = null) => {
+    const resolvedStatus = status || Number(error?.status) || 500
+    const message = (resolvedStatus < 500 && error?.message) ? error.message : fallbackMessage
+    return new Response(JSON.stringify({ error: message }), { status: resolvedStatus, headers: { 'Content-Type': 'application/json' } })
+  }),
   withNoStore: vi.fn((response) => response),
 }))
 

@@ -6,7 +6,13 @@ vi.mock('@/lib/auth-server', () => ({
 
 vi.mock('@/lib/api-security', () => ({
   assertSameOrigin: vi.fn(),
+  applyRateLimit: vi.fn(),
   withNoStore: vi.fn((response) => response),
+  jsonError: vi.fn((error, fallbackMessage = 'Request failed.', status = null) => {
+    const resolvedStatus = status || Number(error?.status) || 500
+    const message = (resolvedStatus < 500 && error?.message) ? error.message : fallbackMessage
+    return new Response(JSON.stringify({ error: message }), { status: resolvedStatus, headers: { 'Content-Type': 'application/json' } })
+  }),
 }))
 
 vi.mock('@/lib/firebase-rest-auth', () => ({
