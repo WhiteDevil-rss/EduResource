@@ -4,17 +4,16 @@ import 'server-only'
  * Edge-compatible session cookie management using Web Crypto API.
  */
 
-let runtimeSessionSecret = null
-
 function getSessionSecret() {
   if (process.env.SESSION_SECRET) {
     return process.env.SESSION_SECRET
   }
-  if (!runtimeSessionSecret) {
-    runtimeSessionSecret = crypto.randomUUID()
+  if (!globalThis.__runtimeSessionSecret) {
+    globalThis.__runtimeSessionSecret = crypto.randomUUID()
   }
-  return runtimeSessionSecret
+  return globalThis.__runtimeSessionSecret
 }
+
 
 /**
  * Base64URL encoding/decoding helpers (Edge safe)

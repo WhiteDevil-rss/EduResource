@@ -686,50 +686,70 @@ export default function FacultyDashboard() {
         <DialogBody className="p-6 py-5 space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Title</label>
-              <Input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Enter resource title" className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+              <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Title</label>
+              <Input
+                value={draft.title}
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                placeholder="Enter resource title"
+                className="h-10 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Subject</label>
-              <Input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Chemistry, Math, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+              <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Subject</label>
+              <Input
+                value={draft.subject}
+                onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
+                placeholder="Chemistry, Math, etc."
+                className="h-10 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
           </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Class</label>
-              <Input value={draft.class} onChange={(e) => setDraft({ ...draft, class: e.target.value })} placeholder="Class 10, Batch B, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+              <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Class / Batch</label>
+              <Input
+                value={draft.class}
+                onChange={(e) => setDraft({ ...draft, class: e.target.value })}
+                placeholder="Class 10, Batch B, etc."
+                className="h-10 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Category</label>
-              <Input value={draft.category || ''} onChange={(e) => setDraft({ ...draft, category: e.target.value })} placeholder="Lecture Notes, Syllabus, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+              <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Category</label>
+              <Input
+                value={draft.category || ''}
+                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                placeholder="Lecture Notes, Syllabus, etc."
+                className="h-10 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Visibility Setting</label>
+            <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Visibility Setting</label>
             <select
               value={draft.status || 'live'}
               onChange={(e) => setDraft({ ...draft, status: e.target.value })}
-              className="w-full h-10 px-3 rounded-lg border border-border/40 bg-muted/20 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-10 px-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 focus:bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer font-medium"
             >
-              <option value="live">Live (Visible to all students)</option>
-              <option value="draft">Draft (Hidden from students)</option>
+              <option value="live" className="bg-card text-foreground">Live (Visible to all students)</option>
+              <option value="draft" className="bg-card text-foreground">Draft (Hidden from students)</option>
             </select>
           </div>
-          <div className="space-y-3">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Resource Summary</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Resource Summary</label>
             <Textarea
               value={draft.summary}
               onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
               placeholder="Briefly describe what this resource is about..."
-              className="resize-none shadow-sm"
+              className="min-h-[100px] rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 focus:bg-background text-sm text-foreground placeholder:text-muted-foreground/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none p-3.5 shadow-sm"
             />
           </div>
           <div className="space-y-2 border-t border-border/20 pt-4">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1 block mb-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block mb-2">
               File Attachment (PDF only, max 25MB)
             </label>
             {draft.file ? (
-              <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+              <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-all">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <FileText size={20} />
@@ -749,8 +769,8 @@ export default function FacultyDashboard() {
                 </Button>
               </div>
             ) : draft.id && draft.fileUrl ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3.5 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/30 transition-all">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
                       <FileText size={20} />
@@ -758,10 +778,10 @@ export default function FacultyDashboard() {
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-foreground truncate max-w-[200px]">Current PDF File</p>
                       <a
-                        href={draft.fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] text-primary hover:underline block truncate max-w-[200px]"
+                         href={draft.fileUrl}
+                         target="_blank"
+                         rel="noreferrer"
+                         className="text-[10px] text-primary hover:underline block truncate max-w-[200px]"
                       >
                         View current file
                       </a>
