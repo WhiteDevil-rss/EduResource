@@ -4,10 +4,16 @@ import 'server-only'
  * Edge-compatible session cookie management using Web Crypto API.
  */
 
-const DEV_SESSION_SECRET = 'codex-dev-session-secret'
+let runtimeSessionSecret = null
 
 function getSessionSecret() {
-  return process.env.SESSION_SECRET || DEV_SESSION_SECRET
+  if (process.env.SESSION_SECRET) {
+    return process.env.SESSION_SECRET
+  }
+  if (!runtimeSessionSecret) {
+    runtimeSessionSecret = crypto.randomUUID()
+  }
+  return runtimeSessionSecret
 }
 
 /**

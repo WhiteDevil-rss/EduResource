@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
-import { assertRequestNotBlocked, assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
+import { assertRequestNotBlocked, assertSameOrigin, jsonError, withNoStore, applyRateLimit } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { auth } from '@/lib/firebase-edge'
 import { createSessionCookie } from '@/lib/session-cookie'
@@ -12,6 +12,7 @@ export async function POST(request) {
   try {
     assertSameOrigin(request)
     await assertRequestNotBlocked(request)
+    applyRateLimit(request, 'auth')
 
     const body = await request.json().catch(() => ({}))
     const idToken = sanitizePlainText(body?.idToken, { maxLength: 4096 })
@@ -159,12 +160,13 @@ export async function POST(request) {
       NextResponse.json({
         user: student,
         role: 'student',
-      })
+      }),
+      request
     )
     response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
       path: '/',
     })

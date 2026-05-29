@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
-import { assertRequestNotBlocked, assertSameOrigin, withNoStore } from '@/lib/api-security'
+import { assertRequestNotBlocked, assertSameOrigin, withNoStore, applyRateLimit } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
@@ -111,6 +111,7 @@ export async function POST(request) {
   try {
     assertSameOrigin(request)
     await assertRequestNotBlocked(request)
+    applyRateLimit(request, 'auth')
     timer.markPhase('request-validation')
 
     const body = await request.json().catch(() => ({}))
@@ -565,12 +566,13 @@ export async function POST(request) {
           role: effectiveUser.role,
         },
         role: effectiveUser.role,
-      })
+      }),
+      request
     )
     response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
       path: '/',
     })

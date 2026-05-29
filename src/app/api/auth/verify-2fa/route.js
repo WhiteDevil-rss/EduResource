@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
-import { assertRequestNotBlocked, assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
+import { assertRequestNotBlocked, assertSameOrigin, jsonError, withNoStore, applyRateLimit } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { createSessionCookie } from '@/lib/session-cookie'
 import {
@@ -19,6 +19,7 @@ export async function POST(request) {
   try {
     assertSameOrigin(request)
     await assertRequestNotBlocked(request)
+    applyRateLimit(request, 'auth')
     const body = await request.json().catch(() => ({}))
     const challengeId = validateChallengeId(body?.challengeId)
     const otp = validateOtpCode(body?.otp)
@@ -100,13 +101,14 @@ export async function POST(request) {
           authProvider: 'credentials',
         },
         role: verifiedUser.role,
-      })
+      }),
+      request
     )
 
     response.cookies.set(SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: Math.floor(SESSION_MAX_AGE_MS / 1000),
       path: '/',
     })

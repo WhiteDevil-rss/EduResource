@@ -19,15 +19,11 @@ import { sanitizeFileName, sanitizePlainText } from '@/lib/request-validation'
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 const ALLOWED_UPLOAD_TYPES = new Set([
   'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ])
 
 function extensionForMimeType(mimeType) {
   const normalized = String(mimeType || '').toLowerCase()
   if (normalized === 'application/pdf') return 'pdf'
-  if (normalized === 'application/msword') return 'doc'
-  if (normalized === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'docx'
   return 'bin'
 }
 

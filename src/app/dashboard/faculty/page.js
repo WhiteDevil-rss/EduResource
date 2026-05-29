@@ -59,7 +59,10 @@ const EMPTY_DRAFT = {
   subject: '',
   class: '',
   summary: '',
+  category: '',
+  status: 'live',
   fileUrl: '',
+  file: null,
 }
 
 const FacultyResourceCard = memo(function FacultyResourceCard({
@@ -95,6 +98,7 @@ export default function FacultyDashboard() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [uploadJobs, setUploadJobs] = useState([])
   const [isSaving, setIsSaving] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [searchInput, setSearchInput] = useState('')
   const [selectedClass, setSelectedClass] = useState('all')
   const [selectedSubject, setSelectedSubject] = useState('all')
@@ -244,7 +248,11 @@ export default function FacultyDashboard() {
   }, [])
 
   const handleEditResource = useCallback((resource) => {
-    setDraft(resource)
+    setDraft({
+      ...EMPTY_DRAFT,
+      ...resource,
+      file: null,
+    })
     setEditorOpen(true)
   }, [])
 
@@ -263,17 +271,63 @@ export default function FacultyDashboard() {
       return
     }
 
+    // Require file for new resources
+    if (!draft.id && !draft.file) {
+      toast.error('Please upload a PDF file to publish this resource.')
+      return
+    }
+
     setIsSaving(true)
+    setUploadProgress(0)
+
     try {
       const url = draft.id ? `/api/faculty/resources/${draft.id}` : '/api/faculty/resources'
       const method = draft.id ? 'PATCH' : 'POST'
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
+
+      const formData = new FormData()
+      formData.append('title', draft.title)
+      formData.append('subject', draft.subject)
+      formData.append('class', draft.class)
+      formData.append('summary', draft.summary || '')
+      formData.append('category', draft.category || '')
+      formData.append('status', draft.status || 'live')
+      if (draft.file) {
+        formData.append('file', draft.file)
+      }
+
+      // XHR wrapping inside a promise to get upload progress tracking
+      const payload = await new Promise((resolve, reject) => {
+        const xhr = new globalThis.XMLHttpRequest()
+        xhr.open(method, url)
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100)
+            setUploadProgress(percent)
+          }
+        }
+        
+        xhr.onload = () => {
+          let responsePayload = {}
+          try {
+            responsePayload = JSON.parse(xhr.responseText)
+          } catch {
+            // ignore JSON parse failure
+          }
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(responsePayload)
+          } else {
+            reject(new Error(responsePayload.error || 'Failed to save resource.'))
+          }
+        }
+        
+        xhr.onerror = () => {
+          reject(new Error('Network error during file upload.'))
+        }
+        
+        xhr.send(formData)
       })
-      const payload = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(payload?.error || 'Failed to save changes.')
 
       if (draft.id) {
         setResources((current) => current.map((r) => (r.id === draft.id ? payload.resource : r)))
@@ -289,6 +343,7 @@ export default function FacultyDashboard() {
       toast.error(error.message)
     } finally {
       setIsSaving(false)
+      setUploadProgress(0)
     }
   }
 
@@ -639,9 +694,26 @@ export default function FacultyDashboard() {
               <Input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} placeholder="Chemistry, Math, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
             </div>
           </div>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Class</label>
+              <Input value={draft.class} onChange={(e) => setDraft({ ...draft, class: e.target.value })} placeholder="Class 10, Batch B, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Category</label>
+              <Input value={draft.category || ''} onChange={(e) => setDraft({ ...draft, category: e.target.value })} placeholder="Lecture Notes, Syllabus, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+            </div>
+          </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Class</label>
-            <Input value={draft.class} onChange={(e) => setDraft({ ...draft, class: e.target.value })} placeholder="Class 10, Batch B, etc." className="h-10 rounded-lg border-border/40 bg-muted/20 text-sm" />
+            <label className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground/60 ml-1">Visibility Setting</label>
+            <select
+              value={draft.status || 'live'}
+              onChange={(e) => setDraft({ ...draft, status: e.target.value })}
+              className="w-full h-10 px-3 rounded-lg border border-border/40 bg-muted/20 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="live">Live (Visible to all students)</option>
+              <option value="draft">Draft (Hidden from students)</option>
+            </select>
           </div>
           <div className="space-y-3">
             <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1">Resource Summary</label>
@@ -652,6 +724,112 @@ export default function FacultyDashboard() {
               className="resize-none shadow-sm"
             />
           </div>
+          <div className="space-y-2 border-t border-border/20 pt-4">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-primary px-1 block mb-1">
+              File Attachment (PDF only, max 25MB)
+            </label>
+            {draft.file ? (
+              <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <FileText size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate max-w-[200px]">{draft.file.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{(draft.file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDraft({ ...draft, file: null })}
+                  className="text-xs text-danger hover:bg-danger/5 hover:text-danger rounded-lg px-2 h-8"
+                >
+                  Remove
+                </Button>
+              </div>
+            ) : draft.id && draft.fileUrl ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                      <FileText size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground truncate max-w-[200px]">Current PDF File</p>
+                      <a
+                        href={draft.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-primary hover:underline block truncate max-w-[200px]"
+                      >
+                        View current file
+                      </a>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-500 mr-2">Uploaded</span>
+                </div>
+                <div className="pt-1">
+                  <Suspense fallback={<PanelSkeleton minHeight="min-h-[120px]" />}>
+                    <LazyUploadDropzone
+                      multiple={false}
+                      accept=".pdf"
+                      label="Replace File"
+                      hint="Drop a new PDF here to replace the current file"
+                      onFileSelect={(files) => {
+                        const file = files[0]
+                        if (file.type !== 'application/pdf') {
+                          toast.error('Only PDF files are allowed.')
+                          return
+                        }
+                        if (file.size > 25 * 1024 * 1024) {
+                          toast.error('File size must be 25MB or less.')
+                          return
+                        }
+                        setDraft({ ...draft, file })
+                      }}
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            ) : (
+              <Suspense fallback={<PanelSkeleton minHeight="min-h-[120px]" />}>
+                <LazyUploadDropzone
+                  multiple={false}
+                  accept=".pdf"
+                  label="Attach PDF"
+                  hint="Drag and drop or browse to select a PDF file"
+                  onFileSelect={(files) => {
+                    const file = files[0]
+                    if (file.type !== 'application/pdf') {
+                      toast.error('Only PDF files are allowed.')
+                      return
+                    }
+                    if (file.size > 25 * 1024 * 1024) {
+                      toast.error('File size must be 25MB or less.')
+                      return
+                    }
+                    setDraft({ ...draft, file })
+                  }}
+                />
+              </Suspense>
+            )}
+          </div>
+
+          {isSaving && (
+            <div className="space-y-2 pt-2 animate-fade-in">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-primary">Uploading & saving resource...</span>
+                <span className="font-semibold text-primary">{uploadProgress}%</span>
+              </div>
+              <div className="relative h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="absolute left-0 top-0 h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-300 ease-out rounded-full"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </DialogBody>
         <DialogFooter className="p-6 pt-4 border-t border-border/40 flex gap-3">
           <Button variant="secondary" className="flex-1 rounded-lg text-sm font-medium" onClick={() => setEditorOpen(false)}>Cancel</Button>

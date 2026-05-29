@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME } from '@/lib/auth-constants'
-import { assertSameOrigin, jsonError, withNoStore } from '@/lib/api-security'
+import { assertSameOrigin, jsonError, withNoStore, applyRateLimit } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { deleteSessionRecord } from '@/lib/server-data'
 import { readSessionCookie } from '@/lib/session-cookie'
@@ -8,6 +8,7 @@ import { readSessionCookie } from '@/lib/session-cookie'
 export async function POST(request) {
   try {
     assertSameOrigin(request)
+    applyRateLimit(request, 'auth')
 
     const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value
     if (sessionCookie) {
@@ -30,11 +31,11 @@ export async function POST(request) {
         request,
       })
 
-      const response = withNoStore(NextResponse.json({ ok: true }))
+      const response = withNoStore(NextResponse.json({ ok: true }), request)
       response.cookies.set(SESSION_COOKIE_NAME, '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'strict',
         expires: new Date(0),
         path: '/',
       })

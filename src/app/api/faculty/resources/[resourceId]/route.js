@@ -4,6 +4,7 @@ import {
   jsonError,
   requireApiSession,
   withNoStore,
+  ApiError,
 } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import {
@@ -11,13 +12,24 @@ import {
   updateResourceRecord,
   updateResourceStatusRecord,
 } from '@/lib/server-data'
-import { sanitizePlainText } from '@/lib/request-validation'
+import { uploadToDrive } from '@/lib/google-drive'
+import { sanitizeFileName, sanitizePlainText } from '@/lib/request-validation'
+
+const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+const ALLOWED_UPLOAD_TYPES = new Set([
+  'application/pdf',
+])
+
+function extensionForMimeType(mimeType) {
+  const normalized = String(mimeType || '').toLowerCase()
+  if (normalized === 'application/pdf') return 'pdf'
+  return 'bin'
+}
 
 export async function PATCH(request, { params }) {
   try {
     assertSameOrigin(request)
     const session = await requireApiSession(request, ['faculty'])
-    const body = await request.json().catch(() => ({}))
     const routeParams = await params
     const resourceId = String(routeParams?.resourceId || '').trim()
 
@@ -25,6 +37,74 @@ export async function PATCH(request, { params }) {
       return withNoStore(
         NextResponse.json({ error: 'Resource ID is required.' }, { status: 400 })
       )
+    }
+
+    const contentType = request.headers.get('content-type') || ''
+    let body = {}
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      const file = formData.get('file')
+
+      body = {
+        title: sanitizePlainText(formData.get('title') || '', { maxLength: 160, collapseWhitespace: true }),
+        subject: sanitizePlainText(formData.get('subject') || '', { maxLength: 80, collapseWhitespace: true }),
+        class: sanitizePlainText(formData.get('class') || '', { maxLength: 80, collapseWhitespace: true }),
+        summary: sanitizePlainText(formData.get('summary') || '', { maxLength: 2000 }),
+        category: sanitizePlainText(formData.get('category') || '', { maxLength: 80, collapseWhitespace: true }),
+        status: formData.get('status') || 'live',
+      }
+
+      if (file && file instanceof File && file.size > 0) {
+        if (!ALLOWED_UPLOAD_TYPES.has(String(file.type || '').toLowerCase())) {
+          throw new ApiError(400, 'Unsupported file type. Only PDF is allowed.')
+        }
+
+        if (Number(file.size || 0) > MAX_UPLOAD_BYTES) {
+          throw new ApiError(400, 'File size must be 25MB or less.')
+        }
+
+        const originalFileName = String(file.name || '').trim()
+        if (!originalFileName || originalFileName.length > 180) {
+          throw new ApiError(400, 'Invalid file name.')
+        }
+
+        const buffer = Buffer.from(await file.arrayBuffer())
+        const safeBaseName = sanitizeFileName(originalFileName)
+        if (safeBaseName === 'upload' || !/[a-zA-Z0-9]/.test(safeBaseName)) {
+          throw new ApiError(400, 'Invalid file name.')
+        }
+        const safeExtension = extensionForMimeType(file.type)
+        const safeUploadName = `${safeBaseName.replace(/\.[^.]+$/, '')}-${crypto.randomUUID().slice(0, 8)}.${safeExtension}`
+
+        // Upload new file to Google Drive
+        const driveData = await uploadToDrive(
+          buffer,
+          safeUploadName,
+          file.type,
+          process.env.GOOGLE_DRIVE_FOLDER_ID
+        )
+
+        const fileUrl =
+          driveData.webViewLink ||
+          (driveData.fileId
+            ? `https://drive.google.com/file/d/${driveData.fileId}/view?usp=drivesdk`
+            : '')
+
+        body.fileUrl = fileUrl
+        body.driveFileId = driveData.fileId
+        body.driveFileLink = fileUrl
+        body.fileType = file.type
+        body.fileSize = file.size
+        body.fileFormat = safeExtension
+      } else {
+        const existingFileUrl = formData.get('fileUrl')
+        if (existingFileUrl) {
+          body.fileUrl = sanitizePlainText(existingFileUrl, { maxLength: 500, collapseWhitespace: true })
+        }
+      }
+    } else {
+      body = await request.json().catch(() => ({}))
     }
 
     const action = sanitizePlainText(body?.action || '', {

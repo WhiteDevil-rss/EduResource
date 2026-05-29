@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { Menu, X, ShieldCheck, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 import { cn } from '@/lib/cn'
 import { Button } from '@/components/ui/button'
@@ -14,9 +15,11 @@ export default function PublicHeader({
   actions = [],
   showUtilityIcons = true,
 }) {
+  const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeSection, setActiveSection] = useState('')
+
 
   const closeMenu = () => setMenuOpen(false)
 

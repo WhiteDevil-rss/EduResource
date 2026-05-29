@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth-server'
-import { assertSameOrigin, withNoStore } from '@/lib/api-security'
+import { assertSameOrigin, withNoStore, applyRateLimit, jsonError } from '@/lib/api-security'
 import { signInWithPassword, updateFirebasePassword } from '@/lib/firebase-rest-auth'
 import { validatePassword } from '@/lib/request-validation'
 
 export async function POST(request) {
   try {
     assertSameOrigin(request)
+    applyRateLimit(request, 'auth')
     const { user } = await getSessionUser()
     if (!user || !user.uid) {
       return withNoStore(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }))
@@ -56,13 +57,8 @@ export async function POST(request) {
 
     return withNoStore(NextResponse.json({
       message: 'Password updated successfully.',
-    }))
+    }), request)
   } catch (error) {
-    console.error('Change password error:', error)
-    const status = Number(error?.status) || 500
-    return withNoStore(NextResponse.json(
-      { error: error.message || 'An unexpected error occurred.' },
-      { status }
-    ))
+    return jsonError(error, 'An unexpected error occurred.')
   }
 }
