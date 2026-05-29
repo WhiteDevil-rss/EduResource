@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_MS } from '@/lib/auth-constants'
-import { assertRequestNotBlocked, assertSameOrigin, withNoStore, applyRateLimit } from '@/lib/api-security'
+import { assertRequestNotBlocked, withNoStore, applyRateLimit } from '@/lib/api-security'
 import { logAction } from '@/lib/audit-log'
 import { signInWithPassword } from '@/lib/firebase-rest-auth'
 import { createSessionCookie } from '@/lib/session-cookie'
@@ -109,7 +109,6 @@ function withTimeout(promise, timeoutMs) {
 export async function POST(request) {
   const timer = new RequestTimer('credential-login')
   try {
-    assertSameOrigin(request)
     await assertRequestNotBlocked(request)
     applyRateLimit(request, 'auth')
     timer.markPhase('request-validation')
@@ -403,23 +402,6 @@ export async function POST(request) {
     effectiveUser.role = accountRole
     if (accountRole === 'admin') {
       effectiveUser.status = 'active'
-    }
-
-    if (effectiveUser.role === 'student') {
-      void logAction({
-        user: { uid: effectiveUser.uid || null, name: effectiveUser.displayName, email: effectiveUser.email, role: effectiveUser.role },
-        action: 'LOGIN',
-        description: 'Credential login rejected: student must use Google portal.',
-        module: 'Auth',
-        status: 'FAILED',
-        request,
-      }).catch(() => { })
-      return withNoStore(
-        NextResponse.json(
-          { error: 'Students must sign in using the Google Student Portal.' },
-          { status: 403 }
-        )
-      )
     }
 
     const authProvider = String(effectiveUser.authProvider || '').toLowerCase()
