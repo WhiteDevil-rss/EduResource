@@ -339,6 +339,14 @@ globalThis.global = global;
     // Fix: patch the Xe factory to inject require: globalThis.require into every module object.
     console.log('Patching Xe CJS module factory to inject require...');
     let workerContent = readFileSync(destPath, 'utf-8');
+
+    // Strip bare imports of node:* modules to eliminate wrangler bundling warnings
+    const bareImportRegex = /import\s*["']node:(process|buffer|util|path|crypto|events|stream|module|async_hooks|diagnostics_channel|perf_hooks|readline)["'];?/g;
+    if (bareImportRegex.test(workerContent)) {
+      workerContent = workerContent.replace(bareImportRegex, '');
+      console.log('[PATCHED] Removed bare imports of node modules to silence wrangler warnings.');
+    }
+
     // The pattern we want to replace is the module object creation inside the Xe factory.
     // esbuild generates: (A={exports:{}}).exports,A)
     // We change it to:   (A={exports:{},require:globalThis.require}).exports,A)
@@ -346,11 +354,12 @@ globalThis.global = global;
     const xeReplacement = '(A={exports:{},require:globalThis.require}).exports,A)';
     if (xePattern.test(workerContent)) {
       workerContent = workerContent.replace(xePattern, xeReplacement);
-      writeFileSync(destPath, workerContent);
       console.log('[PATCHED] Xe module factory in _worker.js — module.require is now available inside CJS factories');
     } else {
       console.warn('[WARN] Xe pattern not found in _worker.js — the module factory structure may have changed');
     }
+
+    writeFileSync(destPath, workerContent);
 
     // Relying on esbuild banner for requirePolyfill injection to avoid duplicates
 
