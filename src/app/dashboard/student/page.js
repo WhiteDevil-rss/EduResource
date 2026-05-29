@@ -107,7 +107,7 @@ function persistDownloads(downloads) {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(downloads))
     }
-  } catch (err) {
+  } catch {
     // Silent
   }
 }
@@ -121,7 +121,7 @@ export default function StudentDashboard() {
   const [, setDownloads] = useState([])
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationsLoading] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [requestModalOpen, setRequestModalOpen] = useState(false)
   const [requestSubmitting, setRequestSubmitting] = useState(false)
@@ -192,7 +192,7 @@ export default function StudentDashboard() {
           setNotifications(Array.isArray(payload?.notifications) ? payload.notifications : [])
           setUnreadCount(Number(payload?.unreadCount || 0))
         }
-      } catch (err) {
+      } catch {
         // Silent
       }
     }
@@ -252,7 +252,7 @@ export default function StudentDashboard() {
       setResources(prev => prev.map(r => 
         r.id === entry.id ? { ...r, isBookmarked: result.bookmarked } : r
       ))
-    } catch (error) {
+    } catch {
       // Revert on error
       setResources(prev => prev.map(r => 
         r.id === entry.id ? { ...r, isBookmarked: previousStatus } : r
@@ -313,7 +313,7 @@ export default function StudentDashboard() {
       if (response.ok) {
         setTargetReviews(payload.reviews || [])
       }
-    } catch (err) {
+    } catch {
       // Silent error
     } finally {
       setReviewsLoading(false)
