@@ -127,24 +127,29 @@ export function assertSameOrigin(request) {
     return
   }
 
-  // Handle Cloudflare/reverse proxy protocol and host headers
-  const headers = request.headers
-  const proto = headers.get('x-forwarded-proto') || new URL(request.url).protocol.replace(':', '')
-  const host = headers.get('x-forwarded-host') || new URL(request.url).host
-  const requestOrigin = `${proto}://${host}`
-
   try {
-    // Normalize protocols and ports using the URL constructor for bulletproof matching
-    const normOrigin = new URL(origin.replace(/^http:/, 'https:')).origin
-    const normRequestOrigin = new URL(requestOrigin.replace(/^http:/, 'https:')).origin
+    const originHostname = new URL(origin).hostname.toLowerCase()
+    
+    // Resolve host from x-forwarded-host, host header, or request URL
+    const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host')
+    const host = hostHeader ? hostHeader.split(':')[0].trim().toLowerCase() : new URL(request.url).hostname.toLowerCase()
 
-    if (normOrigin !== normRequestOrigin) {
-      console.error(`[SAME_ORIGIN_MISMATCH] normOrigin: "${normOrigin}" | normRequestOrigin: "${normRequestOrigin}"`);
-      throw new ApiError(403, 'Cross-site request blocked.')
+    // Resolve host from env NEXT_PUBLIC_APP_URL
+    const envHost = process.env.NEXT_PUBLIC_APP_URL ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname.toLowerCase() : null
+
+    // Perfect fallback: if we are in development, allow localhost/127.0.0.1 automatically
+    const isDev = process.env.NODE_ENV !== 'production'
+    const isLocal = originHostname === 'localhost' || originHostname === '127.0.0.1'
+
+    if (originHostname === host || (envHost && originHostname === envHost) || (isDev && isLocal)) {
+      return
     }
+
+    console.error(`[SAME_ORIGIN_MISMATCH] originHostname: "${originHostname}" | hostHeader: "${host}" | envHost: "${envHost}"`);
+    throw new ApiError(403, 'Cross-site request blocked.')
   } catch (error) {
     if (error instanceof ApiError) throw error
-    console.error('[SAME_ORIGIN_ERROR] Failed to parse and normalize origins:', error)
+    console.error('[SAME_ORIGIN_ERROR] Failed to parse same-origin parameters:', error)
     throw new ApiError(403, 'Cross-site request blocked.')
   }
 }
