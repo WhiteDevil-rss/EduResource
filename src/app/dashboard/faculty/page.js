@@ -869,7 +869,21 @@ export default function FacultyDashboard() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete Resource"
-        description={`Are you sure you want to delete "${deleteTarget?.title}"? This action cannot be undone.`}
+        description={(
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this resource?
+            </p>
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3">
+              <p className="text-sm font-semibold text-foreground break-words">
+                {deleteTarget?.title || 'Untitled resource'}
+              </p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone.
+            </p>
+          </div>
+        )}
         confirmText="Delete"
         cancelText="Cancel"
         onConfirm={handleDeleteResource}
