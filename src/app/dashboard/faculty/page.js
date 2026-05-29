@@ -683,7 +683,7 @@ export default function FacultyDashboard() {
           <DialogTitle className="text-lg font-semibold text-foreground">{draft.id ? 'Edit Resource' : 'New Resource'}</DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">Configure the details for your academic material</DialogDescription>
         </DialogHeader>
-        <DialogBody className="p-6 py-5 space-y-5">
+        <DialogBody className="p-6 py-5 space-y-5 overflow-y-auto max-h-[60vh] pr-3 scrollbar-thin">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-primary px-1 block">Title</label>
