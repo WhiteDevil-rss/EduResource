@@ -121,6 +121,7 @@ export default function FacultyDashboard() {
       try {
         const response = await fetch('/api/faculty/resources', {
           cache: 'no-store',
+          credentials: 'same-origin',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
@@ -155,6 +156,7 @@ export default function FacultyDashboard() {
       try {
         const response = await fetch('/api/notifications', {
           cache: 'no-store',
+          credentials: 'same-origin',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
@@ -183,8 +185,8 @@ export default function FacultyDashboard() {
     const load = async () => {
       try {
         const [analyticsRes, collectionsRes] = await Promise.all([
-          fetch('/api/analytics/summary', { cache: 'no-store', signal: controller.signal }),
-          fetch('/api/collections', { cache: 'no-store', signal: controller.signal }),
+          fetch('/api/analytics/summary', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal }),
+          fetch('/api/collections', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal }),
         ])
 
         if (isActive && analyticsRes.ok) {
@@ -299,6 +301,7 @@ export default function FacultyDashboard() {
       const payload = await new Promise((resolve, reject) => {
         const xhr = new globalThis.XMLHttpRequest()
         xhr.open(method, url)
+        xhr.withCredentials = true
         
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -350,7 +353,10 @@ export default function FacultyDashboard() {
   const handleDeleteResource = async () => {
     if (!deleteTarget?.id) return
     try {
-      const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, { method: 'DELETE' })
+      const response = await fetch(`/api/faculty/resources/${deleteTarget.id}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      })
       if (!response.ok) throw new Error('Failed to delete resource.')
       setResources((current) => current.filter((r) => r.id !== deleteTarget.id))
       setDeleteTarget(null)
@@ -365,6 +371,7 @@ export default function FacultyDashboard() {
       const response = await fetch('/api/notifications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ action: 'read-all' }),
       })
       if (response.ok) {

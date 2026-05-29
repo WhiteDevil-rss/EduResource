@@ -39,7 +39,7 @@ function mapFirebaseAuthError(error, fallbackMessage) {
 
 async function fetchSessionSnapshot() {
   try {
-    const response = await fetch("/api/session", { cache: "no-store" });
+    const response = await fetch("/api/session", { cache: "no-store", credentials: "same-origin" });
     if (!response.ok) {
       return {
         user: null,
@@ -72,7 +72,7 @@ async function fetchSessionSnapshot() {
 
 async function fetchLiveSessionSettings() {
   try {
-    const response = await fetch("/api/session-settings", { cache: "no-store" });
+    const response = await fetch("/api/session-settings", { cache: "no-store", credentials: "same-origin" });
     if (!response.ok) {
       return SESSION_SETTINGS_DEFAULTS;
     }
@@ -207,6 +207,7 @@ export function AuthProvider({ children }) {
       const response = await fetch("/api/auth/student-google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ idToken }),
       });
 
@@ -289,6 +290,7 @@ export function AuthProvider({ children }) {
       const response = await fetch("/api/auth/credential-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           email: String(email || "").trim(),
           password: String(password || ""),
@@ -345,6 +347,7 @@ export function AuthProvider({ children }) {
       const response = await fetch("/api/auth/verify-2fa", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           challengeId: String(challengeId || "").trim(),
           otp: String(otp || "").trim(),
@@ -392,6 +395,7 @@ export function AuthProvider({ children }) {
     const response = await fetch("/api/auth/resend-2fa", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
       body: JSON.stringify({
         challengeId: String(challengeId || "").trim(),
       }),
@@ -412,7 +416,7 @@ export function AuthProvider({ children }) {
 
     try {
       window.sessionStorage.clear();
-    } catch (_) {
+    } catch {
       // ignore
     }
 
@@ -431,7 +435,7 @@ export function AuthProvider({ children }) {
       }
 
       keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-    } catch (_) {
+    } catch {
       // ignore
     }
 
@@ -443,7 +447,7 @@ export function AuthProvider({ children }) {
         }
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
       });
-    } catch (_) {
+    } catch {
       // ignore
     }
   };
@@ -457,14 +461,14 @@ export function AuthProvider({ children }) {
 
     try {
       clearBrowserAuthArtifacts();
-      await fetch("/api/session-logout", { method: "POST" }).catch(() => {});
+      await fetch("/api/session-logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
       
       const authInstance = await getFirebaseAuth();
       if (authInstance) {
         const { signOut } = await getAuthUtils();
         await signOut(authInstance).catch(() => {});
       }
-    } catch (_) {
+    } catch {
       // ignore
     } finally {
       applySession({ user: null, role: null, status: null, authProvider: null });
