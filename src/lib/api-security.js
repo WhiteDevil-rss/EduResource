@@ -111,6 +111,7 @@ export async function assertRequestNotBlocked(request) {
 
   const blocked = await getBlockedIpRecordByIp(ipAddress).catch(() => null)
   if (blocked) {
+    console.error(`[IP_BLOCKED] Request from blocked IP: "${ipAddress}"`);
     throw new ApiError(403, 'Access denied. Your IP is blocked.')
   }
 }
@@ -132,11 +133,18 @@ export function assertSameOrigin(request) {
   const host = headers.get('x-forwarded-host') || new URL(request.url).host
   const requestOrigin = `${proto}://${host}`
 
-  // Normalize protocols for comparison (e.g. behind SSL-terminating proxies)
-  const normOrigin = origin.replace(/^http:/, 'https:')
-  const normRequestOrigin = requestOrigin.replace(/^http:/, 'https:')
+  try {
+    // Normalize protocols and ports using the URL constructor for bulletproof matching
+    const normOrigin = new URL(origin.replace(/^http:/, 'https:')).origin
+    const normRequestOrigin = new URL(requestOrigin.replace(/^http:/, 'https:')).origin
 
-  if (normOrigin !== normRequestOrigin) {
+    if (normOrigin !== normRequestOrigin) {
+      console.error(`[SAME_ORIGIN_MISMATCH] normOrigin: "${normOrigin}" | normRequestOrigin: "${normRequestOrigin}"`);
+      throw new ApiError(403, 'Cross-site request blocked.')
+    }
+  } catch (error) {
+    if (error instanceof ApiError) throw error
+    console.error('[SAME_ORIGIN_ERROR] Failed to parse and normalize origins:', error)
     throw new ApiError(403, 'Cross-site request blocked.')
   }
 }
