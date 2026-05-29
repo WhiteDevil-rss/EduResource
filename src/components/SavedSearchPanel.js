@@ -21,6 +21,7 @@ export function SavedSearchPanel() {
       try {
         const response = await fetch('/api/saved-searches', {
           cache: 'no-store',
+          credentials: 'same-origin',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
@@ -61,6 +62,7 @@ export function SavedSearchPanel() {
       const response = await fetch('/api/saved-searches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ query: trimmed }),
       })
       const payload = await response.json().catch(() => ({}))
@@ -81,6 +83,7 @@ export function SavedSearchPanel() {
       const response = await fetch('/api/saved-searches', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ searchId }),
       })
       const payload = await response.json().catch(() => ({}))

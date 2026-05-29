@@ -23,7 +23,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
   const loadBlockedIps = async () => {
     setLoadingIps(true)
     try {
-      const response = await fetch('/api/admin/blocked-ips', { cache: 'no-store' })
+         const response = await fetch('/api/admin/blocked-ips', { cache: 'no-store', credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Could not load blocked IPs.')
       setBlockedIps(Array.isArray(payload?.blockedIps) ? payload.blockedIps : [])
@@ -67,9 +67,10 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
     setSavingIp(true)
     try {
       const parsedDuration = ipDuration === 'permanent' ? null : Number(ipDuration)
-      const response = await fetch('/api/admin/block-ip', {
+         const response = await fetch('/api/admin/block-ip', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+           credentials: 'same-origin',
         body: JSON.stringify({
           ipAddress: ipInput.trim(),
           reason: ipReason.trim(),
@@ -101,6 +102,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           userId: targetUser.id,
           durationMinutes: targetUser.isBlocked ? null : parsedDuration,
@@ -127,6 +129,7 @@ export function SecurityBlockManagement({ users = [], onChanged }) {
     try {
       const response = await fetch(`/api/admin/unblock-ip/${encodeURIComponent(targetIp)}`, {
         method: 'DELETE',
+        credentials: 'same-origin',
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Failed to unblock IP.')

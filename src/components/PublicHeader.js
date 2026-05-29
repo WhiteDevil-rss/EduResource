@@ -62,7 +62,6 @@ export default function PublicHeader({
     const sectionLinks = links.filter(l => l.href.includes('#'))
     if (sectionLinks.length === 0) return
 
-    const observers = []
     
     const observerOptions = {
       root: null,
@@ -108,10 +107,7 @@ export default function PublicHeader({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20 transition-all duration-300 group-hover:rotate-6 group-hover:scale-110">
               <ShieldCheck className="text-primary-foreground" size={22} />
             </div>
-            <span className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">SPS</span>
-              <span className="hidden sm:inline"> Educationam</span>
-            </span>
+            <span className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{brand}</span>
           </Link>
         </div>
 

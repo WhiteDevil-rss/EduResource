@@ -47,7 +47,7 @@ export default function ResourceRequestsPage() {
     if (!user || !isAdminUser(user)) return
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/resource-requests', { cache: 'no-store' })
+      const response = await fetch('/api/admin/resource-requests', { cache: 'no-store', credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Failed to sync requests.')
       setRequests(Array.isArray(payload?.requests) ? payload.requests : [])
@@ -81,6 +81,7 @@ export default function ResourceRequestsPage() {
       const response = await fetch(`/api/admin/resource-requests/${entry.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ status }),
       })
       const payload = await response.json().catch(() => ({}))

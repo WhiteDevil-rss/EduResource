@@ -2,15 +2,7 @@
 
 import { BookOpen, FolderKanban, Star, Users, TrendingUp, ArrowUpRight, BarChart3, Activity } from 'lucide-react'
 import { StandardCard, StatCard } from '@/components/layout/StandardCards'
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts'
+// Recharts imports removed — not used in this component currently
 
 export function AnalyticsDashboard({ summary, role = 'faculty' }) {
   if (!summary) return null

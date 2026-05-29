@@ -3,6 +3,8 @@ import { auth, firestore } from '@/lib/firebase-edge'
 import { isProtectedAdminEmail } from '@/lib/admin-protection'
 import { normalizeSessionSettings, SESSION_SETTINGS_DEFAULTS } from '@/lib/session-settings'
 
+/* eslint-disable no-unused-vars */
+
 const USERS_COLLECTION = 'users'
 const RESOURCES_COLLECTION = 'resources'
 const RESOURCE_REQUESTS_COLLECTION = 'resource_requests'
@@ -70,7 +72,7 @@ function normalizeHttpUrl(value, { fieldName = 'URL', allowEmpty = false } = {})
 
   let parsed
   try {
-    parsed = new URL(normalized)
+     parsed = new URL(value)
   } catch {
     throw new Error(`${fieldName} is invalid.`)
   }
@@ -355,7 +357,7 @@ function sanitizeSessionData(docId, data = {}) {
     status: data.status || 'active',
     authProvider: data.authProvider || null,
     userAgent: data.userAgent || null,
-    createdAt: data.createdAt || null,
+      createdAt: data.createdAt || nowIso(),
     lastSeenAt: data.lastSeenAt || null,
     expiresAt: data.expiresAt || null,
   }
@@ -2238,7 +2240,6 @@ async function listSessionRecords() {
 
     return activeRecords
   } catch (error) {
-
     return []
   }
 }

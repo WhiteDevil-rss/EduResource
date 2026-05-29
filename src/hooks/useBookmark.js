@@ -13,7 +13,7 @@ export function useBookmark() {
   const loadBookmarks = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/bookmark/list', { cache: 'no-store' })
+      const response = await fetch('/api/bookmark/list', { cache: 'no-store', credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
         throw new Error(payload?.error || 'Could not load bookmarks.')
@@ -38,6 +38,7 @@ export function useBookmark() {
       const response = await fetch('/api/bookmark/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ resourceId: id }),
       })
       const payload = await response.json().catch(() => ({}))

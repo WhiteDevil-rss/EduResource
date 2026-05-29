@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 
 import { ExternalLink, FileText, Download, ShieldAlert } from 'lucide-react'
 import { Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -45,9 +46,7 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
-  const handleIframeError = () => {
-    setLoadError(true)
-  }
+  // inline onError handlers used directly; removed unused handleIframeError
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="student-resource-viewer" labelledBy="resource-viewer-title">
@@ -101,9 +100,11 @@ export function ResourceViewer({ open, onOpenChange, resource, role = 'student' 
               />
             ) : previewKind === 'image' ? (
               <div className="flex h-[65vh] w-full items-center justify-center bg-muted/20 p-4">
-                <img
+                <Image
                   src={previewUrl}
                   alt={resource?.title || 'Resource preview'}
+                  width={1200}
+                  height={800}
                   className="max-h-full max-w-full object-contain shadow-sm"
                   onError={() => setLoadError(true)}
                 />

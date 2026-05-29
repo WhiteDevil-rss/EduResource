@@ -21,6 +21,7 @@ export async function performBulkDelete(selectedIds, itemType) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         ids: selectedIds,
         type: itemType,
@@ -78,6 +79,7 @@ export async function performBulkExport(selectedIds, itemType) {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'same-origin',
       body: JSON.stringify({
         ids: selectedIds,
         type: itemType,

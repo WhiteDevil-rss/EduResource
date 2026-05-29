@@ -16,17 +16,17 @@ import {
 import { useCallback, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { usePathname } from 'next/navigation'
+// usePathname removed — not used
 import { getFirebaseAuth } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { getPostLoginRedirectPath } from '@/lib/admin-protection'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+// Badge removed — not used
 import { cn } from '@/lib/cn'
 
 export default function Login() {
-  const pathname = usePathname()
+  // pathname removed — not used
   const [loginMode, setLoginMode] = useState('staff') // 'staff' or 'student'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

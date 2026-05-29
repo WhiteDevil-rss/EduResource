@@ -1,23 +1,21 @@
 'use client'
 
 import {
-  ArrowRight,
   Globe,
   Shield,
   GraduationCap,
-  Sparkles,
   Loader2,
+  Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+// Badge removed — not used
 
 export default function Register() {
-  const pathname = usePathname()
   const { user, role, loading, isAuthenticating, signInWithGoogleStudent } = useAuth()
   const router = useRouter()
   const [error, setError] = useState('')

@@ -19,6 +19,7 @@ export function RecommendationPanel() {
       try {
         const response = await fetch('/api/recommendations', {
           cache: 'no-store',
+          credentials: 'same-origin',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))

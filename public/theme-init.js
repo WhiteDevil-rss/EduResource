@@ -27,7 +27,7 @@
               }
               return originalWriteText(text);
             };
-          } catch (e) {
+          } catch {
             // Silently fail as this is a non-critical helper
           }
         }, 0);

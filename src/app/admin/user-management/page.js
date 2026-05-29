@@ -57,7 +57,7 @@ export default function UserManagementPage() {
     if (!user || !isAdminUser(user)) return
     if (!silent) setLoading(true)
     try {
-      const response = await fetch('/api/admin/users?page=1&limit=500', { cache: 'no-store' })
+      const response = await fetch('/api/admin/users?page=1&limit=500', { cache: 'no-store', credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Registry sync failure.')
       setUsers(Array.isArray(payload?.users) ? payload.users : [])
@@ -98,6 +98,7 @@ export default function UserManagementPage() {
       const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify(createForm),
       })
 
@@ -130,6 +131,7 @@ export default function UserManagementPage() {
       const response = await fetch(`/api/admin/users/${entry.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ action: 'set-status', status: nextStatus }),
       })
       const payload = await response.json().catch(() => ({}))
@@ -151,6 +153,7 @@ export default function UserManagementPage() {
       const response = await fetch(`/api/admin/users/${resetModal.user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({
           action: 'resetCredentials',
           password: resetModal.password?.trim() ? resetModal.password : undefined,
@@ -178,7 +181,7 @@ export default function UserManagementPage() {
     if (!deleteTarget?.id) return
     try {
       setProcessing(true)
-      const response = await fetch(`/api/admin/users/${deleteTarget.id}`, { method: 'DELETE' })
+      const response = await fetch(`/api/admin/users/${deleteTarget.id}`, { method: 'DELETE', credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Identity purge failure.')
 
@@ -198,6 +201,7 @@ export default function UserManagementPage() {
       const response = await fetch('/api/admin/users/export-csv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ searchTerm: search, roleFilter }),
       })
       if (!response.ok) throw new Error('Data extraction failure.')

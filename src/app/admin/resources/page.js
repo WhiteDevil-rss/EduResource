@@ -39,7 +39,7 @@ export default function AdminResourcesPage() {
     let mounted = true
     const load = async () => {
       try {
-        const response = await fetch('/api/admin/overview', { cache: 'no-store' })
+        const response = await fetch('/api/admin/overview', { cache: 'no-store', credentials: 'same-origin' })
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(payload?.error || 'Could not load resources.')
         if (!mounted) return

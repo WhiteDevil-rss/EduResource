@@ -51,8 +51,9 @@ export function SuspiciousActivityPanel() {
       if (filters.from) params.set('from', filters.from)
       if (filters.to) params.set('to', filters.to)
 
-      const response = await execute(`/api/admin/suspicious-activities?${params.toString()}`, {
+          const response = await execute(`/api/admin/suspicious-activities?${params.toString()}`, {
         cache: 'no-store',
+            credentials: 'same-origin',
       })
 
       const payload = await response.json().catch(() => ({}))
@@ -81,6 +82,7 @@ export function SuspiciousActivityPanel() {
       const response = await fetch('/api/admin/suspicious-activities', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ activityId }),
       })
 
@@ -113,7 +115,7 @@ export function SuspiciousActivityPanel() {
       if (filters.from) params.set('from', filters.from)
       if (filters.to) params.set('to', filters.to)
 
-      const response = await fetch(`/api/admin/suspicious-activities?${params.toString()}`, { cache: 'no-store' })
+      const response = await fetch(`/api/admin/suspicious-activities?${params.toString()}`, { cache: 'no-store', credentials: 'same-origin' })
       if (!response.ok) throw new Error('Export service unavailable.')
 
       const contentDisposition = response.headers.get('content-disposition')

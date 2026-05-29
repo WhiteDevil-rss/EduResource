@@ -39,13 +39,13 @@ export const getFirebaseAuth = async () => {
     
     const { getAuth } = await import('firebase/auth');
     return getAuth(app);
-  } catch (error) {
+    } catch (error) {
     console.error('[FIREBASE] Auth initialization failed:', error);
     // If it fails, try to return the default auth instance as a last resort
     try {
       const { getAuth } = await import('firebase/auth');
       return getAuth();
-    } catch (innerError) {
+    } catch {
       return null;
     }
   }

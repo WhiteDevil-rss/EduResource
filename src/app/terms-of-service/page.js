@@ -1,4 +1,4 @@
-import { PageContainer, ContentSection } from '@/components/layout'
+import { PageContainer } from '@/components/layout'
 import { FileText, Users, GraduationCap, Ban, AlertTriangle, Scale, Mail } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 

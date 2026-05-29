@@ -18,7 +18,6 @@ export async function getSessionUser() {
     return { user: null, role: null, status: null };
   }
 
-  const cookiesSnapshot = cookieStore.getAll()
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
   if (!sessionCookie) {
@@ -55,7 +54,8 @@ export async function getSessionUser() {
   }
 }
 
-export async function requireRole(allowedRoles, contextPath = '') {
+export async function requireRole(allowedRoles, _contextPath = '') {
+  void _contextPath
   const { user, role, status } = await getSessionUser()
 
   if (!user || !role) {

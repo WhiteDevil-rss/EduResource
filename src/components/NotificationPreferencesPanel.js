@@ -27,6 +27,7 @@ export function NotificationPreferencesPanel() {
       try {
         const response = await fetch('/api/notification-preferences', {
           cache: 'no-store',
+          credentials: 'same-origin',
           signal: controller.signal,
         })
         const payload = await response.json().catch(() => ({}))
@@ -65,6 +66,7 @@ export function NotificationPreferencesPanel() {
       const response = await fetch('/api/notification-preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify(next),
       })
       const payload = await response.json().catch(() => ({}))

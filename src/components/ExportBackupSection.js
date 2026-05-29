@@ -16,6 +16,7 @@ export function ExportReportsSection() {
       const response = await fetch('/api/admin/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ type: exportType, format: exportFormat }),
       })
 
@@ -116,7 +117,7 @@ export function BackupSystemSection() {
   const loadBackupInfo = useCallback(async () => {
     try {
       setLoadingInfo(true)
-      const response = await fetch('/api/admin/backup', { cache: 'no-store' })
+      const response = await fetch('/api/admin/backup', { cache: 'no-store', credentials: 'same-origin' })
       if (response.ok) {
         const data = await response.json()
         setLastBackup(data)
@@ -138,6 +139,7 @@ export function BackupSystemSection() {
       const response = await fetch('/api/admin/backup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({}),
       })
 

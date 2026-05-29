@@ -34,7 +34,7 @@ export function SecurityAdvancedSettings() {
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/security-controls', { cache: 'no-store' })
+      const response = await fetch('/api/admin/security-controls', { cache: 'no-store', credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Registry sync failure.')
       setSettings((current) => ({ ...current, ...(payload?.settings || {}) }))
@@ -55,6 +55,7 @@ export function SecurityAdvancedSettings() {
       const response = await fetch('/api/admin/security-controls', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify(settings),
       })
 

@@ -40,7 +40,7 @@ export default function AdminIpManagementPage() {
     setLoading(true)
     setError('')
     try {
-      const resp = await fetch('/api/admin/users', { cache: 'no-store' })
+      const resp = await fetch('/api/admin/users', { cache: 'no-store', credentials: 'same-origin' })
       const payload = await resp.json().catch(() => ({}))
       if (!resp.ok) throw new Error(payload?.error || 'Could not load identity data.')
       setUsers(Array.isArray(payload?.users) ? payload.users : [])

@@ -478,7 +478,6 @@ export const firestore = {
     const token = await getGoogleAccessToken()
     const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:runQuery`
 
-    const [field, op, value] = filter
     const safeLimit = Math.max(1, Math.min(1000, Number(limit) || 10))
 
     let where

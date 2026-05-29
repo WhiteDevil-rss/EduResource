@@ -65,7 +65,6 @@ export default function AdminSecuritySettingsPage() {
   const [maintenanceConfig, setMaintenanceConfig] = useState({ enabled: false, whitelist: [] })
   const [originalMaintenanceConfig, setOriginalMaintenanceConfig] = useState({ enabled: false, whitelist: [] })
   const [newWhitelistEmail, setNewWhitelistEmail] = useState('')
-  const [maintenanceLoading, setMaintenanceLoading] = useState(true)
 
   useEffect(() => {
     if (authLoading) return
@@ -87,7 +86,7 @@ export default function AdminSecuritySettingsPage() {
     let mounted = true
     const load = async () => {
       try {
-        const response = await fetch('/api/admin/session-settings', { cache: 'no-store' })
+        const response = await fetch('/api/admin/session-settings', { cache: 'no-store', credentials: 'same-origin' })
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(payload?.error || 'Could not load session settings.')
         if (!mounted) return
@@ -104,7 +103,7 @@ export default function AdminSecuritySettingsPage() {
 
     const loadMaintenance = async () => {
       try {
-        const response = await fetch('/api/admin/maintenance', { cache: 'no-store' })
+        const response = await fetch('/api/admin/maintenance', { cache: 'no-store', credentials: 'same-origin' })
         const payload = await response.json().catch(() => ({}))
         if (response.ok) {
           setMaintenanceConfig(payload)
@@ -113,7 +112,7 @@ export default function AdminSecuritySettingsPage() {
       } catch (err) {
         console.error('Failed to load maintenance config:', err)
       } finally {
-        setMaintenanceLoading(false)
+        // maintenance loading state removed; nothing to clear here
       }
     }
     loadMaintenance()
@@ -153,6 +152,7 @@ export default function AdminSecuritySettingsPage() {
         const response = await fetch('/api/admin/session-settings', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify(parsed.value),
         })
         const payload = await response.json().catch(() => ({}))
@@ -170,6 +170,7 @@ export default function AdminSecuritySettingsPage() {
         const response = await fetch('/api/admin/maintenance', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
           body: JSON.stringify(maintenanceConfig),
         })
         const payload = await response.json().catch(() => ({}))

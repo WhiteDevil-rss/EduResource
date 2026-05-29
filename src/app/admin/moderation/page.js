@@ -48,7 +48,7 @@ export default function AdminModerationPage() {
     if (!user || !isAdminUser(user)) return
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/moderation', { cache: 'no-store', signal })
+      const response = await fetch('/api/admin/moderation', { cache: 'no-store', credentials: 'same-origin', signal })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload?.error || 'Failed to sync moderation data.')
       setReviews(Array.isArray(payload?.reviews) ? payload.reviews : [])

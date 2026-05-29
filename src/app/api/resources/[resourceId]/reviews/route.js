@@ -10,7 +10,6 @@ import {
 export async function GET(request, { params }) {
   try {
     const { resourceId } = params
-    const session = await requireApiSession(request, ['student', 'faculty', 'admin'])
     
     if (!resourceId) {
       return NextResponse.json({ error: 'Resource ID is required.' }, { status: 400 })

@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import {
   ArrowRight,
   BookOpen,
@@ -11,11 +10,8 @@ import {
   FileText,
   Layers3,
   Shield,
-  Sparkles,
   Users,
-  Zap,
   TrendingUp,
-  Globe,
 } from 'lucide-react'
 import TeamCard from '@/components/TeamCard'
 import { Button } from '@/components/ui/button'
@@ -134,7 +130,7 @@ function MetricCard({ label, value, icon: Icon, animatedValue, inView }) {
 /* ─────────────────────── Main component ─────────────────────── */
 
 export default function LandingPage() {
-  const pathname = usePathname()
+  // pathname removed — not used
   const teamSectionRef = useRef(null)
   const [isVisible, setIsVisible] = useState(false)
   const [resourceCount, setResourceCount] = useState(null)
@@ -170,9 +166,9 @@ export default function LandingPage() {
         // Handle both possible keys from different API versions
         const count = payload?.publishedResourceCount ?? payload?.count
         if (active) setResourceCount(typeof count === 'number' ? count : 450)
-      } catch (err) {
-        if (active) setResourceCount(450)
-      }
+      } catch {
+          if (active) setResourceCount(450)
+        }
     }
     loadResourceCount()
     return () => { active = false }

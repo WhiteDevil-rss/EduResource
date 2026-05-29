@@ -160,7 +160,7 @@ export default function StudentDashboard() {
     const load = async () => {
       setLoading(true)
       try {
-        const response = await fetch('/api/student/resources', { cache: 'no-store', signal: controller.signal })
+        const response = await fetch('/api/student/resources', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal })
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(payload?.error || 'Failed to load resources.')
         if (isActive) {
@@ -308,7 +308,7 @@ export default function StudentDashboard() {
     setReviewComment('')
     setReviewsLoading(true)
     try {
-      const response = await fetch(`/api/resources/${resource.id}/reviews`)
+      const response = await fetch(`/api/resources/${resource.id}/reviews`, { credentials: 'same-origin' })
       const payload = await response.json().catch(() => ({}))
       if (response.ok) {
         setTargetReviews(payload.reviews || [])
@@ -326,6 +326,7 @@ export default function StudentDashboard() {
       const response = await fetch(`/api/resources/${reviewTarget.id}/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ rating: reviewRating, comment: reviewComment }),
       })
       const payload = await response.json().catch(() => ({}))
@@ -333,7 +334,7 @@ export default function StudentDashboard() {
       toast.success('Your review has been submitted. Thank you!')
       
       // Refresh reviews list
-      const freshRes = await fetch(`/api/resources/${reviewTarget.id}/reviews`)
+      const freshRes = await fetch(`/api/resources/${reviewTarget.id}/reviews`, { credentials: 'same-origin' })
       const freshPayload = await freshRes.json().catch(() => ({}))
       if (freshRes.ok) setTargetReviews(freshPayload.reviews || [])
       
