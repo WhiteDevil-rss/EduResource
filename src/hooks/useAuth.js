@@ -328,13 +328,10 @@ export function AuthProvider({ children }) {
       writeSessionStart(Date.now());
       setIsNavigating(true);
 
-      if (typeof window !== "undefined") {
-        window.location.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
-        return null;
-      }
-
-      router.replace(getPostLoginRedirectPath(nextSession.user, nextRole));
-      return null;
+      return {
+        ...nextSession,
+        redirectPath: getPostLoginRedirectPath(nextSession.user, nextRole),
+      };
     } catch (error) {
       const nextError = new Error(error?.message || "Credential sign-in failed.")
       nextError.status = error?.status || null
@@ -344,7 +341,7 @@ export function AuthProvider({ children }) {
       setIsAuthenticating(false);
       // loading remains true if isNavigating is true to prevent UI flash
     }
-  }, [router]);
+  }, []);
 
   const verifyTwoFactorCode = useCallback(async (challengeId, otp) => {
     try {

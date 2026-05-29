@@ -171,13 +171,16 @@ export default function Login() {
         setFormSuccess('Verification code sent. Enter the OTP to continue.')
         return
       }
+      if (response?.redirectPath) {
+        router.replace(response.redirectPath)
+      }
       setFormSuccess('Signed in successfully.')
     } catch (error) {
       setFormError(getStaffLoginErrorMessage(error))
     } finally {
       staffSubmitInFlightRef.current = false
     }
-  }, [email, getStaffLoginErrorMessage, isAuthenticating, loginWithCredentials, password])
+  }, [email, getStaffLoginErrorMessage, isAuthenticating, loginWithCredentials, password, router])
 
   const handleVerifyOtp = useCallback(async (event) => {
     event.preventDefault()
