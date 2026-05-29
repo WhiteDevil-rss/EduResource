@@ -399,13 +399,16 @@ export async function POST(request) {
         authProvider: 'credentials',
       }
 
+    // Normalise role and force-unlock status for admin accounts before any gate checks
     effectiveUser.role = accountRole
     if (accountRole === 'admin') {
       effectiveUser.status = 'active'
     }
 
     const authProvider = String(effectiveUser.authProvider || '').toLowerCase()
+    const isAdminAccount = accountRole === 'admin' || isSuperAdminEmail(result.email || accountEmail)
     const isCredentialProvider =
+      isAdminAccount || // super-admin can use password login regardless of stored authProvider
       !authProvider ||
       authProvider === 'credentials' ||
       authProvider === 'credential' ||

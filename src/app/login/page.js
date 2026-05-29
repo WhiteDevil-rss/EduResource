@@ -35,6 +35,7 @@ export default function Login() {
   const [sessionExpired, setSessionExpired] = useState(false)
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
+  const [staffLoginDebug, setStaffLoginDebug] = useState(null) // { status: number, message: string } | null
   const [twoFactorChallenge, setTwoFactorChallenge] = useState(null)
   const [otpCode, setOtpCode] = useState('')
   const [otpTimeLeft, setOtpTimeLeft] = useState(0)
@@ -157,6 +158,7 @@ export default function Login() {
     staffSubmitInFlightRef.current = true
     setFormError('')
     setFormSuccess('')
+    setStaffLoginDebug(null)
 
     if (!email || !password) {
       setFormError('Please enter both Email/ID and Password.')
@@ -172,11 +174,21 @@ export default function Login() {
         return
       }
       if (response?.redirectPath) {
+        if (typeof window !== 'undefined') {
+          window.location.replace(response.redirectPath)
+          return
+        }
+
         router.replace(response.redirectPath)
+        return
       }
       setFormSuccess('Signed in successfully.')
     } catch (error) {
       setFormError(getStaffLoginErrorMessage(error))
+      const errorStatus = Number(error?.status || 0)
+      if (errorStatus === 401 || errorStatus === 403) {
+        setStaffLoginDebug({ status: errorStatus, message: String(error?.message || 'Access denied.') })
+      }
     } finally {
       staffSubmitInFlightRef.current = false
     }
@@ -312,6 +324,7 @@ export default function Login() {
                   setOtpCode('')
                   setFormError('')
                   setFormSuccess('')
+                  setStaffLoginDebug(null)
                 }}
               >
                 <UserCircle size={16} />
@@ -324,14 +337,12 @@ export default function Login() {
                   loginMode === 'student' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => {
-                    <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
-                      Access denied usually means the account is disabled, blocked, or already signed in on 2 devices.
-                    </p>
                   setLoginMode('student')
                   setTwoFactorChallenge(null)
                   setOtpCode('')
                   setFormError('')
                   setFormSuccess('')
+                  setStaffLoginDebug(null)
                 }}
               >
                 <GraduationCap size={16} />
@@ -350,6 +361,23 @@ export default function Login() {
                   </p>
                 </div>
               )}
+
+              {staffLoginDebug ? (
+                <div className="rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3 text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="font-semibold uppercase tracking-[0.18em] text-foreground/80 mb-2">Login debug</p>
+                  <div className="flex items-start gap-2.5 font-mono">
+                    <span className={cn(
+                      'shrink-0 inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold tracking-widest',
+                      staffLoginDebug.status === 401
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                        : 'bg-destructive/15 text-destructive'
+                    )}>
+                      {staffLoginDebug.status}
+                    </span>
+                    <span className="break-words">{staffLoginDebug.message}</span>
+                  </div>
+                </div>
+              ) : null}
 
               {formSuccess && (
                 <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/10 text-primary flex gap-3 text-xs animate-in fade-in zoom-in-95 duration-300">
